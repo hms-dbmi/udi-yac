@@ -60,4 +60,14 @@ assert.equal(
   'a genuinely missing source must still return null',
 );
 
+// Order is part of the request: the pipeline starts from the first listed
+// source, so [people, events] must not be served the cached [events, people].
+const eventsFirst = store.getDataObject(['events', 'people'], []);
+const peopleFirst = store.getDataObject(['people', 'events'], []);
+assert.ok('kind' in eventsFirst.displayData[0]);
+assert.ok(
+  'age' in peopleFirst.displayData[0],
+  'a reordered source list is its own query',
+);
+
 console.log('Duplicate-source test passed ✓');

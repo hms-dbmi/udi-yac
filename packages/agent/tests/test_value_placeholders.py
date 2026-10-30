@@ -91,6 +91,25 @@ def test_hostile_values_do_not_corrupt_the_spec(value):
     assert spec["transformation"][0]["derive"]["start day"]["if"]["right"]["literal"] == value
 
 
+@pytest.mark.parametrize("value", ["<V1>", "<LOD>", "<NA>", "<E.url>"])
+def test_a_value_that_looks_like_a_placeholder_stays_as_written(value):
+    """Substitution is one pass: `<V1>` bound to itself used to loop forever,
+    and a data value like `<NA>` was resolved again to ""."""
+    spec = instantiate_template(TEMPLATE, {**BASE, "V1": value}, SCHEMA)
+    assert spec["transformation"][0]["derive"]["start day"]["if"]["right"]["literal"] == value
+
+
+def test_a_listed_value_that_looks_like_a_placeholder_stays_as_written():
+    template = TEMPLATE.replace('"<V1>"', '"<V1:list>"')
+    spec = instantiate_template(template, {**BASE, "V1": ["<NA>", "<V1:list:0>"]}, SCHEMA)
+    condition = spec["transformation"][0]["derive"]["start day"]["if"]
+    assert condition["op"] == "||"
+    assert [condition["left"]["right"]["literal"], condition["right"]["right"]["literal"]] == [
+        "<NA>",
+        "<V1:list:0>",
+    ]
+
+
 def test_value_placeholders_are_exposed_as_tool_parameters():
     """The model can only fill a value if the tool actually offers the parameter."""
     from udiagent.generated_vis_tools import TOOL_DEFS, TOOL_DISPATCH
@@ -368,3 +387,123 @@ def test_one_column_cannot_be_both_the_join_key_and_the_matched_column():
     errors = check({**good, "entity1_field1": "event"})
     assert errors, "binding the join key to the matched column must be refused"
     assert "join key" in errors[0] and "event" in errors[0], errors
+
+
+# ---------------------------------------------------------------------------
+# A stratifier grouping's values are checked the same way
+# ---------------------------------------------------------------------------
+
+#: A stratified chart: the stratum is derived from the grouping of <F2>.
+GROUPED_TEMPLATE = json.dumps(
+    {
+        "source": {"name": "<E>", "source": "<E.url>"},
+        "transformation": [
+            {"derive": {"stratum": "<GROUP:F2>"}},
+            {"groupby": ["stratum", "<F1:n>"]},
+        ],
+        "representation": {
+            "mark": "line",
+            "mapping": [{"encoding": "color", "field": "stratum", "type": "nominal"}],
+        },
+    }
+)
+
+ARM_DOMAINS = [
+    {
+        "entity": "events",
+        "field": "event_type",
+        "type": "point",
+        "domain": {
+            "values": [
+                "ACNS0334: Regimen A",
+                "ACNS0334: Regimen B",
+                "ACNS0331: Regimen B",
+                "Not Applicable",
+            ]
+        },
+        "fieldDescription": "",
+    },
+]
+
+
+def _grouping(*groups):
+    return json.dumps(
+        {
+            "type": "nominal",
+            "groups": [{"label": label, "values": values} for label, values in groups],
+        }
+    )
+
+
+GROUPED_BASE = {"E": "events", "F1": "subject_id", "F2": "event_type"}
+
+
+def test_a_grouping_value_absent_from_its_column_is_rejected_with_suggestions():
+    """'Regimen B' is a fragment of the real labels: a group of it matches no
+    rows and draws an empty curve. The error names the labels it could mean,
+    so the retry can copy them."""
+    errors = validate_bindings(
+        GROUPED_TEMPLATE,
+        {**GROUPED_BASE, "GROUP": _grouping(("Arm B", ["Regimen B"]))},
+        SCHEMA,
+        ARM_DOMAINS,
+    )
+    assert len(errors) == 1, errors
+    assert "group 'Arm B'" in errors[0]
+    assert "empty curve" in errors[0]
+    assert "'ACNS0334: Regimen B'" in errors[0]
+    assert "'ACNS0331: Regimen B'" in errors[0]
+    assert "Regimen A" not in errors[0]
+
+
+def test_a_grouping_of_real_values_is_accepted():
+    errors = validate_bindings(
+        GROUPED_TEMPLATE,
+        {
+            **GROUPED_BASE,
+            "GROUP": _grouping(
+                ("Arm A", ["ACNS0334: Regimen A"]), ("Arm B", ["ACNS0334: Regimen B"])
+            ),
+        },
+        SCHEMA,
+        ARM_DOMAINS,
+    )
+    assert errors == [], errors
+
+
+def test_a_grouping_case_mismatch_is_reported_as_one():
+    errors = validate_bindings(
+        GROUPED_TEMPLATE,
+        {**GROUPED_BASE, "GROUP": _grouping(("Arm B", ["acns0334: regimen b"]))},
+        SCHEMA,
+        ARM_DOMAINS,
+    )
+    assert len(errors) == 1, errors
+    assert "'ACNS0334: Regimen B' does" in errors[0]
+
+
+def test_a_grouping_on_a_column_with_no_value_list_is_left_alone():
+    """An omitted domain means "not sent", never "not there"."""
+    omitted = [
+        {
+            "entity": "events",
+            "field": "event_type",
+            "type": "point",
+            "domain": {"values": [], "distinct": 284, "omitted": True},
+            "fieldDescription": "",
+        }
+    ]
+    errors = validate_bindings(
+        GROUPED_TEMPLATE,
+        {**GROUPED_BASE, "GROUP": _grouping(("Arm B", ["anything"]))},
+        SCHEMA,
+        omitted,
+    )
+    assert errors == [], errors
+
+
+def test_a_misspelt_value_gets_a_spelling_suggestion():
+    errors = validate_bindings(TEMPLATE, {**BASE, "V1": "Deceasd"}, SCHEMA, DOMAINS)
+    assert len(errors) == 1
+    assert "Did you mean" in errors[0]
+    assert "'Deceased'" in errors[0]

@@ -75,4 +75,20 @@ describe('agentFilterState', () => {
       },
     ]);
   });
+  it('flags host filters: a separate one read-only, a shared one editable', () => {
+    const selection = {
+      dataSourceKey: 'Patient',
+      type: 'point' as const,
+      selection: { sex: ['F'] },
+    };
+    const host: ActiveFilter[] = [
+      { id: 'host-filter-cohort', origin: 'host', selection },
+      { id: 'col:Patient.sex', origin: 'host', selection },
+    ];
+    expect(agentFilterState(host, {}, []).map((e) => [e.id, e.readOnly])).toEqual([
+      ['host-filter-cohort', true],
+      ['col:Patient.sex', false],
+    ]);
+    expect(agentFilterState(active, {}, messages).some((e) => 'readOnly' in e)).toBe(false);
+  });
 });

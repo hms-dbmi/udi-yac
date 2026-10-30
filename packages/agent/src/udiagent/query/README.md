@@ -86,18 +86,57 @@ HAVING count(matching) = count(total)`; `match: 'none'` → `targetKey NOT IN
   scope**: it keeps every row of each subject that matches. An empty point
   value-list means **no constraint** on that field (matches Arquero), not
   "match nothing".
-- `kde` must be the last op; the engine post-processes its rows in Python.
+- `only` selects one **marginal** of a pre-aggregated cube: the rows where
+  exactly the named dimensions are populated and every other dimension is
+  null. The complement comes from the entity's configured `udi:dimensions`
+  (see §3.1), not from the spec — so `{"only": ["sex"]}` compiles to `sex IS
+NOT NULL AND race IS NULL AND age IS NULL` without the caller knowing the
+  cube's shape. `{"only": []}` is the grand-total row. Pass `dimensions`
+  inline to use it against an entity with no configured cube roles; with
+  neither, the query fails loudly rather than returning a wrong marginal.
+- `kde` must be the last op; the engine post-processes its rows in Python. It
+  fetches only the kde field and the group columns, and `samples` is clamped
+  to 512.
+
+**Filtering a cube.** A prepended predicate cannot work: a per-sex chart reads
+the marginal where `race IS NULL`, so `race IN (…)` on top of it is
+unsatisfiable and returns nothing. Filtering means reading a _different_
+marginal and re-aggregating — expand → filter → contract:
+
+```json
+[
+  { "only": ["sex", "race"] },
+  { "filter": { "name": "race-brush" } },
+  { "groupby": ["sex"] },
+  { "rollup": { "cnt": { "op": "sum", "field": "cnt" } } }
+]
+```
+
+The chat builds this automatically for cube sources
+(`features/dashboard/utils/cubeFilters.ts`). Contraction is exact for additive
+measures and `min`/`max` only; means, medians and distinct counts cannot be
+re-aggregated from cells, and the chat declines to filter such a
+visualization rather than render a plausible wrong number.
 
 ### 2.2 `QueryEngine` (`engine.py`)
 
-`QueryEngine(connector, table_map, row_cap=5000, entity_schemas=None)`.
+`QueryEngine(connector, table_map, row_cap=5000, entity_schemas=None, package_extras=None)`.
 
 - `table_map`: entity name → physical table/view name (entity names may
   contain spaces; table names are SQL-safe).
-- `entity_schemas`: per-entity `primaryKey`/`foreignKeys` and descriptions
-  that **can't be introspected from the database** — merged into the resource
-  by `introspect()` (see §4); the chat's cross-entity filtering depends on the
-  keys, and the LLM reads the descriptions.
+- `entity_schemas`: per-entity metadata that **can't be introspected from the
+  database** — merged into the resource by `introspect()` (see §4).
+  `primaryKey`/`foreignKeys` land in the schema and drive the chat's
+  cross-entity filtering; descriptions are what the LLM reads; the cube roles
+  (`udi:cube`, `udi:dimensions`, `udi:measures`, `udi:measure_aggregations`)
+  land on the resource and drive `only`, as does `udi:linked_dimensions`,
+  which drives the chat's filtering between cubes and line-level tables.
+- `package_extras`: package-level descriptor keys, likewise un-introspectable —
+  merged into the package descriptor by `introspect()`. Today that is
+  `udi:prefer`, which tells the agent whether a package holding both
+  line-level tables and cubes answers from the line-level tables or the cubes
+  by default. It cannot replace a key introspection sets (`name`, `udi:path`,
+  `resources`).
 
 `run_query(source, transformation?, selections?, display_data_only?, offset?)`
 returns the client-facing result:
@@ -118,8 +157,9 @@ returns the client-facing result:
   `true` when the pipeline ends in a rollup (the aggregate's unfiltered twin
   is rarely consumed).
 - **Row cap**: aggregated results are small by construction and never capped;
-  row-level results are limited to `row_cap` and flagged `truncated`.
-  `offset` pages past the cap ("load more") — deterministic only when the
+  row-level results are limited to `row_cap` and flagged `truncated`. A kde
+  reads at most 50,000 input rows (whichever the backend returns first) and is
+  flagged `truncated` with that cap when it hits it. `offset` pages past the cap ("load more") — deterministic only when the
   spec orders by a unique key.
 
 `run_batch(queries, selections)` runs many specs in one call and returns
@@ -155,10 +195,12 @@ is exact below 100k rows, approximate (`APPROX_COUNT_DISTINCT`) above.
 
 Foreign keys and primary keys are **merged in from `entity_schemas`**, because
 the database stores no FK constraints — this is what makes cross-entity
-filtering work in remote mode. So are descriptions: a schema's `description`
-becomes the resource's, and its `fields` (`[{name, description}]`) fill in the
-matching introspected columns' `description` and their domains'
-`fieldDescription`.
+filtering work in remote mode. So are descriptions and titles: a schema's
+`description` and `title` become the resource's, and its `fields`
+(`[{name, description, title}]`) fill in the matching introspected columns'
+`description` and `title` and their domains' `fieldDescription`. Titles are the
+labels the chat shows for a table and its columns. A schema's `"udi:hide_count": true` lands on the resource
+too, keeping that table's row count out of the chat.
 
 ---
 
@@ -169,7 +211,9 @@ matching introspected columns' `description` and their domains'
 Set the env var to a JSON file mapping **package name → backend spec**. The
 reference server loads it at startup (`server/app.py` `_load_query_engines`).
 The key `default` (or a package with no explicit match) serves requests whose
-`package` doesn't match a configured one.
+`package` doesn't match a configured one. A host on another web framework
+builds its own `{package: QueryEngine}` and serves the two endpoints with
+`udiagent.api.metadata` and `udiagent.api.query`.
 
 ```jsonc
 {
@@ -201,7 +245,15 @@ The key `default` (or a package with no explicit match) serves requests whose
     },
     "tables": { "donors": "donors", "samples": "samples" },
     "schemas": {
-      // optional but REQUIRED for cross-entity filtering
+      // optional but REQUIRED for cross-entity filtering, and for `only`
+      // on a pre-aggregated cube. Cube roles are resource-level keys and
+      // are served back on the resource by /v1/yac/metadata, so the chat
+      // recognises a remote cube; everything else lands in the schema.
+      "encounter_cube": {
+        "udi:cube": true,
+        "udi:dimensions": ["sex", "race", "age_group"],
+        "udi:measures": ["cnt"],
+      },
       "samples": {
         "foreignKeys": [
           {
@@ -214,14 +266,26 @@ The key `default` (or a package with no explicit match) serves requests whose
         "primaryKey": ["id"],
         // optional: what the LLM is told the table and its columns mean
         "description": "One row per tissue donor.",
+        // optional: the label the chat shows for the table (and, per field, a column)
+        "title": "Donors",
+        // optional: keep this table's row count out of the chat
+        "udi:hide_count": true,
         "fields": [
-          { "name": "age", "description": "Age at donation, in years." },
+          {
+            "name": "age",
+            "description": "Age at donation, in years.",
+            "title": "Age",
+          },
         ],
       },
     },
     // optional: the chat's "Try an example" prompts for this package, served by
     // GET /v1/yac/examples?package=my_cohort in place of the global list
     "examplePrompts": ["How many donors are in each age group?"],
+    // optional: package-level keys served with the introspected schema
+    // (`package_extras`); a package mixing line-level tables and cubes says
+    // which to answer from by default
+    "package": { "udi:prefer": "line_level" },
   },
 }
 ```
@@ -250,7 +314,7 @@ Related env var: `UDI_METADATA_TTL_SECONDS` (default `3600`) — introspection
 cache TTL.
 
 **Generating the config for a CSV dataset.** Two seeders write this config for
-you, carrying `foreignKeys`/`primaryKey` and descriptions from the directory's
+you, carrying `foreignKeys`/`primaryKey`, descriptions, titles and `udi:hide_count` from the directory's
 `datapackage.json` into `schemas` and applying identical CSV cleaning:
 
 - `packages/agent/scripts/seed_duckdb.py` → a local `.duckdb` file +
@@ -328,6 +392,11 @@ equivalent (a throwaway JWKS plus two users with different grants) against the
 dev container.
 
 ### 3.2 HTTP contract (for a non-toolkit consumer)
+
+The full request and response schemas are in the
+[HTTP API reference](https://hms-dbmi.github.io/udi-yac/docs/backend/http-api/)
+(generated from the server into [`openapi.json`](../../../openapi.json)); this
+section explains how the two endpoints are meant to be used.
 
 Two JWT-guarded endpoints (dev: `INSECURE_DEV_MODE=1`, `Authorization: Bearer
 dev`). With `jwtPassthrough` set on a backend, that same token is also what

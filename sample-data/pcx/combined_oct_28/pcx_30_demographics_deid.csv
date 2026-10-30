@@ -1,0 +1,94 @@
+organization_name,research_id,given_name,family_name,birth_year,race,ethnicity,gender,address_postal_code,diagnosis_type_cohort
+Seattle Children's Hospital,C103074,C103074_given_name,C103074_family_name,1991,White,Not Hispanic or Latino,female,981XX,Medulloblastoma
+Seattle Children's Hospital,C104427,C104427_given_name,C104427_family_name,2012,White,Hispanic or Latino,female,981XX,Atypical teratoid/rhabdoid tumor
+Seattle Children's Hospital,C1056939,C1056939_given_name,C1056939_family_name,2009,Pacific Islander,Not Hispanic or Latino,male,985XX,Atypical teratoid/rhabdoid tumor
+Seattle Children's Hospital,C1057185,C1057185_given_name,C1057185_family_name,2000,Asian,Not Hispanic or Latino,male,995XX,Medulloblastoma
+Seattle Children's Hospital,C1057431,C1057431_given_name,C1057431_family_name,2011,White,Not Hispanic or Latino,male,983XX,Medulloblastoma
+Seattle Children's Hospital,C1070100,C1070100_given_name,C1070100_family_name,2004,White,Not Hispanic or Latino,male,982XX,Medulloblastoma
+Seattle Children's Hospital,C1070223,C1070223_given_name,C1070223_family_name,1999,White,Not Hispanic or Latino,male,985XX,Medulloblastoma
+Seattle Children's Hospital,C1070346,C1070346_given_name,C1070346_family_name,2016,White,Not Hispanic or Latino,female,988XX,Atypical teratoid/rhabdoid tumor
+Seattle Children's Hospital,C1070838,C1070838_given_name,C1070838_family_name,2012,White,Not Hispanic or Latino,male,982XX,Medulloblastoma
+Seattle Children's Hospital,C1154847,C1154847_given_name,C1154847_family_name,2016,Asian,Not Hispanic or Latino,female,982XX,Atypical teratoid/rhabdoid tumor
+Seattle Children's Hospital,C1155462,C1155462_given_name,C1155462_family_name,2010,Unknown,Unknown,male,983XX,Medulloblastoma
+Seattle Children's Hospital,C1155585,C1155585_given_name,C1155585_family_name,2006,White,Not Hispanic or Latino,female,980XX,Medulloblastoma
+Seattle Children's Hospital,C1183875,C1183875_given_name,C1183875_family_name,2000,White,Not Hispanic or Latino,male,988XX,Medulloblastoma
+Seattle Children's Hospital,C1253493,C1253493_given_name,C1253493_family_name,2012,White,Not Hispanic or Latino,male,989XX,Medulloblastoma
+Seattle Children's Hospital,C1253862,C1253862_given_name,C1253862_family_name,2004,Asian,Not Hispanic or Latino,male,983XX,Medulloblastoma
+Seattle Children's Hospital,C141696,C141696_given_name,C141696_family_name,2002,White,Not Hispanic or Latino,female,981XX,Medulloblastoma
+Seattle Children's Hospital,C142557,C142557_given_name,C142557_family_name,2009,White,Not Hispanic or Latino,female,993XX,Medulloblastoma
+Seattle Children's Hospital,C143172,C143172_given_name,C143172_family_name,2001,White,Not Hispanic or Latino,male,980XX,Medulloblastoma
+Seattle Children's Hospital,C143418,C143418_given_name,C143418_family_name,2006,"Filipino, White",Not Hispanic or Latino,female,982XX,Medulloblastoma
+Seattle Children's Hospital,C143541,C143541_given_name,C143541_family_name,2010,White,Not Hispanic or Latino,female,982XX,Medulloblastoma
+Seattle Children's Hospital,C148215,C148215_given_name,C148215_family_name,2007,White,Not Hispanic or Latino,female,985XX,Atypical teratoid/rhabdoid tumor
+Seattle Children's Hospital,C154365,C154365_given_name,C154365_family_name,1995,White,Not Hispanic or Latino,male,980XX,Medulloblastoma
+Seattle Children's Hospital,C169248,C169248_given_name,C169248_family_name,1999,Other,Hispanic or Latino,male,993XX,Medulloblastoma
+Seattle Children's Hospital,C169371,C169371_given_name,C169371_family_name,1996,Asian,Not Hispanic or Latino,female,981XX,Medulloblastoma
+Seattle Children's Hospital,C170232,C170232_given_name,C170232_family_name,1995,White,Not Hispanic or Latino,male,981XX,Medulloblastoma
+Seattle Children's Hospital,C226074,C226074_given_name,C226074_family_name,2012,White,Hispanic or Latino,male,993XX,Atypical teratoid/rhabdoid tumor
+Seattle Children's Hospital,C2333064,C2333064_given_name,C2333064_family_name,2016,White,Not Hispanic or Latino,male,985XX,Medulloblastoma
+Seattle Children's Hospital,C2333310,C2333310_given_name,C2333310_family_name,2016,Other,Not Hispanic or Latino,male,980XX,Atypical teratoid/rhabdoid tumor
+Seattle Children's Hospital,C2358156,C2358156_given_name,C2358156_family_name,2010,White,Not Hispanic or Latino,female,980XX,Medulloblastoma
+Seattle Children's Hospital,C2463690,C2463690_given_name,C2463690_family_name,2015,Other,Hispanic or Latino,female,980XX,Medulloblastoma
+Seattle Children's Hospital,C2544870,C2544870_given_name,C2544870_family_name,2005,White,Not Hispanic or Latino,male,980XX,Medulloblastoma
+Seattle Children's Hospital,C2571192,C2571192_given_name,C2571192_family_name,2016,White,Not Hispanic or Latino,female,985XX,Atypical teratoid/rhabdoid tumor
+Seattle Children's Hospital,C2571315,C2571315_given_name,C2571315_family_name,2013,Other,Hispanic or Latino,female,980XX,Medulloblastoma
+Seattle Children's Hospital,C2605755,C2605755_given_name,C2605755_family_name,2017,"Other, White",Hispanic or Latino,female,591XX,Medulloblastoma
+Seattle Children's Hospital,C2696529,C2696529_given_name,C2696529_family_name,2011,American Indian,Not Hispanic or Latino,female,985XX,Medulloblastoma
+Seattle Children's Hospital,C2698251,C2698251_given_name,C2698251_family_name,2015,White,Not Hispanic or Latino,female,982XX,Medulloblastoma
+Seattle Children's Hospital,C2714610,C2714610_given_name,C2714610_family_name,2010,Unknown,Unknown,female,980XX,Atypical teratoid/rhabdoid tumor
+Seattle Children's Hospital,C2784966,C2784966_given_name,C2784966_family_name,1988,White,Not Hispanic or Latino,female,981XX,Medulloblastoma
+Seattle Children's Hospital,C2852616,C2852616_given_name,C2852616_family_name,2004,White,Not Hispanic or Latino,female,980XX,Medulloblastoma
+Seattle Children's Hospital,C2892714,C2892714_given_name,C2892714_family_name,2017,White,Not Hispanic or Latino,male,982XX,Medulloblastoma
+Seattle Children's Hospital,C310206,C310206_given_name,C310206_family_name,1999,White,Not Hispanic or Latino,male,982XX,Medulloblastoma
+Seattle Children's Hospital,C3388527,C3388527_given_name,C3388527_family_name,2017,White,Not Hispanic or Latino,male,982XX,Medulloblastoma
+Seattle Children's Hospital,C3544368,C3544368_given_name,C3544368_family_name,2019,White,Not Hispanic or Latino,male,273XX,Medulloblastoma
+Seattle Children's Hospital,C3544737,C3544737_given_name,C3544737_family_name,2008,Other,Not Hispanic or Latino,male,980XX,Medulloblastoma
+Seattle Children's Hospital,C3631329,C3631329_given_name,C3631329_family_name,2009,Unknown,Hispanic or Latino,male,967XX,Medulloblastoma
+Seattle Children's Hospital,C3631698,C3631698_given_name,C3631698_family_name,1995,White,Not Hispanic or Latino,male,990XX,Medulloblastoma
+Seattle Children's Hospital,C3717306,C3717306_given_name,C3717306_family_name,2010,White,Not Hispanic or Latino,male,989XX,Medulloblastoma
+Seattle Children's Hospital,C3884586,C3884586_given_name,C3884586_family_name,2011,White,Not Hispanic or Latino,male,983XX,Medulloblastoma
+Seattle Children's Hospital,C4031571,C4031571_given_name,C4031571_family_name,2018,Alaska Native,Not Hispanic or Latino,male,995XX,Atypical teratoid/rhabdoid tumor
+Seattle Children's Hospital,C4031694,C4031694_given_name,C4031694_family_name,2012,Black or African American,Hispanic or Latino,male,981XX,Medulloblastoma
+Seattle Children's Hospital,C4033539,C4033539_given_name,C4033539_family_name,2019,White,Hispanic or Latino,female,980XX,Medulloblastoma
+Seattle Children's Hospital,C4034523,C4034523_given_name,C4034523_family_name,2017,White,Not Hispanic or Latino,male,757XX,Medulloblastoma
+Seattle Children's Hospital,C4034646,C4034646_given_name,C4034646_family_name,2016,White,Not Hispanic or Latino,female,997XX,Atypical teratoid/rhabdoid tumor
+Seattle Children's Hospital,C4103649,C4103649_given_name,C4103649_family_name,2016,White,Not Hispanic or Latino,male,996XX,Medulloblastoma
+Seattle Children's Hospital,C4104018,C4104018_given_name,C4104018_family_name,2020,White,Not Hispanic or Latino,male,960XX,Medulloblastoma
+Seattle Children's Hospital,C4344483,C4344483_given_name,C4344483_family_name,2014,White,Not Hispanic or Latino,male,834XX,Medulloblastoma
+Seattle Children's Hospital,C5254437,C5254437_given_name,C5254437_family_name,2019,White,Not Hispanic or Latino,female,980XX,Atypical teratoid/rhabdoid tumor
+Seattle Children's Hospital,C5492565,C5492565_given_name,C5492565_family_name,2010,Asian,Unknown,male,982XX,Medulloblastoma
+Seattle Children's Hospital,C558912,C558912_given_name,C558912_family_name,2012,Other,Not Hispanic or Latino,female,984XX,Atypical teratoid/rhabdoid tumor
+Seattle Children's Hospital,C5623560,C5623560_given_name,C5623560_family_name,2018,Alaska Native,Not Hispanic or Latino,male,981XX,Medulloblastoma
+Seattle Children's Hospital,C5624052,C5624052_given_name,C5624052_family_name,2023,White,Hispanic or Latino,male,980XX,Medulloblastoma
+Seattle Children's Hospital,C602700,C602700_given_name,C602700_family_name,2012,Mexican/Mexican American,Hispanic or Latino,male,982XX,Medulloblastoma
+Seattle Children's Hospital,C603069,C603069_given_name,C603069_family_name,2015,White,Not Hispanic or Latino,male,985XX,Atypical teratoid/rhabdoid tumor
+Seattle Children's Hospital,C6083703,C6083703_given_name,C6083703_family_name,2015,Moroccan,Not Hispanic or Latino,female,980XX,Medulloblastoma
+Seattle Children's Hospital,C622257,C622257_given_name,C622257_family_name,2011,White,Not Hispanic or Latino,female,982XX,Medulloblastoma
+Seattle Children's Hospital,C647349,C647349_given_name,C647349_family_name,2013,White,Not Hispanic or Latino,male,980XX,Medulloblastoma
+Seattle Children's Hospital,C676746,C676746_given_name,C676746_family_name,1998,White,Not Hispanic or Latino,male,988XX,Medulloblastoma
+Seattle Children's Hospital,C6958725,C6958725_given_name,C6958725_family_name,2021,White,Unknown,male,983XX,Atypical teratoid/rhabdoid tumor
+Seattle Children's Hospital,C700977,C700977_given_name,C700977_family_name,1995,White,Not Hispanic or Latino,female,980XX,Medulloblastoma
+Seattle Children's Hospital,C701223,C701223_given_name,C701223_family_name,2007,White,Not Hispanic or Latino,female,982XX,Medulloblastoma
+Seattle Children's Hospital,C701469,C701469_given_name,C701469_family_name,2014,White,Not Hispanic or Latino,female,982XX,Medulloblastoma
+Seattle Children's Hospital,C7093902,C7093902_given_name,C7093902_family_name,2022,"Alaska Native, Mexican/Mexican American, White",Not Hispanic or Latino,male,982XX,Medulloblastoma
+Seattle Children's Hospital,C724962,C724962_given_name,C724962_family_name,2004,Other,Hispanic or Latino,male,782XX,Medulloblastoma
+Seattle Children's Hospital,C725331,C725331_given_name,C725331_family_name,2002,Other,Hispanic or Latino,male,981XX,Medulloblastoma
+Seattle Children's Hospital,C7302756,C7302756_given_name,C7302756_family_name,2020,Unknown,Not Hispanic or Latino,female,985XX,Medulloblastoma
+Seattle Children's Hospital,C7457490,C7457490_given_name,C7457490_family_name,2021,White,Not Hispanic or Latino,female,595XX,Medulloblastoma
+Seattle Children's Hospital,C758541,C758541_given_name,C758541_family_name,2007,Asian,Not Hispanic or Latino,male,980XX,Medulloblastoma
+Seattle Children's Hospital,C7611978,C7611978_given_name,C7611978_family_name,2021,Unknown,Unknown,female,985XX,Atypical teratoid/rhabdoid tumor
+Seattle Children's Hospital,C7617267,C7617267_given_name,C7617267_family_name,2019,White,Not Hispanic or Latino,male,972XX,Atypical teratoid/rhabdoid tumor
+Seattle Children's Hospital,C782649,C782649_given_name,C782649_family_name,2005,White,Not Hispanic or Latino,female,981XX,Atypical teratoid/rhabdoid tumor
+Seattle Children's Hospital,C782895,C782895_given_name,C782895_family_name,2011,White,Not Hispanic or Latino,male,995XX,Medulloblastoma
+Seattle Children's Hospital,C784371,C784371_given_name,C784371_family_name,1993,White,Not Hispanic or Latino,female,838XX,Medulloblastoma
+Seattle Children's Hospital,C797655,C797655_given_name,C797655_family_name,2010,Other,Hispanic or Latino,female,989XX,Medulloblastoma
+Seattle Children's Hospital,C8183559,C8183559_given_name,C8183559_family_name,2016,White,Not Hispanic or Latino,male,982XX,Medulloblastoma
+Seattle Children's Hospital,C836769,C836769_given_name,C836769_family_name,2004,Other,Hispanic or Latino,female,989XX,Medulloblastoma
+Seattle Children's Hospital,C837630,C837630_given_name,C837630_family_name,2016,White,Not Hispanic or Latino,female,985XX,Medulloblastoma
+Seattle Children's Hospital,C8379990,C8379990_given_name,C8379990_family_name,2012,White,Not Hispanic or Latino,male,993XX,Medulloblastoma
+Seattle Children's Hospital,C849561,C849561_given_name,C849561_family_name,2014,White,Not Hispanic or Latino,female,980XX,Medulloblastoma
+Seattle Children's Hospital,C8735460,C8735460_given_name,C8735460_family_name,2014,Asian Indian,Not Hispanic or Latino,female,980XX,Medulloblastoma
+Seattle Children's Hospital,C912414,C912414_given_name,C912414_family_name,2009,"White, Other",Not Hispanic or Latino,male,985XX,Medulloblastoma
+Seattle Children's Hospital,C912660,C912660_given_name,C912660_family_name,2009,Other,Hispanic or Latino,male,988XX,Medulloblastoma
+Seattle Children's Hospital,C923607,C923607_given_name,C923607_family_name,2013,Other,Hispanic or Latino,male,980XX,Medulloblastoma
+Seattle Children's Hospital,C948330,C948330_given_name,C948330_family_name,2001,White,Not Hispanic or Latino,male,980XX,Medulloblastoma

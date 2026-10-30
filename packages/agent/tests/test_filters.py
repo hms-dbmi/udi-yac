@@ -15,6 +15,7 @@ from udiagent.filters import (
     filter_summary,
     normalize_filters,
     operation_tool_calls,
+    translate_linked_values,
     validate_operations,
 )
 from udiagent.orchestrator import Orchestrator, OrchestratorResult, Usage
@@ -328,6 +329,21 @@ def test_invalid_operations_are_named(op, expected):
     assert errors[0].startswith("Operation 1")
 
 
+def test_host_filter_shared_on_a_column_is_editable():
+    # The chat flags every host filter; one without the flag (a client from
+    # before it) stays read-only.
+    shared = {**HOST, "id": "col:Patient.id", "readOnly": False}
+    current = [GROUP3, BRUSH, HOST, shared]
+    ops = [{"op": "remove", "id": shared["id"]}]
+    assert validate_operations(ops, SCHEMA, DOMAINS, current) == []
+    flagged = {**HOST, "readOnly": True}
+    errors = validate_operations(
+        [{"op": "remove", "id": HOST["id"]}], SCHEMA, DOMAINS, [GROUP3, BRUSH, flagged]
+    )
+    assert "is read-only (set by the host page, read-only)" in errors[0]
+    assert "(set by the host page, editable)" in describe_filters([shared])
+
+
 def test_chart_filters_can_be_modified_and_removed():
     """Chat and chart filters are one filter per column; either is editable."""
     assert _errors({"op": "remove", "id": BRUSH["id"]}) == []
@@ -608,3 +624,148 @@ def test_past_filter_calls_point_at_the_current_state():
     replies = [m["content"] for m in msgs if m["role"] == "tool"]
     assert replies == [FILTER_CALL_REPLY, "OK"]
     assert "Current filters" in FILTER_CALL_REPLY
+
+
+# ---------------------------------------------------------------------------
+# Linked columns: a cube dimension and the line-level column behind it
+# ---------------------------------------------------------------------------
+
+SHH = [
+    "Medulloblastoma, SHH-activated and TP53-mutant",
+    "Medulloblastoma, SHH-activated and TP53-wildtype",
+]
+LINE_DX = ["Medulloblastoma, Group 3", *SHH, "ATRT, NOS or NEC"]
+
+
+def _cube(name):
+    return {
+        "name": name,
+        "udi:cube": True,
+        "udi:dimensions": ["subtype"],
+        "udi:measures": ["cnt"],
+        "udi:linked_dimensions": {
+            "subtype": {
+                "entity": "Event",
+                "field": "cns_integrated_diagnosis",
+                "values": {"Group 3": ["Medulloblastoma, Group 3"], "SHH": SHH},
+            }
+        },
+        "schema": {
+            "fields": [
+                {"name": "subtype", "udi:data_type": "nominal"},
+                {"name": "cnt", "udi:data_type": "quantitative"},
+            ]
+        },
+    }
+
+
+LINKED_RAW = {"resources": [*RAW_SCHEMA["resources"], _cube("Efs"), _cube("Os")]}
+LINKED = parse_schema_from_dict(LINKED_RAW)
+LINKED_DOMAINS = json.dumps(
+    [
+        {
+            "entity": "Event",
+            "field": "cns_integrated_diagnosis",
+            "type": "point",
+            "domain": {"values": LINE_DX},
+        },
+        *[
+            {
+                "entity": cube,
+                "field": "subtype",
+                "type": "point",
+                "domain": {"values": ["Group 3", "SHH"]},
+            }
+            for cube in ("Efs", "Os")
+        ],
+    ]
+)
+MODIFY_DX = {
+    **ADD_GROUP3,
+    "op": "modify",
+    "id": "col:Event.cns_integrated_diagnosis",
+}
+
+
+def test_links_are_parsed_from_the_cubes():
+    assert LINKED["links"][0] == {
+        "cube": "Efs",
+        "dimension": "subtype",
+        "entity": "Event",
+        "field": "cns_integrated_diagnosis",
+        "values": {"Group 3": ["Medulloblastoma, Group 3"], "SHH": SHH},
+    }
+
+
+def test_cube_values_on_the_line_level_column_take_its_spelling():
+    """After a reset the chat keeps the empty diagnosis filter on the
+    line-level column; the model may still name the cube's values."""
+    (op,) = translate_linked_values(
+        [{**MODIFY_DX, "pointValues": ["SHH", "Group 3"]}], LINKED, LINKED_DOMAINS
+    )
+    assert op["pointValues"] == [*SHH, "Medulloblastoma, Group 3"]
+
+
+def test_line_level_values_on_a_cube_column_take_its_spelling():
+    (op,) = translate_linked_values(
+        [{**ADD_GROUP3, "entity": "Efs", "field": "subtype", "pointValues": SHH}],
+        LINKED,
+        LINKED_DOMAINS,
+    )
+    assert op["pointValues"] == ["SHH"]
+
+
+def test_values_already_right_or_unknown_to_every_link_are_left_alone():
+    ops = [
+        {**MODIFY_DX, "pointValues": ["Medulloblastoma, Group 3", "Ependymoma"]},
+        {"op": "clear"},
+    ]
+    assert translate_linked_values(ops, LINKED, LINKED_DOMAINS) == ops
+
+
+def test_filter_step_accepts_cube_values_on_the_line_level_column():
+    with_dx_filter = [
+        *CURRENT,
+        {**GROUP3, "id": MODIFY_DX["id"], "pointValues": []},
+    ]
+    orch, create = _filter_orchestrator(
+        [
+            _tool_call(
+                APPLY_FILTER_OPERATIONS,
+                {"operations": [{**MODIFY_DX, "pointValues": ["SHH"]}]},
+            )
+        ]
+    )
+    result = orch._handle_filter_data(
+        {"request": "filter to SHH"},
+        [{"role": "user", "content": "filter to SHH"}],
+        json.dumps(LINKED_RAW),
+        LINKED_DOMAINS,
+        Usage(),
+        current_filters=with_dx_filter,
+    )
+    # First attempt, with the line-level spelling in the call the chat applies.
+    assert create.call_count == 1
+    (call,) = result
+    assert call["arguments"]["filter"]["pointValues"] == SHH
+
+
+def test_a_rejected_value_lists_every_value_the_column_holds():
+    """The filter step has no tool to fetch more values, so a list cut at 8
+    left the model guessing among the other 20."""
+    many = [f"Value {i}" for i in range(28)]
+    domains = json.dumps(
+        [
+            {
+                "entity": "Event",
+                "field": "cns_integrated_diagnosis",
+                "type": "point",
+                "domain": {"values": many},
+            }
+        ]
+    )
+    (error,) = validate_operations(
+        [{**ADD_GROUP3, "pointValues": ["Value 99"]}], SCHEMA, domains, CURRENT
+    )
+    assert "Values there (28):" in error
+    assert all(f"'{v}'" in error for v in many)

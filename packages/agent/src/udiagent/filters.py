@@ -15,7 +15,10 @@ One entry per (filter, field)::
      "scope": {"entity": "Patient", "match": "any"}}
 
 ``intervalRange: {min, max}`` replaces ``pointValues`` on an interval filter.
-``scope`` is absent (or null) for a row-level filter.
+``scope`` is absent (or null) for a row-level filter. ``readOnly: true`` marks
+a filter the host page keeps for itself; a host filter without the flag (the
+host shares the column with chat and charts) is editable. Clients that predate
+the flag send none, so a ``host`` entry without it is read-only.
 """
 
 from __future__ import annotations
@@ -25,14 +28,22 @@ import json
 SCOPE_MATCHES = ("any", "all", "none")
 
 _ORIGIN_LABELS = {
-    "chat": "set in chat, editable",
-    "chart": "set on a chart, editable",
-    "host": "set by the host page, read-only",
+    "chat": "set in chat",
+    "chart": "set on a chart",
+    "host": "set by the host page",
 }
 
-#: Filters the agent may modify or remove. Chat and chart filters are one
-#: filter per column, whoever set them last; the host page owns its own.
-EDITABLE_ORIGINS = ("chat", "chart")
+
+def _read_only(entry: dict) -> bool:
+    """Whether the host page keeps this filter for itself (see the module doc)."""
+    flag = entry.get("readOnly")
+    return flag if isinstance(flag, bool) else entry.get("origin") == "host"
+
+
+def _origin_label(entry: dict) -> str:
+    """Who set the filter, and whether the agent may change it."""
+    access = "read-only" if _read_only(entry) else "editable"
+    return f"{_ORIGIN_LABELS[entry['origin']]}, {access}"
 
 
 def normalize_filters(raw) -> list[dict]:
@@ -113,7 +124,7 @@ def describe_filters(filters: list[dict]) -> str:
         return "No filters are active."
     lines = []
     for entry in filters:
-        lines.append(f"- id: {entry['id']} ({_ORIGIN_LABELS[entry['origin']]})")
+        lines.append(f"- id: {entry['id']} ({_origin_label(entry)})")
         if entry.get("title"):
             lines.append(f"  title: {entry['title']}")
         lines.append(f"  condition: {describe_condition(entry)}")
@@ -282,6 +293,67 @@ def _value_lists(data_domains) -> dict:
     return out
 
 
+def _linked_spellings(schema: dict, entity: str, field: str, value: str) -> list[str]:
+    """How ``value``, spelled as some other column of the same link group,
+    reads on ``entity.field``. Empty when no link knows the value.
+
+    A cube dimension and the line-level column it was aggregated from
+    (``udi:linked_dimensions``) spell the same category differently — "SHH"
+    against "Medulloblastoma, SHH-activated and TP53-mutant". The chat keeps a
+    linked filter on one of them, so the model may meet a filter on the
+    line-level column while knowing the cube's values, or the other way round.
+    Values translate through the line-level column (the hub), as they do in
+    the chat, so two cubes linked to it translate between themselves too.
+    """
+    links = schema.get("links") or []
+    own = next(
+        (l for l in links if (l["cube"], l["dimension"]) == (entity, field)), None
+    )
+    hub = (own["entity"], own["field"]) if own else (entity, field)
+    group = [l for l in links if (l["entity"], l["field"]) == hub]
+    if not group:
+        return []
+    # The value on the hub: as a cube spells it, or already the hub's own.
+    hub_values = [h for l in group for h in l["values"].get(value, [])] or [value]
+    if own is None:
+        return [] if hub_values == [value] else list(dict.fromkeys(hub_values))
+    return [c for c, hubs in own["values"].items() if any(h in hubs for h in hub_values)]
+
+
+def translate_linked_values(operations, schema: dict, data_domains) -> list:
+    """``operations`` with each point value the target column does not hold,
+    but a linked column spells, rewritten to the target's own spelling.
+
+    Done before validation and kept in the emitted filter, so the filter the
+    client applies holds values that match rows. A value no link knows is left
+    for validation to report.
+    """
+    if not isinstance(operations, list) or not schema.get("links"):
+        return operations
+    values = _value_lists(data_domains)
+    out = []
+    for op in operations:
+        if (
+            not isinstance(op, dict)
+            or op.get("op") not in ("add", "modify")
+            or op.get("filterType") != "point"
+        ):
+            out.append(op)
+            continue
+        entity, field = op.get("entity"), op.get("field")
+        known = values.get((entity, field))
+        picked = []
+        for value in op.get("pointValues") or []:
+            spellings = (
+                [s for s in _linked_spellings(schema, entity, field, value) if s in known]
+                if known and value not in known
+                else []
+            )
+            picked += spellings or [value]
+        out.append({**op, "pointValues": list(dict.fromkeys(picked))})
+    return out
+
+
 def _related(schema: dict, a: str, b: str) -> bool:
     """A direct foreign key between ``a`` and ``b``, either way round."""
     return any(
@@ -347,11 +419,12 @@ def _validate_condition(
                     f"'{lowered[value.lower()]}' is — copy it exactly, including case."
                 )
             else:
-                sample = ", ".join(repr(v) for v in known[:8])
-                more = "" if len(known) <= 8 else f", … ({len(known)} in all)"
+                # Every value: this step has no tool to look up the rest, and the
+                # list is already bounded by what the client sent in full.
+                listed = ", ".join(repr(v) for v in known)
                 errors.append(
                     f"Value '{value}' is not in '{entity}.{field}', so the filter "
-                    f"would match no rows. Values there: {sample}{more}."
+                    f"would match no rows. Values there ({len(known)}): {listed}."
                 )
     else:
         errors.append("filterType must be 'point' or 'interval'.")
@@ -386,8 +459,8 @@ def validate_operations(
     """
     if not isinstance(operations, list) or not operations:
         return ["Give at least one operation."]
-    origins = {f["id"]: f["origin"] for f in current}
-    editable_ids = sorted(i for i, o in origins.items() if o in EDITABLE_ORIGINS)
+    by_id = {f["id"]: f for f in current}
+    editable_ids = sorted(i for i, f in by_id.items() if not _read_only(f))
     values = _value_lists(data_domains)
     touched: set[str] = set()
     errors: list[str] = []
@@ -399,14 +472,14 @@ def validate_operations(
         problems: list[str] = []
         if kind in ("modify", "remove"):
             target = op.get("id")
-            if target not in origins:
+            if target not in by_id:
                 known = ", ".join(editable_ids) or "none"
                 problems.append(
                     f"No filter has id '{target}'. Editable filters: {known}."
                 )
-            elif origins[target] not in EDITABLE_ORIGINS:
+            elif _read_only(by_id[target]):
                 problems.append(
-                    f"Filter '{target}' is read-only ({_ORIGIN_LABELS[origins[target]]}). "
+                    f"Filter '{target}' is read-only ({_origin_label(by_id[target])}). "
                     f"Add a new filter instead."
                 )
             elif target in touched:

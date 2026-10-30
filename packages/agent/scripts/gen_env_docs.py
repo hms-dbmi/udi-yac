@@ -6,7 +6,7 @@ and optional example for every variable, so this renders both places that used
 to be hand-maintained (and had already drifted apart):
 
   * `packages/agent/.env.template`  — the whole file
-  * `packages/agent/README.md`      — the table between the generated markers
+  * `packages/agent/docs/server.md` — the table between the generated markers
 
 Usage::
 
@@ -27,7 +27,7 @@ sys.path.insert(0, str(_AGENT_ROOT / "src"))
 from udiagent.server.config import ServerConfig  # noqa: E402
 
 TEMPLATE_PATH = _AGENT_ROOT / ".env.template"
-README_PATH = _AGENT_ROOT / "README.md"
+SERVER_DOC_PATH = _AGENT_ROOT / "docs" / "server.md"
 
 BEGIN = "<!-- BEGIN generated: env vars (scripts/gen_env_docs.py) -->"
 END = "<!-- END generated: env vars -->"
@@ -60,7 +60,7 @@ def _template_value(field):
     return str(default)
 
 
-def _readme_default(field):
+def _table_default(field):
     default = field.default
     if default is None or default == "":
         return "—"
@@ -119,13 +119,13 @@ def _markdown_table(header: list[str], rows: list[list[str]]) -> str:
     )
 
 
-def render_readme_table() -> str:
+def render_server_doc_table() -> str:
     return _markdown_table(
         ["Variable", "Default", "Description"],
         [
             [
                 f"`{name.upper()}`",
-                _readme_default(field),
+                _table_default(field),
                 " ".join(field.description.split()),
             ]
             for name, field in ServerConfig.model_fields.items()
@@ -133,7 +133,7 @@ def render_readme_table() -> str:
     )
 
 
-def splice_readme(text: str, table: str) -> str:
+def splice_server_doc(text: str, table: str) -> str:
     start, end = text.index(BEGIN), text.index(END)
     return text[: start + len(BEGIN)] + f"\n\n{table}\n\n" + text[end:]
 
@@ -149,8 +149,8 @@ def main() -> int:
 
     wanted = {
         TEMPLATE_PATH: render_template(),
-        README_PATH: splice_readme(
-            README_PATH.read_text(), render_readme_table()
+        SERVER_DOC_PATH: splice_server_doc(
+            SERVER_DOC_PATH.read_text(), render_server_doc_table()
         ),
     }
 

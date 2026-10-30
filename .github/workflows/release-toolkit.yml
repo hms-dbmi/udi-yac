@@ -6,7 +6,8 @@ name: Release udi-toolkit
 # what publishes.
 #
 # To release:
-#   1. Bump "version" in packages/grammar/package.json in a PR; merge it.
+#   1. Bump "version" in packages/grammar/package.json in a PR into dev; merge
+#      it, then promote dev to main.
 #   2. git fetch origin main
 #      git tag udi-toolkit-v<version> origin/main && git push origin udi-toolkit-v<version>
 #
@@ -21,12 +22,13 @@ on:
     tags:
       - "udi-toolkit-v*"
 
+# The build job installs and runs the dependency tree, so it holds a read-only
+# token. Only the publish job, which runs none of it, can publish or release.
 permissions:
-  contents: write # Required to create the GitHub Release
-  id-token: write # Required for npm trusted publishing (OIDC)
+  contents: read
 
 jobs:
-  release:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -65,10 +67,44 @@ jobs:
           node test/smoke-react.mjs
           node test/smoke-exports.mjs
 
+      # Packed after the build above, so prepublishOnly's rebuild is not needed.
+      - name: Pack
+        run: pnpm --filter udi-toolkit pack --pack-destination "$RUNNER_TEMP/package"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: package
+          path: ${{ runner.temp }}/package/*.tgz
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Required to create the GitHub Release
+      id-token: write # Required for npm trusted publishing (OIDC)
+    steps:
+      # For the pnpm version pin and the tag gh verifies; nothing here runs it.
+      - uses: actions/checkout@v7
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: package
+          path: package
+
       # --no-git-checks: the tag is checked out in detached HEAD, which pnpm's
       # default branch/cleanliness checks reject.
       - name: Publish to npm
-        run: pnpm --filter udi-toolkit publish --access public --no-git-checks
+        run: pnpm publish package/*.tgz --access public --no-git-checks
 
       - name: Create GitHub Release
         env:

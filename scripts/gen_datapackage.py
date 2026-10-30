@@ -207,6 +207,10 @@ def _annotate_cube(res: dict, measure: str) -> None:
                 f"Cube dimension: {field['name']}. Null when the row aggregates "
                 "over this dimension."
             )
+    # A cube's dimensions are null in every marginal that excludes them, so
+    # the inferred primary key (a column unique across all rows) is
+    # meaningless here — and a foreign key to it would be worse.
+    res["schema"].pop("primaryKey", None)
 
 
 def _load_descriptions(path: Path) -> dict[tuple[str, str], dict[str, str]]:

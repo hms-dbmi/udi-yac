@@ -7,17 +7,27 @@ Output shapes match the existing client-computed contract exactly
 dataDomains list), so the orchestrator and completion request path are
 unchanged — remote-mode clients just fetch this from GET /v1/yac/metadata.
 
-Cost model: per table — DESCRIBE, COUNT(*), one single-pass stats query,
-plus one DISTINCT query per low-cardinality categorical column. Small tables
-(<= APPROX_THRESHOLD_ROWS) use exact COUNT(DISTINCT); large ones use
-APPROX_COUNT_DISTINCT (DuckDB and StarRocks both have it) with an exact
-follow-up only for near-unique columns, so huge tables stay cheap.
+Cost model: per table — DESCRIBE, COUNT(*), one single-pass stats query, and
+one GROUPING SETS query for the values of every low-cardinality categorical
+column at once. Small tables (<= APPROX_THRESHOLD_ROWS) use exact
+COUNT(DISTINCT); large ones use APPROX_COUNT_DISTINCT (DuckDB and StarRocks
+both have it) with an exact follow-up only for near-unique columns, so huge
+tables stay cheap. The query count matters more than what each reads: on
+secured StarRocks views every query pays ~60 ms of planning and policy checks,
+so a value query per column made a 12-table package take ~12 s.
 """
 
 from __future__ import annotations
 
+import contextvars
+import logging
 import time
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any
+
+from .connectors import _POOL_SIZE
+
+logger = logging.getLogger(__name__)
 
 # Categorical domains larger than this are omitted from an introspected
 # package. At least vis_generate.MAX_DRAWN_CATEGORIES: a chart can draw that
@@ -78,6 +88,38 @@ def _approx_count_distinct(dialect, col: str) -> str:
     return f"APPROX_COUNT_DISTINCT({col})"
 
 
+def _distinct_values(connector, table: str, names: list[str]) -> dict[str, list]:
+    """Every distinct non-null value of each column, sorted, from one query.
+
+    GROUPING SETS groups by each column on its own in a single scan, and
+    GROUPING(col) is 0 on exactly the rows grouped by that column — which tells
+    a column's own NULL apart from the NULLs the other sets fill in. Values keep
+    their native types, which a UNION of the columns would not.
+    """
+    if not names:
+        return {}
+    q = connector.dialect.quote
+    cols = [q(name) for name in names]
+    select = ", ".join(
+        [f"{c} AS _v{i}" for i, c in enumerate(cols)]
+        + [f"GROUPING({c}) AS _g{i}" for i, c in enumerate(cols)]
+    )
+    sets = ", ".join(f"({c})" for c in cols)
+    rows = connector.execute(
+        f"SELECT {select} FROM {q(table)} GROUP BY GROUPING SETS ({sets})"
+    )
+    values: dict[str, list] = {name: [] for name in names}
+    for row in rows:
+        for i, name in enumerate(names):
+            if row[f"_g{i}"] == 0:
+                if row[f"_v{i}"] is not None:
+                    values[name].append(row[f"_v{i}"])
+                break
+    for found in values.values():
+        found.sort()  # what ORDER BY gave: dates come back as ISO strings
+    return values
+
+
 def introspect_table(
     connector, table: str, entity: str, distinct_cap: int = DEFAULT_DISTINCT_CAP
 ) -> tuple[dict, list[dict]]:
@@ -104,9 +146,8 @@ def introspect_table(
             selects.append(f"MAX({q(name)}) AS _mx{i}")
     stats = connector.execute(f"SELECT {', '.join(selects)} FROM {q(table)}")[0]
 
-    fields: list[dict] = []
-    domains: list[dict] = []
-    for i, (name, sql_type) in enumerate(columns):
+    cardinalities = []
+    for i, (name, _sql_type) in enumerate(columns):
         cardinality = int(stats[f"_c{i}"] or 0)
         # The approximate sketch can undercount, which would misreport unique
         # keys. For near-unique columns, spend one exact query.
@@ -115,6 +156,22 @@ def introspect_table(
                 f"SELECT COUNT(DISTINCT {q(name)}) AS c FROM {q(table)}"
             )
             cardinality = int(exact[0]["c"])
+        cardinalities.append(cardinality)
+
+    # The values of every categorical small enough to list, in one query.
+    listed = _distinct_values(
+        connector,
+        table,
+        [
+            name
+            for (name, sql_type), cardinality in zip(columns, cardinalities)
+            if not _is_numeric(sql_type) and 0 < cardinality <= distinct_cap
+        ],
+    )
+
+    fields: list[dict] = []
+    domains: list[dict] = []
+    for i, ((name, sql_type), cardinality) in enumerate(zip(columns, cardinalities)):
         numeric = _is_numeric(sql_type)
         data_type = "quantitative" if numeric else "nominal"
         fields.append(
@@ -139,22 +196,18 @@ def introspect_table(
                         "domain": {"min": mn, "max": mx},
                     }
                 )
-        elif 0 < cardinality <= distinct_cap:
-            rows = connector.execute(
-                f"SELECT DISTINCT {q(name)} AS v FROM {q(table)} "
-                f"WHERE {q(name)} IS NOT NULL ORDER BY v LIMIT {distinct_cap + 1}"
+        elif name in listed and len(listed[name]) <= distinct_cap:
+            # An approximate cardinality can undercount: a column with more
+            # values than the cap still gets no domain.
+            domains.append(
+                {
+                    "entity": entity,
+                    "field": name,
+                    "type": "point",
+                    "fieldDescription": "",
+                    "domain": {"values": listed[name]},
+                }
             )
-            values = [r["v"] for r in rows]
-            if len(values) <= distinct_cap:
-                domains.append(
-                    {
-                        "entity": entity,
-                        "field": name,
-                        "type": "point",
-                        "fieldDescription": "",
-                        "domain": {"values": values},
-                    }
-                )
 
     resource = {
         "name": entity,
@@ -164,6 +217,19 @@ def introspect_table(
         "udi:column_count": len(fields),
     }
     return resource, domains
+
+
+# Configured-schema keys that live on the resource rather than in its schema.
+_RESOURCE_LEVEL_EXTRAS = (
+    "udi:cube",
+    "udi:dimensions",
+    "udi:measures",
+    "udi:measure_aggregations",
+    "udi:linked_dimensions",
+)
+
+# Descriptor keys introspection owns; configured package extras can't replace them.
+_RESERVED_PACKAGE_KEYS = ("name", "udi:name", "udi:path", "resources")
 
 
 def introspect(
@@ -176,40 +242,73 @@ def introspect(
     resources = []
     all_domains: list[dict] = []
     entity_schemas = getattr(engine, "entity_schemas", None) or {}
-    for entity, table in engine.table_map.items():
-        resource, domains = introspect_table(
-            engine.connector, table, entity, distinct_cap
-        )
+    # Tables in parallel: each query's cost on a secured view is mostly fixed
+    # planning time, not work. A copy of this thread's context per table, so the
+    # request's database token (use_db_token) reaches the worker threads.
+    entities = list(engine.table_map.items())
+    with ThreadPoolExecutor(max_workers=max(1, min(_POOL_SIZE, len(entities)))) as pool:
+        futures = [
+            pool.submit(
+                contextvars.copy_context().run,
+                introspect_table,
+                engine.connector,
+                table,
+                entity,
+                distinct_cap,
+            )
+            for entity, table in entities
+        ]
+        tables = [future.result() for future in futures]
+    for (entity, _table), (resource, domains) in zip(entities, tables):
         # Relationship metadata (primaryKey/foreignKeys) isn't introspectable
         # from the database — merge it from the engine's configured schemas so
         # the chat's cross-entity filtering can resolve entity relationships.
-        # Nor are descriptions or date formats: `description` is the table's,
-        # and `fields` overlays per-column descriptions and `udi:time_format`
-        # by name rather than replacing the introspected fields.
+        # Nor are descriptions, titles or date formats: `description` and
+        # `title` are the table's, and `fields` overlays per-column
+        # descriptions, titles and `udi:time_format` by name rather than
+        # replacing the introspected fields. Nor is `udi:hide_count`, a display
+        # choice that sits on the resource.
         extras = dict(entity_schemas.get(entity) or {})
         if description := extras.pop("description", None):
             resource["description"] = description
+        if title := extras.pop("title", None):
+            resource["title"] = title
+        if extras.pop("udi:hide_count", False):
+            resource["udi:hide_count"] = True
         overlay = {f["name"]: f for f in extras.pop("fields", [])}
         for field in resource["schema"]["fields"]:
             extra = overlay.get(field["name"], {})
             field["description"] = extra.get("description") or ""
+            if title := extra.get("title"):
+                field["title"] = title
             if time_format := extra.get("udi:time_format"):
                 field["udi:time_format"] = time_format
         for domain in domains:
             extra = overlay.get(domain["field"], {})
             domain["fieldDescription"] = extra.get("description") or ""
+        # Cube roles are resource-level keys in a datapackage descriptor,
+        # not schema-level ones — the chat reads them off the resource.
+        # Everything else (primaryKey/foreignKeys) belongs in the schema.
+        for key in _RESOURCE_LEVEL_EXTRAS:
+            if key in extras:
+                resource[key] = extras.pop(key)
         resource["schema"].update(extras)
         resources.append(resource)
         all_domains.extend(domains)
-    return {
-        "dataSchema": {
-            "name": package_name,
-            "udi:name": package_name,
-            "udi:path": "",
-            "resources": resources,
-        },
-        "dataDomains": all_domains,
+    data_schema = {
+        "name": package_name,
+        "udi:name": package_name,
+        "udi:path": "",
+        "resources": resources,
     }
+    # Package-level metadata a database can't hold (`udi:prefer`), from the
+    # engine's configuration, as the per-entity extras above are.
+    for key, value in (getattr(engine, "package_extras", None) or {}).items():
+        if key in _RESERVED_PACKAGE_KEYS:
+            logger.warning("package extra %r ignored: introspection sets it", key)
+            continue
+        data_schema[key] = value
+    return {"dataSchema": data_schema, "dataDomains": all_domains}
 
 
 class MetadataCache:

@@ -20,12 +20,14 @@ interface SessionTargetStores {
  *
  * `sourceFields` comes from the loaded data package and is what
  * `importDashboard` needs to re-inject interactivity into each spec, so this
- * must not run before the package is ready.
+ * must not run before the package is ready. `cubeMeasureFields` (also from
+ * the package) keeps cube measures out of the re-injected interactivity.
  */
 export function applySessionExport(
   session: SessionExport,
   stores: SessionTargetStores,
   sourceFields: Record<string, string[]> | null,
+  cubeMeasureFields?: Record<string, string[]> | null,
 ): void {
   // Without a reset, imported filters would inherit the old session's values,
   // removed flags and applied-call record, and the import's own calls would be
@@ -54,5 +56,6 @@ export function applySessionExport(
   dashboard.importDashboard(
     { visualizations: session.visualizations, layout: session.layout },
     sourceFields,
+    cubeMeasureFields,
   );
 }

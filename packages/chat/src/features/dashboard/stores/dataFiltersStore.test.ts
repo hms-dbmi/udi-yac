@@ -463,6 +463,80 @@ describe('dataFiltersStore', () => {
       type: 'point',
       selection: { sex: values },
     });
+
+    it('ignores a scope on the filtered table itself, which would reach no table', () => {
+      const store = createDataFiltersStore();
+      store
+        .getState()
+        .applyExternalFilters([
+          { ...host('a', ['male']), scope: { entity: 'donors', match: 'any' } },
+        ]);
+      expect(store.getState().filterScopes).toEqual({});
+    });
+  });
+
+  describe('host filters — shared mode', () => {
+    const host = (id: string, values: string[]) => ({
+      id,
+      dataSourceKey: 'donors',
+      type: 'point' as const,
+      selection: { sex: values },
+    });
+    const sex = (store: ReturnType<typeof createDataFiltersStore>) =>
+      store.getState().dataSelections['col:donors.sex']?.selection;
+
+    it('makes a one-field host filter its column’s filter, origin host', () => {
+      const store = createDataFiltersStore();
+      store.getState().applyExternalFilters([host('a', ['male'])], 'shared');
+      expect(Object.keys(store.getState().dataSelections)).toEqual(['col:donors.sex']);
+      expect(sex(store)).toEqual({ sex: ['male'] });
+      expect(store.getState().filterOrigins['col:donors.sex']).toBe('host');
+    });
+
+    it('lets a chart click take the column over, last edit winning', () => {
+      const store = createDataFiltersStore();
+      store.getState().applyExternalFilters([host('a', ['male'])], 'shared');
+      store.getState().applyChartSelection('donors', ['sex'], pointSel({ sex: ['female'] }), 0);
+      expect(sex(store)).toEqual({ sex: ['female'] });
+      expect(store.getState().filterOrigins['col:donors.sex']).toBe('chart');
+
+      // The host follows the click: its new value is what the column holds,
+      // so the chart stays the column's last editor.
+      store.getState().applyExternalFilters([host('a', ['female'])], 'shared');
+      expect(store.getState().filterOrigins['col:donors.sex']).toBe('chart');
+
+      // Dropping the entry leaves a column the host no longer owns.
+      store.getState().applyExternalFilters([], 'shared');
+      expect(sex(store)).toEqual({ sex: ['female'] });
+    });
+
+    it('removes the column filter when the host drops an entry it still owns', () => {
+      const store = createDataFiltersStore();
+      store.getState().applyExternalFilters([host('a', ['male'])], 'shared');
+      store.getState().applyExternalFilters([], 'shared');
+      expect(store.getState().dataSelections).toEqual({});
+      expect(store.getState().filterOrigins).toEqual({});
+    });
+
+    it('keeps a filter on several fields separate', () => {
+      const store = createDataFiltersStore();
+      store
+        .getState()
+        .applyExternalFilters(
+          [{ ...host('a', ['male']), selection: { sex: ['male'], race: ['x'] } }],
+          'shared',
+        );
+      expect(Object.keys(store.getState().dataSelections)).toEqual(['host-filter-a']);
+    });
+
+    it('survives a reset and stays out of a session export', () => {
+      const store = createDataFiltersStore();
+      store.getState().applyExternalFilters([host('a', ['male'])], 'shared');
+      store.getState().resetFilters();
+      expect(sex(store)).toEqual({ sex: ['male'] });
+      expect(store.getState().filterOrigins['col:donors.sex']).toBe('host');
+      expect(store.getState().exportFilterState().selections).toEqual({});
+    });
   });
 
   describe('getValidDataSelections', () => {

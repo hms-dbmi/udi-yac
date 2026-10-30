@@ -115,33 +115,39 @@ Embedding in another app? Two things worth knowing up front:
 
 ### Config Props
 
-| Prop                  | Type                   | Description                                                                                                                                                                                                                                      |
-| --------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `apiBaseUrl`          | `string`               | Base URL for the UDIAgent API. Absolute (`https://agent.example.org`) or a same-origin path (`/api/yac`).                                                                                                                                        |
-| `remotePackage`       | `string?`              | Server-side data package name. Schema/domains come from `GET /v1/yac/metadata` and queries from `POST /v1/yac/query`; no CSVs load in the browser and cross-filtering becomes commit-on-mouse-up. Takes precedence over both data-package props. |
-| `dataPackagePath`     | `string?`              | URL/path to `datapackage_udi.json`. Ignored when `dataPackage` is provided.                                                                                                                                                                      |
-| `dataPackage`         | `DataPackage?`         | Provide a data package object directly instead of fetching from a URL. Takes precedence over `dataPackagePath`.                                                                                                                                  |
-| `dataFieldDomains`    | `DataFieldDomain[]?`   | Pre-computed field domains. Skips CSV loading for domain computation when provided with `dataPackage`.                                                                                                                                           |
-| `fetchOptions`        | `RequestInit?`         | Custom fetch options (headers, credentials, etc.) forwarded to all data-loading fetch calls.                                                                                                                                                     |
-| `authToken`           | `string?`              | JWT bearer token for API auth. Omit it when a backend proxy attaches the header instead; no `Authorization` header is then sent.                                                                                                                 |
-| `requireApiKey`       | `boolean?`             | Show API key input before chatting                                                                                                                                                                                                               |
-| `model`               | `string?`              | LLM model name override                                                                                                                                                                                                                          |
-| `downloadActions`     | `DownloadAction[]?`    | Extra items appended to the Download Data dropdown. See [Custom download actions](#custom-download-actions).                                                                                                                                     |
-| `downloadButtonLabel` | `string?`              | Override the Download dropdown's trigger label. Defaults to `Download Data`.                                                                                                                                                                     |
-| `entityIcons`         | `EntityIconMap?`       | Icon overrides for entity count chips. See [Custom entity icons](#custom-entity-icons).                                                                                                                                                          |
-| `mascot`              | `ReactNode \| null?`   | Replace or hide the welcome mascot. See [Custom mascot](#custom-mascot).                                                                                                                                                                         |
-| `splashMessages`      | `readonly string[]?`   | Override or hide the randomised prompt above the mascot. See [Custom splash messages](#custom-splash-messages).                                                                                                                                  |
-| `onEvent`             | `TrackerFn?`           | Analytics callback invoked on key user actions. See [Analytics events](#analytics-events).                                                                                                                                                       |
-| `palette`             | `UDIPalette?`          | Default color palette for every chart and table. See [Custom color palette](#custom-color-palette).                                                                                                                                              |
-| `fontScale`           | `number?`              | Text size multiplier (1–2) for every chart, table and label. Overrides and hides the viewer's own Text size setting; omit it to leave text size to the viewer.                                                                                   |
-| `readOnly`            | `boolean \| 'locked'?` | Start with the chat collapsed to a rail and every editing control hidden. `'locked'` removes the way back out. See [Read-only dashboard embed](#read-only-dashboard-embed).                                                                      |
-| `initialSession`      | `unknown?`             | A session export to seed the dashboard and conversation with. See [Read-only dashboard embed](#read-only-dashboard-embed).                                                                                                                       |
-| `savedSessionsKey`    | `string?`              | Adds **Saved in browser…** to the dashboard's Session menu: save the current session by name, then load or delete it later. Stored in `localStorage` under this key, so use one key per data package.                                            |
-| `filters`             | `UDIFilter[]?`         | Filters set by the embedding page. See [Filters from the host page](#filters-from-the-host-page).                                                                                                                                                |
-| `onFiltersChange`     | `(filters) => void`    | Called with every filter in place whenever one changes. See [Filters from the host page](#filters-from-the-host-page).                                                                                                                           |
-| `issueReporting`      | `boolean?`             | Let users report a problem to the development team: a Report an issue item in the Session menu, a button on the crash screen, and an offer from the agent. Needs LangFuse on the agent, which records reports via `POST /v1/yac/issue_report`.   |
-| `className`           | `string?`              | CSS class for the root element                                                                                                                                                                                                                   |
-| `style`               | `CSSProperties?`       | Inline styles for the root element                                                                                                                                                                                                               |
+| Prop                    | Type                      | Description                                                                                                                                                                                                                                      |
+| ----------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `apiBaseUrl`            | `string`                  | Base URL for the UDIAgent API. Absolute (`https://agent.example.org`) or a same-origin path (`/api/yac`).                                                                                                                                        |
+| `remotePackage`         | `string?`                 | Server-side data package name. Schema/domains come from `GET /v1/yac/metadata` and queries from `POST /v1/yac/query`; no CSVs load in the browser and cross-filtering becomes commit-on-mouse-up. Takes precedence over both data-package props. |
+| `dataPackagePath`       | `string?`                 | URL/path to `datapackage_udi.json`. Ignored when `dataPackage` is provided.                                                                                                                                                                      |
+| `dataPackage`           | `DataPackage?`            | Provide a data package object directly instead of fetching from a URL. Takes precedence over `dataPackagePath`.                                                                                                                                  |
+| `dataFieldDomains`      | `DataFieldDomain[]?`      | Pre-computed field domains. Skips CSV loading for domain computation when provided with `dataPackage`.                                                                                                                                           |
+| `fetchOptions`          | `RequestInit?`            | Custom fetch options (headers, credentials, etc.) forwarded to all data-loading fetch calls.                                                                                                                                                     |
+| `authToken`             | `string?`                 | JWT bearer token for API auth. Omit it when a backend proxy attaches the header instead; no `Authorization` header is then sent.                                                                                                                 |
+| `requireApiKey`         | `boolean?`                | Show API key input before chatting                                                                                                                                                                                                               |
+| `model`                 | `string?`                 | LLM model name override                                                                                                                                                                                                                          |
+| `downloadActions`       | `DownloadAction[]?`       | Extra items appended to the Download Data dropdown. See [Custom download actions](#custom-download-actions).                                                                                                                                     |
+| `downloadButtonLabel`   | `string?`                 | Override the Download dropdown's trigger label. Defaults to `Download Data`.                                                                                                                                                                     |
+| `entityIcons`           | `EntityIconMap?`          | Icon overrides for entity count chips. See [Custom entity icons](#custom-entity-icons).                                                                                                                                                          |
+| `mascot`                | `ReactNode \| null?`      | Replace or hide the welcome mascot. See [Custom mascot](#custom-mascot).                                                                                                                                                                         |
+| `splashMessages`        | `readonly string[]?`      | Override or hide the randomised prompt above the mascot. See [Custom splash messages](#custom-splash-messages).                                                                                                                                  |
+| `onEvent`               | `TrackerFn?`              | Analytics callback invoked on key user actions. See [Analytics events](#analytics-events).                                                                                                                                                       |
+| `palette`               | `UDIPalette?`             | Default color palette for every chart and table. See [Custom color palette](#custom-color-palette).                                                                                                                                              |
+| `recordUrl`             | `RecordUrlFn?`            | Link individual records (table rows, scatter points) to their own pages. See [Record links](#record-links).                                                                                                                                      |
+| `fontScale`             | `number?`                 | Text size multiplier (1–2) for every chart, table and label. Overrides and hides the viewer's own Text size setting; omit it to leave text size to the viewer.                                                                                   |
+| `readOnly`              | `boolean \| 'locked'?`    | Hide the chat pane and every editing control. `'locked'` removes the user's way back out. Followed on change. See [Read-only dashboard embed](#read-only-dashboard-embed).                                                                       |
+| `onReadOnlyChange`      | `(readOnly) => void`      | Called when the user leaves read-only via Explore Data. See [Switching modes from the host](#switching-modes-from-the-host).                                                                                                                     |
+| `refitOnReadOnlyChange` | `boolean?`                | Re-derive the dashboard's column count for its new width when read-only changes. Defaults to `true`. See [Switching modes from the host](#switching-modes-from-the-host).                                                                        |
+| `initialSession`        | `unknown?`                | A session export to seed the dashboard and conversation with. See [Read-only dashboard embed](#read-only-dashboard-embed).                                                                                                                       |
+| `savedSessionsKey`      | `string?`                 | Adds **Saved in browser…** to the dashboard's Session menu: save the current session by name, then load or delete it later. Stored in `localStorage` under this key, so use one key per data package.                                            |
+| `filters`               | `UDIFilter[]?`            | Filters set by the embedding page. See [Filters from the host page](#filters-from-the-host-page).                                                                                                                                                |
+| `onFiltersChange`       | `(filters) => void`       | Called with every filter in place whenever one changes. See [Filters from the host page](#filters-from-the-host-page).                                                                                                                           |
+| `filterMode`            | `'separate' \| 'shared'?` | `'shared'` makes a host filter on one field that column's filter, which chat and chart clicks edit too. See [Filters from the host page](#filters-from-the-host-page).                                                                           |
+| `cohort`                | `{ entity, fields? }?`    | The table whose filtered rows to report, and their key fields (default: its `primaryKey`). See [Reporting the filtered cohort](#reporting-the-filtered-cohort).                                                                                  |
+| `onCohortChange`        | `(cohort) => void`        | Called with the key fields of every `cohort.entity` row all filters leave, or `null` while none reaches it. See [Reporting the filtered cohort](#reporting-the-filtered-cohort).                                                                 |
+| `issueReporting`        | `boolean?`                | Let users report a problem to the development team: a Report an issue item in the Session menu, a button on the crash screen, and an offer from the agent. Needs LangFuse on the agent, which records reports via `POST /v1/yac/issue_report`.   |
+| `className`             | `string?`                 | CSS class for the root element                                                                                                                                                                                                                   |
+| `style`                 | `CSSProperties?`          | Inline styles for the root element                                                                                                                                                                                                               |
 
 ### Read-only dashboard embed
 
@@ -162,11 +168,45 @@ import 'udi-yac/style.css';
 </div>;
 ```
 
-**Read-only is the starting mode, not a lock.** A floating "Explore Data" button at the dashboard's
+**Read-only is a mode, not a lock.** A floating "Explore Data" button at the dashboard's
 bottom right leaves read-only, at which point the full chat and every editing control appear. The
 chat opens fresh: the conversation `initialSession` carried is hidden, though the model still has
 it as context for the charts on the dashboard. If your users must not be able to chat at all,
 pass `readOnly="locked"` to `UDIChat` instead: the button is dropped, leaving no way out.
+
+#### Switching modes from the host
+
+`readOnly` is followed on change, so a host can show the dashboard inline and read-only, then give
+it a bigger stage — a modal, say — with the chat, and back again. Charts, filters, brushes, the
+conversation and a draft in the chat input all carry over, as long as it stays the **same mounted
+`UDIChat`**: restyle its container in place rather than rendering it somewhere else. A
+portal-based dialog remounts it and starts over; tabs beside it should hide it with CSS, not
+unmount it.
+
+```tsx
+const [expanded, setExpanded] = useState(false);
+
+<div className={expanded ? 'fixed inset-6 z-50' : 'h-[800px]'}>
+  <UDIChat
+    {...config}
+    initialSession={savedSession}
+    readOnly={!expanded}
+    onReadOnlyChange={(readOnly) => setExpanded(!readOnly)}
+    refitOnReadOnlyChange={false}
+  />
+</div>;
+```
+
+`onReadOnlyChange` fires when the user presses Explore Data, not when the prop changes. Passing it
+makes the mode controlled: the button no longer leaves read-only by itself, your state setter
+does, by changing `readOnly` in the same update that restyles the container — so the chat appears
+in the new space with no in-between frame, and you can animate the move (a view transition, say)
+from the read-only view still on screen. The seeded transcript is hidden the first time the chat
+opens only; later, the conversation is the user's.
+
+By default the dashboard re-derives its column count for its new width on each switch. Pass
+`refitOnReadOnlyChange={false}` to keep the count — the one `initialSession` asked for, say — and
+let the cards stretch or narrow instead.
 
 | Removed in read-only                                                       | Kept in read-only                       |
 | -------------------------------------------------------------------------- | --------------------------------------- |
@@ -230,6 +270,38 @@ const [filters, setFilters] = useState<UDIFilter[]>([
 
 A `point` filter's `selection` maps each field to the values to keep; an `interval` filter's maps
 each field to `[min, max]`.
+
+**Sharing columns with the chat.** By default a host filter is its own chip, read-only to the agent,
+and applies on top of any chat or chart filter on the same column. Pass `filterMode="shared"` to
+keep one filter per column instead: a host filter on a single field becomes that column's filter,
+the same one the agent and chart clicks write. Whoever edits it last sets it, and
+`onFiltersChange` reports it as `col:<entity>.<field>` with that editor's `origin`. A host can
+then mirror chart clicks and chat requests into its own controls, matching on `dataSourceKey` and
+field. Dropping a host entry removes the filter only while the host was its last editor. Filters
+on several fields stay separate. Don't scope a filter to its own table: it is treated as
+unscoped, since a plain filter already reaches every related table through its foreign keys.
+
+### Reporting the filtered cohort
+
+A host can follow which subjects the filters leave, to narrow its own lists to the same people.
+Name the table and, if it has no `primaryKey`, the fields that identify its rows:
+
+```tsx
+<UDIChat
+  {...config}
+  cohort={{ entity: 'patient', fields: ['patient_id'] }}
+  onCohortChange={(cohort) => setPatientIds(cohort?.keys.map((k) => k.patient_id) ?? null)}
+/>
+```
+
+- Every filter counts: chat, chart and host, on any table that reaches `entity` (directly, or
+  through a subject scope), exactly as a chart of `entity` would be filtered.
+- `onCohortChange` gets `{ entity, keys }`, one object of key fields per row, once the filters have
+  settled (300 ms after the last change, so a brush drag runs one query). It gets `null` while no
+  filter reaches `entity`: everyone is in, and no list of every subject is sent.
+- In server-side data mode the keys come back grouped, so the list is complete: it is not cut at
+  the package's row cap.
+- A filter on another table reaches `entity` through a single key column, as charts do.
 
 ### Data Source Configuration
 
@@ -469,6 +541,28 @@ Supply any of these to take over a channel; each one you set wins, and the rest 
 | `grid`       | Gridlines, the plot frame, and table rules.                   |
 | `text`       | Tick labels, axis and legend titles, table text.              |
 | `mutedText`  | Empty cells and truncation notices.                           |
+
+### Record links
+
+Pass `recordUrl` to link individual records out to their own pages: a dataset, a donor, a patient. It is called with a row and its entity (the spec's first source) and returns that record's URL, or nothing for a row with no page.
+
+```tsx
+<UDIChat
+  apiBaseUrl="http://localhost:8007"
+  recordUrl={(record, entity) =>
+    typeof record.uuid === 'string'
+      ? `https://portal.hubmapconsortium.org/browse/${entity.replace(/s$/, '')}/${record.uuid}`
+      : undefined
+  }
+/>
+```
+
+- **Tables** gain a leading ↗ column that opens the row's page in a new tab. A table of aggregates (counts by sex, say) has no record ids, so the function returns nothing and the column is left out.
+- **Point marks** open their record on a plain click; the cursor turns to a pointer over them. A Shift, Ctrl or ⌘ click still picks, and clicking a point keeps an existing brush. Bars, lines and areas never link.
+- The function sees the whole row, not just the columns on screen, so it can key on a column the table doesn't show.
+- Only `http(s)` URLs are followed. A relative URL resolves against the host page.
+
+Independently of `recordUrl`, a table cell whose value is an `http(s)` URL — a protocol DOI, say — is always shown as a link.
 
 ### Custom mascot
 

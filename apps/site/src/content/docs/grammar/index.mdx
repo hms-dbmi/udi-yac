@@ -1,0 +1,60 @@
+---
+title: The UDI grammar
+description: The visualization grammar behind YAC's charts, with examples, a tutorial and a live editor.
+sidebar:
+  label: Overview
+  order: 1
+---
+
+import { LinkCard, CardGrid } from '@astrojs/starlight/components';
+
+The **Universal Discovery Interface** is a research project that aims to improve biomedical data portal interfaces. An essential component is its **visualization grammar**, a JSON format that can describe many different visualizations. Every chart in YAC is a grammar spec, rendered by the [`udi-toolkit`](/udi-yac/docs/integrate/toolkit/) component.
+
+The grammar uses principles from [The Grammar of Graphics](https://link.springer.com/book/10.1007/0-387-28695-0), which also underlies libraries like [Vega-Lite](https://vega.github.io/vega-lite/) and [ggplot2](https://ggplot2.tidyverse.org/). A spec has three sections:
+
+- **`source`** defines the tabular data sources.
+- **`transformation`** (optional) reshapes the source data: grouping, aggregating, joining, deriving and filtering.
+- **`representation`** maps fields of the transformed data to visual encodings, as chart marks or table rows.
+
+![A grammar spec's source, transformation and representation sections, and the chart they produce.](../../../assets/grammar-overview.png)
+
+<CardGrid>
+  <LinkCard
+    title="Tutorial"
+    description="Build a heatmap of HuBMAP datasets step by step."
+    href="/udi-yac/grammar/tutorial/"
+  />
+  <LinkCard
+    title="Examples"
+    description="Tables, bar charts, scatterplots, heatmaps and distributions."
+    href="/udi-yac/grammar/examples/"
+  />
+  <LinkCard
+    title="HuBMAP examples"
+    description="Charts of live metadata from the HuBMAP Data Portal."
+    href="/udi-yac/grammar/hubmap/"
+  />
+  <LinkCard
+    title="Editor"
+    description="Write a spec and see the chart as you type."
+    href="/udi-yac/grammar/editor/"
+  />
+</CardGrid>
+
+The full reference for every field is in the [grammar toolkit docs](/udi-yac/docs/integrate/toolkit/).
+
+<script is:inline>
+  {`
+  // The grammar demo used to be a separate app with hash routes at this URL.
+  // Send its links, including shared editor links, to the pages that replaced it.
+  const legacy = location.hash.match(/^#\\/(\\w+)(\\?.*)?$/);
+  const page = legacy && {
+    Editor: 'editor/',
+    Examples: 'examples/',
+    HuBMAPExamples: 'hubmap/',
+    HuBMAPDemo: 'hubmap/',
+    HuBMAPTutorial: 'tutorial/',
+  }[legacy[1]];
+  if (page) location.replace(page + (legacy[2] ?? ''));
+  `}
+</script>

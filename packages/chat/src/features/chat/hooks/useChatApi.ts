@@ -68,9 +68,18 @@ export function useChatApi(config: QueryConfig, options: UseChatApiOptions = {})
         }),
         dfState.filterScopes,
         messages,
+        dpState.dimensionLinks,
       );
       const hadUserKey = !!config.openAiKey;
       const startedAt = performance.now();
+      // A reset or an import while this is in flight starts another
+      // conversation: abort the request, and never add its reply to the new one.
+      const { conversationId } = conversationStore.getState();
+      const isStale = () => conversationStore.getState().conversationId !== conversationId;
+      const controller = new AbortController();
+      const unsubscribe = conversationStore.subscribe((state) => {
+        if (state.conversationId !== conversationId) controller.abort();
+      });
 
       setIsLoading(true);
       setError(null);
@@ -81,9 +90,11 @@ export function useChatApi(config: QueryConfig, options: UseChatApiOptions = {})
           messages,
           dpState.dataPackageString,
           dpState.dataDomainsString,
-          conversationStore.getState().conversationId,
+          conversationId,
           filters,
+          controller.signal,
         );
+        if (isStale()) return;
 
         conversationStore.getState().addUsage(usage);
         conversationStore.getState().addMessage({
@@ -134,6 +145,7 @@ export function useChatApi(config: QueryConfig, options: UseChatApiOptions = {})
           onNormalResponse?.();
         }
       } catch (e) {
+        if (isStale()) return;
         const message = e instanceof Error ? e.message : String(e);
         setError(message);
         trackEvent('request_failed', {
@@ -142,6 +154,7 @@ export function useChatApi(config: QueryConfig, options: UseChatApiOptions = {})
           hadUserKey,
         });
       } finally {
+        unsubscribe();
         setIsLoading(false);
       }
     },

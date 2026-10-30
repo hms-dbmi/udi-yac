@@ -1,13 +1,15 @@
 [project]
 name = "udiagent"
-version = "0.8.0"
+version = "0.12.1"
 description = "UDI Agent: LLM-powered data visualization orchestration library"
 readme = "README.md"
 requires-python = ">=3.12"
 license = {text = "MIT"}
 dependencies = [
-    "openai>=3.33.0",
+    "openai>=3.37.0",
     "jsonschema>=4.26.0",
+    # Request models (udiagent.models). openai already installs it.
+    "pydantic>=2",
     "requests>=2.32.5",
     "python-dotenv>=1.0.0",
 ]
@@ -23,7 +25,7 @@ bedrock = [
     "openai[bedrock]",
 ]
 server = [
-    "fastapi[standard]>=0.143.0",
+    "fastapi[standard]>=0.146.0",
     "python-jose[cryptography]>=3.5.0",
     "python-dotenv>=1.0.0",
     # Already pulled in by fastapi[standard]; declared because ServerConfig
@@ -63,3 +65,14 @@ packages = ["src/udiagent"]
 
 [tool.uv.sources]
 udi-grammar-py = { workspace = true }
+
+# The Python API reference on the docs site (apps/site/scripts/sync-docs.mjs
+# runs `uvx griffe2md` from this directory, once per public package).
+[tool.griffe2md]
+search_paths = ["src"]
+show_submodules = false
+show_signature_annotations = true
+show_if_no_docstring = false
+summary = { modules = false, attributes = false, classes = true, functions = true }
+# A tool-definition constant: its value is one very long line.
+filters = ["!^_", "!^ORCHESTRATOR_TOOLS$"]

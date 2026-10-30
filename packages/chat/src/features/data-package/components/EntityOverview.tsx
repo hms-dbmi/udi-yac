@@ -6,7 +6,6 @@ import {
   ArrowLeft,
   ArrowRight,
   ChevronRight,
-  Columns3,
   ExternalLink,
   Info,
   KeyRound,
@@ -28,6 +27,7 @@ import {
   useTracker,
 } from '@/app/UDIChatContext';
 import { cn } from '@/lib/utils';
+import { useToolkitSelections } from '@/features/dashboard';
 import type { DataFieldDomain } from '@/types/dataPackage';
 import { highlightMatch } from '@/utils/highlightMatch';
 import { joinDataPath } from '../utils/joinDataPath';
@@ -257,17 +257,16 @@ export function EntityOverview({ entity }: EntityOverviewProps) {
   const dataFieldDomains = useDataPackage((s) => s.dataFieldDomains);
   const sourceResolver = useDataPackage((s) => s.sourceResolver);
   const sourceFields = useDataPackage((s) => s.sourceFields);
-  const getKeyFields = useDataPackage((s) => s.getKeyFields);
   // Subscribed so the row table's named filters are rebuilt when the set of
   // filters changes (see the tableSpec memo).
   const dataSelections = useDataFilters((s) => s.dataSelections);
+  const toolkitSelections = useToolkitSelections();
   const filterScopes = useDataFilters((s) => s.filterScopes);
   const activeVisualizations = useDashboard((s) => s.activeVisualizations);
   const palette = usePalette();
   const trackEvent = useTracker();
 
   const [query, setQuery] = useState('');
-  const [showAllFields, setShowAllFields] = useState(false);
 
   // Opt-in, because mounting the table is by far the most expensive thing on
   // this panel: ag-grid builds a RowNode per source row (9530 for HuBMAP
@@ -306,14 +305,10 @@ export function EntityOverview({ entity }: EntityOverviewProps) {
     [dataPackage, entity],
   );
   const rowCount = resource?.['udi:row_count'] ?? 0;
-  // Two different notions, deliberately: the badge marks fields that really act
-  // as keys in a relationship, while the row table's column projection keeps the
-  // store's broader definition (which also counts `udi:unique` fields).
   const keyBadgeFields = useMemo(
     () => relationshipKeyFields(dataPackage, entity),
     [dataPackage, entity],
   );
-  const keyFields = useMemo(() => getKeyFields(entity), [getKeyFields, entity]);
 
   const domainsByField = useMemo(() => {
     const map = new Map<string, DataFieldDomain>();
@@ -377,36 +372,22 @@ export function EntityOverview({ entity }: EntityOverviewProps) {
   const totalFields = numeric.length + categorical.length;
 
   /**
-   * The table without any filters applied — source plus, optionally, a row
-   * layer over the entity's key columns. This is what gets popped to the
+   * The table without any filters applied. This is what gets popped to the
    * dashboard: `dashboardStore.updateSpecFilters` prepends the active named
    * filters to `viz.spec.transformation`, so a spec that already carried them
    * would filter twice.
+   *
+   * No `representation`: the toolkit's parser defaults it to a row layer over
+   * `field: '*'`, every column. Narrowing to the entity's key columns left
+   * only identifiers (a single id on a table whose only key is its foreign
+   * key), so the better a package declared its keys, the worse its table read.
    */
   const baseTableSpec = useMemo<UDIGrammar | null>(() => {
     if (!dataPackage || !resource) return null;
-    const spec: UDIGrammar = {
+    return {
       source: { name: entity, source: joinDataPath(dataPackage['udi:path'], resource.path) },
     };
-    // Omitting `representation` makes the toolkit's parser default to a row
-    // layer over `field: '*'` — every column, no code. Narrow it to the
-    // entity's key columns otherwise, mirroring DashboardCard's table view.
-    if (!showAllFields && keyFields.length > 0) {
-      spec.representation = {
-        mark: 'row',
-        mapping: keyFields.map((field) => ({
-          encoding: 'text' as const,
-          mark: 'text' as const,
-          field,
-          type:
-            domainsByField.get(field)?.type === 'interval'
-              ? ('quantitative' as const)
-              : ('nominal' as const),
-        })),
-      };
-    }
-    return spec;
-  }, [dataPackage, resource, entity, showAllFields, keyFields, domainsByField]);
+  }, [dataPackage, resource, entity]);
 
   /** The same table with the currently active filters, for the inline preview. */
   const tableSpec = useMemo<UDIGrammar | null>(() => {
@@ -456,13 +437,12 @@ export function EntityOverview({ entity }: EntityOverviewProps) {
       ],
       dataPackageStore,
     );
-    trackEvent('data_overview_table_popped', { entity, allFields: showAllFields });
+    trackEvent('data_overview_table_popped', { entity });
   }, [
     baseTableSpec,
     dataPackage,
     entity,
     sourceFields,
-    showAllFields,
     dashboardStore,
     dataPackageStore,
     trackEvent,
@@ -555,27 +535,6 @@ export function EntityOverview({ entity }: EntityOverviewProps) {
               Rows
             </h4>
             <div className="udi:flex udi:items-center udi:gap-1">
-              {showRows && keyFields.length > 0 && (
-                <Tooltip>
-                  <TooltipTrigger
-                    render={
-                      <Button
-                        variant="ghost"
-                        size="icon-xs"
-                        aria-pressed={showAllFields}
-                        onClick={() => setShowAllFields((v) => !v)}
-                      />
-                    }
-                  >
-                    <Columns3
-                      className={cn('udi:size-3.5', showAllFields && 'udi:text-udi-primary')}
-                    />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {showAllFields ? 'Show key fields only' : 'Show all fields'}
-                  </TooltipContent>
-                </Tooltip>
-              )}
               <Tooltip>
                 <TooltipTrigger
                   render={
@@ -589,9 +548,7 @@ export function EntityOverview({ entity }: EntityOverviewProps) {
                 >
                   <ExternalLink className="udi:size-3.5" />
                 </TooltipTrigger>
-                <TooltipContent>
-                  Open on dashboard{showRows && keyFields.length > 0 ? ' (current columns)' : ''}
-                </TooltipContent>
+                <TooltipContent>Open on dashboard</TooltipContent>
               </Tooltip>
               <Button
                 variant="ghost"
@@ -600,7 +557,11 @@ export function EntityOverview({ entity }: EntityOverviewProps) {
                 aria-expanded={showRows}
                 onClick={toggleRows}
               >
-                {showRows ? 'Hide' : `Show ${rowCount.toLocaleString()} rows`}
+                {showRows
+                  ? 'Hide'
+                  : resource?.['udi:hide_count']
+                    ? 'Show rows'
+                    : `Show ${rowCount.toLocaleString()} rows`}
               </Button>
             </div>
           </div>
@@ -612,10 +573,10 @@ export function EntityOverview({ entity }: EntityOverviewProps) {
             <div className="udi:h-64">
               {tableReady ? (
                 <UDIVis
-                  key={`${entity}|${showAllFields}`}
+                  key={entity}
                   className="udi:block udi:h-full udi:w-full"
                   spec={tableSpec}
-                  selections={dataSelections}
+                  selections={toolkitSelections}
                   sourceResolver={sourceResolver}
                   palette={palette}
                   fillContainer

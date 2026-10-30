@@ -1,9 +1,9 @@
 name: Deploy to GitHub Pages
 
-# Combined Pages site:
-#   /            ← landing page + docs (apps/site, Astro Starlight)
-#   /app/        ← the chat, embedded by apps/site from the udi-yac library
-#   /grammar/    ← quasar demo app (apps/grammar-app)
+# The Pages site, all built by apps/site (Astro Starlight):
+#   /            ← landing page + docs
+#   /app/        ← the chat, embedded from the udi-yac library
+#   /grammar/    ← grammar docs and examples; the editor at /grammar/editor/
 
 on:
   push:
@@ -11,11 +11,15 @@ on:
     paths:
       - "packages/chat/**"
       - "packages/grammar/**"
-      - "apps/grammar-app/**"
       - "apps/site/**"
       - "sample-data/**"
       # The docs copy these in (apps/site/scripts/sync-docs.mjs)
       - "packages/agent/README.md"
+      - "packages/agent/docs/**"
+      - "packages/agent/openapi.json"
+      - "packages/agent/pyproject.toml"
+      - "packages/agent/src/udiagent/*.py"
+      - "packages/agent/src/udiagent/query/*.py"
       - "packages/agent/src/udiagent/query/README.md"
       - "packages/agent/src/udiagent/data/skills/template_visualizations.json"
       - "packages/grammar-py/README.md"
@@ -24,10 +28,9 @@ on:
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 
+# Only the deploy job, which runs no repository code, may write to Pages.
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
   group: pages
@@ -51,15 +54,16 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # sync-docs builds the Python API reference with `uvx griffe2md`.
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.2.0
+
       - name: Build udi-toolkit
         run: pnpm run build:toolkit
 
       # The site's app page embeds the library build, not the standalone SPA.
       - name: Build udi-yac library
         run: pnpm --filter udi-yac build:lib
-
-      - name: Build grammar demo app
-        run: pnpm --filter udi-grammar-app build
 
       # Datasets and sessions come from sample-data/catalog.json; these set
       # only the agent connection. Issue reports need LangFuse on that agent.
@@ -71,20 +75,17 @@ jobs:
           VITE_UDI_REQUIRE_API_KEY: ${{ vars.VITE_UDI_REQUIRE_API_KEY }}
           VITE_UDI_ISSUE_REPORTING: "true"
 
-      - name: Assemble site
-        run: |
-          mkdir -p _site/grammar
-          cp -r apps/site/dist/* _site/
-          cp -r apps/grammar-app/dist/spa/* _site/grammar/
-
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v5
         with:
-          path: ./_site
+          path: ./apps/site/dist
 
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

@@ -326,6 +326,7 @@ class TestServerUsage:
             mock_agent = UDIAgent.__new__(UDIAgent)
             mock_agent.gpt_model = MagicMock()
             mock_agent.gpt_model_name = "gpt-test"
+            mock_agent.use_bedrock = False
 
             server_app.agent = mock_agent
             server_app.orchestrator.agent = mock_agent
@@ -407,7 +408,7 @@ class TestServerUsage:
 
         with (
             patch.object(self.server_app.orchestrator, "run", return_value=result),
-            caplog.at_level(logging.INFO, logger=self.server_app.__name__),
+            caplog.at_level(logging.INFO, logger="udiagent.api"),
         ):
             resp = self.client.post(
                 "/v1/yac/completions",
@@ -422,7 +423,7 @@ class TestServerUsage:
         log_messages = [
             record.getMessage()
             for record in caplog.records
-            if record.name == self.server_app.__name__
+            if record.name == "udiagent.api"
         ]
         logs = "\n".join(log_messages)
         for sensitive_value in (
@@ -438,7 +439,7 @@ class TestServerUsage:
 
     def test_completions_budget_rebuff_returns_200(self):
         """Hooking app.state.budget_check produces a Rebuff body + usage headers."""
-        self.server_app.app.state.budget_check = lambda u: "Quota exceeded."
+        self.server_app.app.state.budget_check = lambda claims, u: "Quota exceeded."
 
         # Stub orchestrator.run to honor the budget_check passed in.
         def fake_run(**kwargs):
@@ -467,7 +468,7 @@ class TestServerUsage:
 
     def test_completions_budget_skipped_when_user_brings_key(self):
         """When X-OpenAI-Key is present, budget_check is not passed."""
-        self.server_app.app.state.budget_check = lambda u: "should not fire"
+        self.server_app.app.state.budget_check = lambda claims, u: "should not fire"
 
         with patch.object(
             self.server_app.orchestrator,
@@ -563,8 +564,30 @@ class TestServerUsage:
             data_domains=body["dataDomains"],
             openai_api_key=None,
             model=None,
+            budget_check=None,
         )
         assert resp.json()["usage"]["total_tokens"] == 7
+
+    @pytest.mark.parametrize(
+        "user_key, expect_check", [(None, True), ("sk-user-key", False)]
+    )
+    def test_benchmark_is_held_to_the_budget_on_the_server_key(self, user_key, expect_check):
+        """The benchmark spends tokens like a completion; without the hook it was
+        an unmetered way around the quota."""
+        check = lambda claims, u: None  # noqa: E731
+        self.server_app.app.state.budget_check = check
+        headers = {"Authorization": "Bearer test"}
+        if user_key:
+            headers["X-OpenAI-Key"] = user_key
+        result = MagicMock(tool_calls=[], orchestrator_choice="rebuff", usage=Usage())
+        with patch.object(self.server_app.orchestrator, "run", return_value=result) as run:
+            self.client.post("/v1/yac/benchmark", json=self._body(), headers=headers)
+        bound = run.call_args.kwargs["budget_check"]
+        if expect_check:
+            # Bound to the caller's token, so a quota can key on the user.
+            assert bound.func is check and bound.args == ({"dev_mode": True},)
+        else:
+            assert bound is None
 
     def test_benchmark_refuses_to_skip_routing_for_other_choices(self):
         body = self._body() | {"orchestrator_choice": "get-subset-of-data"}
@@ -618,3 +641,47 @@ class TestServerUsage:
         finally:
             app.dependency_overrides.clear()
         assert resp.status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# udiagent.api.completions: the same turn for a host on another framework
+# ---------------------------------------------------------------------------
+
+
+def _host_orchestrator(run):
+    agent = UDIAgent.__new__(UDIAgent)
+    agent.gpt_model = MagicMock()
+    agent.gpt_model_name = "gpt-test"
+    agent.use_bedrock = False
+    return SimpleNamespace(agent=agent, run=run)
+
+
+_HOST_BODY = {
+    "messages": [{"role": "user", "content": "hi"}],
+    "dataSchema": "{}",
+    "dataDomains": "{}",
+}
+
+
+def test_a_host_gets_a_quota_refusal_as_a_rebuff():
+    from udiagent.api import completions
+
+    def run(**kwargs):
+        raise BudgetExceededError("Out of tokens.", Usage(total_tokens=5))
+
+    tool_calls, headers = completions(_host_orchestrator(run), _HOST_BODY)
+    assert tool_calls == [build_rebuff_toolcall("Out of tokens.", reason="budget_exceeded")]
+    assert headers["X-Usage-Total-Tokens"] == "5"
+    assert headers["X-Usage-Model"] == "gpt-test"
+
+
+def test_a_host_gets_a_malformed_body_as_a_bad_request():
+    from udiagent.api import EndpointError, completions
+
+    with pytest.raises(EndpointError) as caught:
+        completions(_host_orchestrator(MagicMock()), {"messages": []})
+    assert caught.value.status == 422
+    assert caught.value.errors == [
+        "dataSchema: Field required",
+        "dataDomains: Field required",
+    ]

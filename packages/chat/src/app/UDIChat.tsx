@@ -8,7 +8,8 @@ import {
   type RefObject,
 } from 'react';
 import { Sparkles } from 'lucide-react';
-import { UDIToolkitProvider } from 'udi-toolkit/react';
+import { queryData, UDIToolkitProvider, type RecordUrlFn } from 'udi-toolkit/react';
+import type { DataTransformation } from 'udi-toolkit';
 import { useThemePalette } from './useThemePalette';
 import {
   UDIChatProvider,
@@ -34,13 +35,14 @@ import {
   useGlobalStore,
   useTracker,
 } from '@/app/UDIChatContext';
-import { DataOverviewPanel } from '@/features/data-package';
+import { DataOverviewPanel, joinDataPath } from '@/features/data-package';
 import { Button } from '@/components/ui/button';
 import {
   extractAllUdiSpecsFromMessage,
   HOST_FILTER_PREFIX,
   IssueReportDialog,
   useActiveFilters,
+  withLinkedSelections,
   type TemplateProvenance,
   type UDIFilter,
 } from '@/features/dashboard';
@@ -58,7 +60,7 @@ import { cn } from '@/lib/utils';
 import { ChatRootProvider } from '@/lib/chatRoot';
 import type { QueryConfig } from '@/features/chat/api/completions';
 import { validateConfig } from '@/app/validateConfig';
-import type { UDIChatConfig } from './UDIChatConfig';
+import type { UDIChatConfig, UDICohort } from './UDIChatConfig';
 import { selectFontScale } from '@/stores/globalStore';
 
 export type { UDIChatConfig };
@@ -76,6 +78,10 @@ function UDIChatInner({
   initialSession,
   filters,
   onFiltersChange,
+  filterMode,
+  cohort,
+  onCohortChange,
+  onReadOnlyChange,
   issueReporting,
 }: UDIChatConfig) {
   const conversationStore = useConversationStore();
@@ -150,6 +156,7 @@ function UDIChatInner({
       parsedInitialSession.value,
       { conversation: conversationStore, dashboard: dashboardStore, dataFilters: dataFiltersStore },
       dataPackageStore.getState().sourceFields,
+      dataPackageStore.getState().cubeMeasureFields,
     );
   }, [
     parsedInitialSession,
@@ -237,13 +244,14 @@ function UDIChatInner({
       isValidIntervalFilter: dpState.isValidIntervalFilter,
       isValidPointFilter: dpState.isValidPointFilter,
     };
-    dataFiltersStore.getState().syncFiltersFromMessages(messages, validate);
+    dataFiltersStore.getState().syncFiltersFromMessages(messages, validate, dpState.dimensionLinks);
   }, [messages, loadingPhase, dataFiltersStore, dataPackageStore]);
 
-  // Update spec filter structure when LLM FilterData selections change or when
-  // the set of active visualizations changes. Brush selections don't need to
-  // trigger this — each viz's own UUID is already in the filter list (from
-  // activeVisualizations), so the filter structure is stable once set up.
+  // Update spec filter structure when any filter selection changes or when
+  // the set of active visualizations changes. Chart brushes write into
+  // `dataSelections` too, which cube sources depend on: which marginal a
+  // visualization must expand to depends on WHICH FIELDS are currently
+  // selected.
   const dataSelections = useDataFilters((s) => s.dataSelections);
   const filterScopes = useDataFilters((s) => s.filterScopes);
   const activeVisualizations = useDashboard((s) => s.activeVisualizations);
@@ -263,8 +271,8 @@ function UDIChatInner({
   // `?? []` so a host that stops passing `filters` deletes the ones it set.
   useEffect(() => {
     if (loadingPhase !== 'ready') return;
-    dataFiltersStore.getState().applyExternalFilters(filters ?? []);
-  }, [filters, loadingPhase, dataFiltersStore]);
+    dataFiltersStore.getState().applyExternalFilters(filters ?? [], filterMode);
+  }, [filters, filterMode, loadingPhase, dataFiltersStore]);
 
   // Every filter in place out, whenever the set or a value changes. Lives here
   // rather than in the filter bar, which isn't always mounted.
@@ -274,7 +282,7 @@ function UDIChatInner({
     if (!onFiltersChange) return;
     const report: UDIFilter[] = activeFilters.map(({ id, origin, selection }) => ({
       ...selection,
-      id: origin === 'host' ? id.slice(HOST_FILTER_PREFIX.length) : id,
+      id: id.startsWith(HOST_FILTER_PREFIX) ? id.slice(HOST_FILTER_PREFIX.length) : id,
       origin,
     }));
     const json = JSON.stringify(report);
@@ -288,12 +296,125 @@ function UDIChatInner({
     }
   }, [activeFilters, onFiltersChange]);
 
-  const exitReadOnly = () => {
-    // The seeded transcript would open the chat on a wall of prompts nobody
-    // here typed. Hidden, not dropped — see `hiddenCount`.
+  // Leaving read-only for the first time: the seeded transcript would open the
+  // chat on a wall of prompts nobody here typed. Hidden, not dropped — see
+  // `hiddenCount`. Only the first time: by the next exit the transcript is the
+  // user's own. A layout effect, so the transcript never paints.
+  const transcriptHidden = useRef(!readOnly);
+  useLayoutEffect(() => {
+    if (readOnly || transcriptHidden.current) return;
+    transcriptHidden.current = true;
     conversationStore.getState().hideMessages();
-    globalStore.getState().setReadOnly(false);
+  }, [readOnly, conversationStore]);
+
+  // The chat region mounts the first time it is shown and then stays mounted,
+  // only hidden while read-only, so a host toggling modes keeps the draft, the
+  // scroll position and a response still on its way.
+  const [chatMounted, setChatMounted] = useState(!readOnly);
+  if (!readOnly && !chatMounted) setChatMounted(true);
+
+  // The subjects every filter in place leaves, out to the host: the key
+  // columns of each `cohort.entity` row that passes, by the dashboard's own
+  // filter builder, so the cohort is what a chart of that table shows. `null`
+  // while no filter reaches the entity. Grouped, so a remote package returns
+  // every key rather than its row cap. The callback is read through a ref: an
+  // inline one would otherwise re-run the query on every host render.
+  const latestOnCohortChange = useRef(onCohortChange);
+  useLayoutEffect(() => {
+    latestOnCohortChange.current = onCohortChange;
+  });
+  const hasOnCohortChange = onCohortChange != null;
+  const cohortEntity = cohort?.entity;
+  const cohortFieldsKey = JSON.stringify(cohort?.fields ?? null);
+  const lastReportedCohort = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (!hasOnCohortChange || !cohortEntity || loadingPhase !== 'ready') return;
+    const report = (value: UDICohort | null) => {
+      const json = JSON.stringify(value);
+      if (json === lastReportedCohort.current) return;
+      lastReportedCohort.current = json;
+      try {
+        // A copy, so a host mutating what it's handed can't reach us.
+        latestOnCohortChange.current?.(JSON.parse(json) as UDICohort | null);
+      } catch (err) {
+        console.error('UDIChat: onCohortChange threw', err);
+      }
+    };
+    const dataPackage = dataPackageStore.getState().dataPackage;
+    const resource = dataPackage?.resources.find((r) => r.name === cohortEntity);
+    const fields = (JSON.parse(cohortFieldsKey) as string[] | null) ?? resource?.schema.primaryKey;
+    if (!dataPackage || !resource || !fields?.length) {
+      console.error(
+        `UDIChat: cohort entity "${cohortEntity}" needs \`cohort.fields\` or a primaryKey in the data package.`,
+      );
+      return;
+    }
+    const dashboard = dashboardStore.getState();
+    const named = dashboard.getNamedFilters(
+      dashboard.getFilterIds(dataFiltersStore, dataPackageStore),
+      cohortEntity,
+      dataFiltersStore,
+      dataPackageStore,
+    ) as DataTransformation[];
+    if (named.length === 0) {
+      report(null);
+      return;
+    }
+    let stale = false;
+    // ponytail: a fixed 300ms debounce, so a brush drag runs one query, not
+    // one a frame; make it a prop if a host needs the cohort live.
+    const timer = setTimeout(() => {
+      queryData(
+        {
+          source: {
+            name: cohortEntity,
+            source: joinDataPath(dataPackage['udi:path'], resource.path),
+          },
+          transformation: [...named, { groupby: fields }, { rollup: { n: { op: 'count' } } }],
+        },
+        withLinkedSelections(
+          dataFiltersStore.getState().dataSelections,
+          dataPackageStore.getState().dimensionLinks,
+          dataFiltersStore.getState().filterScopes,
+        ),
+        // Explicit: left out, it runs the unfiltered pass as well.
+        { displayDataOnly: true },
+      )
+        .then((result) => {
+          if (stale || !result) return;
+          const keys = (result.displayData as Record<string, unknown>[]).map((row) =>
+            Object.fromEntries(fields.map((f) => [f, row[f]])),
+          );
+          report({ entity: cohortEntity, keys });
+        })
+        .catch((err) => console.error('UDIChat: cohort query failed', err));
+    }, 300);
+    return () => {
+      stale = true;
+      clearTimeout(timer);
+    };
+    // dataSelections / filterScopes / activeVisualizations are change
+    // triggers: the filter builder reads them out of the stores.
+  }, [
+    hasOnCohortChange,
+    cohortEntity,
+    cohortFieldsKey,
+    loadingPhase,
+    dataSelections,
+    filterScopes,
+    activeVisualizations,
+    dashboardStore,
+    dataFiltersStore,
+    dataPackageStore,
+  ]);
+
+  const exitReadOnly = () => {
     trackEvent('read_only_exited', {});
+    // A host listening owns the mode and switches `readOnly` itself — often
+    // while it moves us into more room, which it may want to animate from the
+    // read-only view still on screen.
+    if (onReadOnlyChange) onReadOnlyChange(false);
+    else globalStore.getState().setReadOnly(false);
   };
 
   const queryConfig: QueryConfig = {
@@ -313,17 +434,17 @@ function UDIChatInner({
     // portals into it.
     <div className="udi:@container/shell udi:flex udi:h-full udi:w-full udi:bg-background">
       {/*
-       * Read-only drops the whole left region, so the dashboard gets the full
+       * Read-only hides the whole left region, so the dashboard gets the full
        * width; the floating Explore Data button is the way back. One branch,
        * rather than a per-control sweep, because the chat pane is where every
        * writing affordance lives — the input and its `//admin` backdoor, reset,
        * example prompts, the memory bank, the API key, closed-viz restore, and
-       * the data overview's "Open on dashboard" button. Nothing here is
-       * unmounted for good: leaving read-only re-renders the region with its
-       * state intact.
+       * the data overview's "Open on dashboard" button. `display: none` makes
+       * all of it unreachable; `contents` leaves the shell's flex row as if
+       * this wrapper were not there.
        */}
-      {!readOnly && (
-        <>
+      {chatMounted && (
+        <div style={{ display: readOnly ? 'none' : 'contents' }}>
           {/* Sidebar drawer — debug mode only */}
           {debugMode && drawerOpen && (
             <div className="udi:w-56 udi:shrink-0 udi:border-r udi:bg-background udi:overflow-hidden udi:flex udi:flex-col">
@@ -385,7 +506,7 @@ function UDIChatInner({
               )}
             </div>
           </div>
-        </>
+        </div>
       )}
       <div className="udi:relative udi:flex-1 udi:min-w-0 udi:overflow-hidden">
         <DashboardPanel seeding={seeding} />
@@ -475,8 +596,20 @@ function ScaledRoot({
   palette: UDIPalette | undefined;
 }) {
   const fontScale = useGlobal(selectFontScale);
+  // A stable wrapper, so a host passing an inline function doesn't rebuild
+  // every table's columns on each of its renders; it still calls the latest.
+  const latestRecordUrl = useRef(props.recordUrl);
+  useLayoutEffect(() => {
+    latestRecordUrl.current = props.recordUrl;
+  });
+  const hasRecordUrl = props.recordUrl != null;
+  const recordUrl = useMemo<RecordUrlFn | undefined>(
+    () =>
+      hasRecordUrl ? (record, entity) => latestRecordUrl.current?.(record, entity) : undefined,
+    [hasRecordUrl],
+  );
   return (
-    <UDIToolkitProvider palette={palette} fontScale={fontScale}>
+    <UDIToolkitProvider palette={palette} fontScale={fontScale} recordUrl={recordUrl}>
       <MascotProvider mascot={props.mascot}>
         <SplashMessagesProvider messages={props.splashMessages}>
           {/*
@@ -515,7 +648,11 @@ function UDIChatValidated(props: UDIChatConfig) {
   return (
     <TooltipProvider>
       <ChatRootProvider value={rootRef}>
-        <UDIChatProvider readOnly={props.readOnly} fontScale={props.fontScale}>
+        <UDIChatProvider
+          readOnly={props.readOnly}
+          fontScale={props.fontScale}
+          refitOnReadOnlyChange={props.refitOnReadOnlyChange}
+        >
           <ApiConfigProvider apiBaseUrl={props.apiBaseUrl} authToken={props.authToken}>
             <IssueReportingProvider value={props.issueReporting === true}>
               <TrackerProvider onEvent={props.onEvent}>

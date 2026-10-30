@@ -20,6 +20,7 @@ from udiagent.filters import (
     filter_failure_args,
     normalize_filters,
     operation_tool_calls,
+    translate_linked_values,
     validate_operations,
 )
 from udiagent.grammar import load_grammar
@@ -30,6 +31,7 @@ from udiagent.messages import (
     visualization_calls,
 )
 from udiagent.schema import (
+    lookup_field_values,
     parse_schema_from_dict,
     simplify_data_domains,
     simplify_data_schema,
@@ -45,7 +47,7 @@ from udiagent.tools import (
     ORCHESTRATOR_TOOLS,
     function_call_render_visualization,
 )
-from udiagent.vis_generate import _parse_request_schema, _retry_turns
+from udiagent.vis_generate import _latest_user_text, _parse_request_schema, _retry_turns
 
 logger = logging.getLogger(__name__)
 
@@ -421,6 +423,9 @@ class Orchestrator:
             openai_api_key=openai_api_key,
             data_domains=data_domains,
             model=model,
+            # The description replaces the user's words; choices the request
+            # must ask for (the time span) are checked against the originals.
+            request_text=_latest_user_text(messages),
         )
 
         return result
@@ -452,64 +457,13 @@ class Orchestrator:
         return f"No chart '{chart_id}' in this conversation. Charts: {known}."
 
     def _lookup_field_values(self, tool_args, data_domains):
-        """Answer `ListFieldValues`: the values the prompt only sampled.
-
-        The values are already in the request — the client sends every column's
-        domain, capped for size — they are simply not all in the prompt. So this
-        reads them back rather than fetching anything, which is what makes a
-        sample honest: the rest is one call away and no round trip to the client
-        is needed.
-        """
-        entity = (tool_args.get("entity") or "").strip()
-        field = (tool_args.get("field") or "").strip()
-        try:
-            domains = (
-                json.loads(data_domains)
-                if isinstance(data_domains, str)
-                else data_domains
-            ) or []
-        except (json.JSONDecodeError, TypeError):
-            domains = []
-
-        match = next(
-            (
-                d
-                for d in domains
-                if d.get("entity") == entity and d.get("field") == field
-            ),
-            None,
+        """Answer `ListFieldValues` (see `udiagent.schema.lookup_field_values`)."""
+        return lookup_field_values(
+            data_domains,
+            tool_args.get("entity"),
+            tool_args.get("field"),
+            tool_args.get("contains"),
         )
-        if match is None:
-            known = sorted(
-                {f"{d.get('entity')}.{d.get('field')}" for d in domains if d.get("field")}
-            )
-            return (
-                f"No column '{field}' on '{entity}'. Columns with values on "
-                f"record: {', '.join(known[:40]) or 'none'}."
-            )
-
-        domain = match.get("domain") or {}
-        if match.get("type") == "interval":
-            return (
-                f"{entity}.{field} is numeric, ranging from "
-                f"{domain.get('min')} to {domain.get('max')}."
-            )
-
-        values = [v for v in domain.get("values", []) if v is not None]
-        distinct = domain.get("distinct", len(values))
-        if not values:
-            return (
-                f"{entity}.{field} has {distinct} distinct values, too many to "
-                f"list — it is an identifier or a date. Filter on a range, or "
-                f"group by it, rather than naming values."
-            )
-        listed = ", ".join(str(v) for v in values)
-        if len(values) < distinct:
-            return (
-                f"{entity}.{field} has {distinct} distinct values. The "
-                f"{len(values)} on record here: {listed}."
-            )
-        return f"{entity}.{field} has {distinct} distinct values, all of them: {listed}."
 
     def _handle_rebuff(
         self,
@@ -764,7 +718,10 @@ class Orchestrator:
             if args is None:
                 errors = ["No filter change came back."]
                 continue
-            operations = args.get("operations")
+            # A linked column's values may arrive in another column's spelling.
+            operations = translate_linked_values(
+                args.get("operations"), schema, data_domains
+            )
             errors = validate_operations(operations, schema, data_domains, current)
             if not errors:
                 return operation_tool_calls(operations, current)

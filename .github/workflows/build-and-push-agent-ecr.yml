@@ -1,13 +1,13 @@
 name: Build and push agent image to ECR
 
 # Builds packages/agent's image and pushes it to ECR tagged with the commit SHA,
-# which is what deploy-agent-svc.yml deploys. Runs only for changes that can
-# alter the image, and only after the agent's tests pass, so every pushed tag
-# is a deployable build.
+# which is what the ECS service deploys (its definitions are not in this repo).
+# Runs only for changes that can alter the image, and only after the agent's
+# tests pass, so every pushed tag is a deployable build.
 #
 # Required repo variables (Settings > Secrets and variables > Actions > Variables):
 #   AWS_REGION           e.g. us-east-2
-#   AWS_BUILD_ROLE_ARN   arn of <iam-stack>-github-build (iam.yml output)
+#   AWS_BUILD_ROLE_ARN   arn of the IAM role this workflow assumes to push to ECR
 #   ECR_REPOSITORY       ECR repo name, e.g. udi-agent
 
 on:
@@ -85,11 +85,12 @@ jobs:
           set -euo pipefail
           IMAGE="${REGISTRY}/${REPOSITORY}"
           # Context is the repo root: the Dockerfile copies the workspace uv.lock
-          # (see root pyproject.toml [tool.uv.workspace]), same as deploy-agent.yml.
+          # (see root pyproject.toml [tool.uv.workspace]).
           # The SHA tag is the deployable one; 'latest' (excluded from immutability
           # in the ECR repo policy) is a convenience pointer only — the deploy
           # workflow refuses it.
-          docker build -f packages/agent/Dockerfile -t "${IMAGE}:${SHA}" -t "${IMAGE}:latest" .
+          docker build -f packages/agent/Dockerfile --build-arg GIT_SHA="${SHA}" \
+            -t "${IMAGE}:${SHA}" -t "${IMAGE}:latest" .
           docker push "${IMAGE}:${SHA}"
           docker push "${IMAGE}:latest"
           echo "Pushed ${IMAGE}:${SHA}" >> "$GITHUB_STEP_SUMMARY"

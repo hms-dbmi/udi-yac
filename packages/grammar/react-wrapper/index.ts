@@ -32,6 +32,7 @@ export { formatTime } from '../temporal';
 // clobbers the Vue build's `dist/index.js`. The value is still exported from
 // the main (`udi-toolkit`) and `udi-toolkit/ce` entries.
 export type { UDIPalette, ContinuousColor, DiscreteColor } from '../Palette';
+export type { RecordUrlFn } from '../recordUrl';
 export type {
   DataSelections,
   ActiveDataSelection as DataSelection,
@@ -55,8 +56,9 @@ export type {
 } from '../queryBackend';
 export { setTimeFormats } from './temporal';
 export type { TimeFormats } from '../temporal';
-export { loadDataPackage } from './loadDataPackage';
+export { loadDataPackage, getCubeMetadata } from './loadDataPackage';
 export type { SourceSpec, LoadDataPackageOptions } from '../loadDataPackage';
+export type { CubeMetadata } from '../DataSourcesStore';
 export {
   subscribeToSelections,
   clearAllSelections,

@@ -1,9 +1,9 @@
 name: CI (site)
 
 # The site is otherwise built only by the Pages deploy on main. It embeds the
-# udi-yac library and reads its public API (typedoc), the READMEs and the
-# template JSON, so a PR to any of those can break it; keep these paths in step
-# with pages.yml.
+# udi-yac library and reads its public API (typedoc), the READMEs and docs, the
+# agent's docstrings and the template JSON, so a PR to any of those can break
+# it; keep these paths in step with pages.yml.
 
 on:
   pull_request:
@@ -13,12 +13,20 @@ on:
       - "packages/grammar/**"
       - "sample-data/**"
       - "packages/agent/README.md"
+      - "packages/agent/docs/**"
+      - "packages/agent/openapi.json"
+      - "packages/agent/pyproject.toml"
+      - "packages/agent/src/udiagent/*.py"
+      - "packages/agent/src/udiagent/query/*.py"
       - "packages/agent/src/udiagent/query/README.md"
       - "packages/agent/src/udiagent/data/skills/template_visualizations.json"
       - "packages/grammar-py/README.md"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
       - ".github/workflows/ci-site.yml"
+
+permissions:
+  contents: read
 
 jobs:
   build:
@@ -37,6 +45,10 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      # sync-docs builds the Python API reference with `uvx griffe2md`.
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.2.0
 
       - name: Build udi-toolkit, the udi-yac library, then the site
         run: pnpm build:site

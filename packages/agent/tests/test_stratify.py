@@ -149,9 +149,13 @@ def test_single_cut_gives_two_buckets():
     grouping = parse_grouping('{"type": "quantitative", "cuts": [65]}')
     assert grouping_labels(grouping) == ["< 65", "≥ 65"]
     assert grouping_expr(grouping, "age") == {
-        "if": {"op": "<", "left": {"field": "age"}, "right": {"literal": 65}},
-        "then": {"literal": "< 65"},
-        "else": {"literal": "≥ 65"},
+        "if": {"op": "==", "left": {"field": "age"}, "right": {"literal": None}},
+        "then": {"literal": None},
+        "else": {
+            "if": {"op": "<", "left": {"field": "age"}, "right": {"literal": 65}},
+            "then": {"literal": "< 65"},
+            "else": {"literal": "≥ 65"},
+        },
     }
 
 
@@ -159,7 +163,7 @@ def test_buckets_are_half_open_on_the_right():
     """`50–65` holds 50 and excludes 65, which is what "over 65" means."""
     labels = quantitative_labels([50, 65])
     assert labels == ["< 50", "50–65", "≥ 65"]
-    expr = grouping_expr({"type": "quantitative", "cuts": [50, 65]}, "age")
+    expr = grouping_expr({"type": "quantitative", "cuts": [50, 65]}, "age")["else"]
     assert expr["if"]["right"] == {"literal": 50}
     assert expr["else"]["if"]["right"] == {"literal": 65}
     assert expr["else"]["else"] == {"literal": "≥ 65"}
@@ -243,7 +247,7 @@ def test_a_grouping_object_needs_no_parsing():
     to cost the whole tool call."""
     grouping = {"type": "quantitative", "cuts": [65]}
     assert parse_grouping(grouping) == grouping
-    assert grouping_expr(parse_grouping(grouping), "age")["then"] == {"literal": "< 65"}
+    assert grouping_expr(parse_grouping(grouping), "age")["else"]["then"] == {"literal": "< 65"}
 
 
 def test_the_string_form_still_parses():

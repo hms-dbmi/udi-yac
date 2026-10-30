@@ -31,8 +31,8 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '[{"encoding": "x", "field": "<E1> count", "type": "quantitative"}, {"encoding": "y", "field": "<E2.F>", "type": '
  '"nominal"}]}}',
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"filter": "<MARGINAL:D>"}], "representation": '
- '{"mark": "bar", "mapping": [{"encoding": "x", "field": "<D:n>", "type": "nominal"}, {"encoding": "y", "field": '
- '"<M>", "type": "quantitative"}]}}',
+ '{"mark": "bar", "mapping": [{"encoding": "x", "field": "<M>", "type": "quantitative"}, {"encoding": "y", "field": '
+ '"<D:n>", "type": "nominal"}]}}',
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"filter": "<MARGINAL:D>"}], "representation": '
  '{"mark": "bar", "mapping": [{"encoding": "x", "field": "<D:q>", "type": "quantitative"}, {"encoding": "y", "field": '
  '"<M>", "type": "quantitative"}]}}',
@@ -1514,66 +1514,68 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '"nominal"}, {"encoding": "color", "field": "group", "type": "nominal", "omitLegend": true, "domain": ["<E2> + <E3>", '
  '"<E2> only", "<E3> only", "Neither"]}], "align": "right", "dy": 10, "stroke": "white", "strokeWidth": 3, '
  '"strokeOpacity": 0.7, "avoidOverlap": 8}], "title": {"text": "<E2> / <E3>", "align": "right"}}',
- '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"filter": "<MARGINAL:D1,D2>"}, {"derive": '
- '{"events": {"if": {"op": "==", "left": {"field": "<D2:n>"}, "right": {"literal": "<V1>"}}, "then": {"field": "<M>"}, '
- '"else": {"literal": 0}}, "censored": {"if": {"op": "==", "left": {"field": "<D2:n>"}, "right": {"literal": "<V2>"}}, '
- '"then": {"field": "<M>"}, "else": {"literal": 0}}}}, {"groupby": ["<D1>"]}, {"rollup": {"events": {"op": "sum", '
- '"field": "events"}, "censored": {"op": "sum", "field": "censored"}}}, {"derive": {"observed": {"op": "+", "left": '
- '{"field": "events"}, "right": {"field": "censored"}}}}, {"derive": {"cohort end": {"agg": "max", "field": "<D1>"}}}, '
- '{"derive": {"subjects": {"agg": "sum", "field": "observed"}, "deaths": {"agg": "sum", "field": "events"}}}, '
- '{"orderby": {"field": "<D1>", "order": "asc"}}, {"derive": {"left so far": {"rolling": {"expression": {"agg": "sum", '
- '"field": "observed"}}}}}, {"derive": {"at risk": {"op": "+", "left": {"op": "-", "left": {"field": "subjects"}, '
- '"right": {"field": "left so far"}}, "right": {"field": "observed"}}}}, {"derive": {"km factor": {"op": "-", "left": '
- '{"literal": 1}, "right": {"op": "/", "left": {"field": "events"}, "right": {"field": "at risk"}}}}}, {"derive": {"km '
- 'log": {"fn": "log", "args": [{"if": {"op": ">", "left": {"field": "km factor"}, "right": {"literal": 0}}, "then": '
- '{"field": "km factor"}, "else": {"literal": 1}}]}, "km exhausted": {"if": {"op": ">", "left": {"field": "km '
- 'factor"}, "right": {"literal": 0}}, "then": {"literal": 0}, "else": {"literal": 1}}}}, {"derive": {"greenwood term": '
- '{"if": {"op": ">", "left": {"field": "at risk"}, "right": {"field": "events"}}, "then": {"op": "/", "left": '
- '{"field": "events"}, "right": {"op": "*", "left": {"field": "at risk"}, "right": {"op": "-", "left": {"field": "at '
- 'risk"}, "right": {"field": "events"}}}}, "else": {"literal": 0}}}}, {"derive": {"km log sum": {"rolling": '
- '{"expression": {"agg": "sum", "field": "km log"}}}, "km exhausted so far": {"rolling": {"expression": {"agg": "sum", '
- '"field": "km exhausted"}}}, "greenwood sum": {"rolling": {"expression": {"agg": "sum", "field": "greenwood term"}}}, '
- '"events so far": {"rolling": {"expression": {"agg": "sum", "field": "events"}}}}}, {"derive": {"km percentage": '
- '{"if": {"op": ">", "left": {"field": "km exhausted so far"}, "right": {"literal": 0}}, "then": {"literal": 0}, '
- '"else": {"op": "*", "left": {"fn": "exp", "args": [{"field": "km log sum"}]}, "right": {"literal": 100}}}}}, '
- '{"derive": {"basic percentage": {"op": "*", "left": {"op": "-", "left": {"literal": 1}, "right": {"op": "/", "left": '
- '{"field": "events so far"}, "right": {"field": "subjects"}}}, "right": {"literal": 100}}, "kaplan meier": '
- '"<ESTIMATOR>"}}, {"derive": {"survival percentage": {"if": {"op": "==", "left": {"field": "kaplan meier"}, "right": '
- '{"literal": 1}}, "then": {"field": "km percentage"}, "else": {"field": "basic percentage"}}}}, {"derive": {"km log '
- 'se": {"op": "/", "left": {"fn": "exp", "args": [{"op": "*", "left": {"fn": "log", "args": [{"if": {"op": ">", '
- '"left": {"field": "greenwood sum"}, "right": {"literal": 0}}, "then": {"field": "greenwood sum"}, "else": '
- '{"literal": 1}}]}, "right": {"literal": 0.5}}]}, "right": {"if": {"op": "<", "left": {"field": "km log sum"}, '
- '"right": {"literal": 0}}, "then": {"op": "-", "left": {"literal": 0}, "right": {"field": "km log sum"}}, "else": '
- '{"literal": 1}}}}}, {"derive": {"ci requested": "<CI>"}}, {"derive": {"ci lower": {"if": {"op": "&&", "left": {"op": '
+ '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"filter": "<MARGINAL:D1,D2>"}, {"filter": '
+ '{"op": ">=", "left": {"field": "<D1>"}, "right": {"literal": 0}}}, {"derive": {"events": {"if": {"op": "==", "left": '
+ '{"field": "<D2:n>"}, "right": {"literal": "<V1>"}}, "then": {"field": "<M>"}, "else": {"literal": 0}}, "censored": '
+ '{"if": {"op": "==", "left": {"field": "<D2:n>"}, "right": {"literal": "<V2>"}}, "then": {"field": "<M>"}, "else": '
+ '{"literal": 0}}}}, {"groupby": ["<D1>"]}, {"rollup": {"events": {"op": "sum", "field": "events"}, "censored": {"op": '
+ '"sum", "field": "censored"}}}, {"derive": {"observed": {"op": "+", "left": {"field": "events"}, "right": {"field": '
+ '"censored"}}}}, {"derive": {"survival years": {"op": "/", "left": {"field": "<D1>"}, "right": {"literal": 12}}}}, '
+ '{"derive": {"cohort end": {"agg": "max", "field": "survival years"}}}, {"derive": {"subjects": {"agg": "sum", '
+ '"field": "observed"}, "deaths": {"agg": "sum", "field": "events"}}}, {"orderby": {"field": "survival years", '
+ '"order": "asc"}}, {"derive": {"left so far": {"rolling": {"expression": {"agg": "sum", "field": "observed"}}}}}, '
+ '{"derive": {"at risk": {"op": "+", "left": {"op": "-", "left": {"field": "subjects"}, "right": {"field": "left so '
+ 'far"}}, "right": {"field": "observed"}}}}, {"derive": {"km factor": {"op": "-", "left": {"literal": 1}, "right": '
+ '{"op": "/", "left": {"field": "events"}, "right": {"field": "at risk"}}}}}, {"derive": {"km log": {"fn": "log", '
+ '"args": [{"if": {"op": ">", "left": {"field": "km factor"}, "right": {"literal": 0}}, "then": {"field": "km '
+ 'factor"}, "else": {"literal": 1}}]}, "km exhausted": {"if": {"op": ">", "left": {"field": "km factor"}, "right": '
+ '{"literal": 0}}, "then": {"literal": 0}, "else": {"literal": 1}}}}, {"derive": {"greenwood term": {"if": {"op": ">", '
+ '"left": {"field": "at risk"}, "right": {"field": "events"}}, "then": {"op": "/", "left": {"field": "events"}, '
+ '"right": {"op": "*", "left": {"field": "at risk"}, "right": {"op": "-", "left": {"field": "at risk"}, "right": '
+ '{"field": "events"}}}}, "else": {"literal": 0}}}}, {"derive": {"km log sum": {"rolling": {"expression": {"agg": '
+ '"sum", "field": "km log"}}}, "km exhausted so far": {"rolling": {"expression": {"agg": "sum", "field": "km '
+ 'exhausted"}}}, "greenwood sum": {"rolling": {"expression": {"agg": "sum", "field": "greenwood term"}}}, "events so '
+ 'far": {"rolling": {"expression": {"agg": "sum", "field": "events"}}}}}, {"derive": {"km percentage": {"if": {"op": '
+ '">", "left": {"field": "km exhausted so far"}, "right": {"literal": 0}}, "then": {"literal": 0}, "else": {"op": "*", '
+ '"left": {"fn": "exp", "args": [{"field": "km log sum"}]}, "right": {"literal": 100}}}}}, {"derive": {"basic '
+ 'percentage": {"op": "*", "left": {"op": "-", "left": {"literal": 1}, "right": {"op": "/", "left": {"field": "events '
+ 'so far"}, "right": {"field": "subjects"}}}, "right": {"literal": 100}}, "kaplan meier": "<ESTIMATOR>"}}, {"derive": '
+ '{"survival percentage": {"if": {"op": "==", "left": {"field": "kaplan meier"}, "right": {"literal": 1}}, "then": '
+ '{"field": "km percentage"}, "else": {"field": "basic percentage"}}}}, {"derive": {"km log se": {"op": "/", "left": '
+ '{"fn": "exp", "args": [{"op": "*", "left": {"fn": "log", "args": [{"if": {"op": ">", "left": {"field": "greenwood '
+ 'sum"}, "right": {"literal": 0}}, "then": {"field": "greenwood sum"}, "else": {"literal": 1}}]}, "right": {"literal": '
+ '0.5}}]}, "right": {"if": {"op": "<", "left": {"field": "km log sum"}, "right": {"literal": 0}}, "then": {"op": "-", '
+ '"left": {"literal": 0}, "right": {"field": "km log sum"}}, "else": {"literal": 1}}}}}, {"derive": {"ci requested": '
+ '"<CI>"}}, {"derive": {"ci lower": {"if": {"op": "&&", "left": {"op": "==", "left": {"field": "ci requested"}, '
+ '"right": {"literal": 1}}, "right": {"op": "==", "left": {"field": "kaplan meier"}, "right": {"literal": 1}}}, '
+ '"then": {"if": {"op": ">", "left": {"field": "km exhausted so far"}, "right": {"literal": 0}}, "then": {"literal": '
+ '0}, "else": {"if": {"op": "<", "left": {"field": "km log sum"}, "right": {"literal": 0}}, "then": {"op": "*", '
+ '"left": {"fn": "exp", "args": [{"op": "*", "left": {"field": "km log sum"}, "right": {"fn": "exp", "args": [{"op": '
+ '"*", "left": {"literal": 1.959963984540054}, "right": {"field": "km log se"}}]}}]}, "right": {"literal": 100}}, '
+ '"else": {"field": "km percentage"}}}, "else": {"literal": null}}, "ci upper": {"if": {"op": "&&", "left": {"op": '
  '"==", "left": {"field": "ci requested"}, "right": {"literal": 1}}, "right": {"op": "==", "left": {"field": "kaplan '
  'meier"}, "right": {"literal": 1}}}, "then": {"if": {"op": ">", "left": {"field": "km exhausted so far"}, "right": '
  '{"literal": 0}}, "then": {"literal": 0}, "else": {"if": {"op": "<", "left": {"field": "km log sum"}, "right": '
  '{"literal": 0}}, "then": {"op": "*", "left": {"fn": "exp", "args": [{"op": "*", "left": {"field": "km log sum"}, '
- '"right": {"fn": "exp", "args": [{"op": "*", "left": {"literal": 1.959963984540054}, "right": {"field": "km log '
- 'se"}}]}}]}, "right": {"literal": 100}}, "else": {"field": "km percentage"}}}, "else": {"literal": null}}, "ci '
- 'upper": {"if": {"op": "&&", "left": {"op": "==", "left": {"field": "ci requested"}, "right": {"literal": 1}}, '
- '"right": {"op": "==", "left": {"field": "kaplan meier"}, "right": {"literal": 1}}}, "then": {"if": {"op": ">", '
- '"left": {"field": "km exhausted so far"}, "right": {"literal": 0}}, "then": {"literal": 0}, "else": {"if": {"op": '
- '"<", "left": {"field": "km log sum"}, "right": {"literal": 0}}, "then": {"op": "*", "left": {"fn": "exp", "args": '
- '[{"op": "*", "left": {"field": "km log sum"}, "right": {"fn": "exp", "args": [{"op": "*", "left": {"literal": '
- '-1.959963984540054}, "right": {"field": "km log se"}}]}}]}, "right": {"literal": 100}}, "else": {"field": "km '
- 'percentage"}}}, "else": {"literal": null}}}}, {"derive": {"horizon years": "<HORIZON>"}}, {"derive": {"horizon '
- 'time": {"op": "*", "left": {"field": "horizon years"}, "right": {"literal": 12}}}}, {"derive": {"curve cut": {"if": '
- '{"op": ">", "left": {"field": "cohort end"}, "right": {"field": "horizon time"}}, "then": {"literal": 1}, "else": '
- '{"literal": 0}}}}, {"filter": {"op": "<=", "left": {"field": "<D1>"}, "right": {"field": "horizon time"}}}, '
- '{"derive": {"curve end": {"agg": "max", "field": "<D1>"}, "events in window": {"agg": "sum", "field": "events"}}}, '
- '{"derive": {"final percentage": {"agg": "min", "field": "survival percentage"}}}, {"derive": {"full survival": '
- '{"literal": 100}}}, {"derive": {"first time": {"agg": "min", "field": "<D1>"}}}, {"derive": {"first percentage": '
- '{"agg": "max", "field": "survival percentage"}}}, {"derive": {"lead time": {"if": {"op": "==", "left": {"window": '
- '"rank"}, "right": {"literal": 1}}, "then": {"literal": 0}, "else": {"if": {"op": "==", "left": {"window": "rank"}, '
- '"right": {"literal": 2}}, "then": {"field": "first time"}, "else": {"literal": null}}}, "drop time": {"if": {"op": '
- '"<=", "left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": "first time"}, "else": {"literal": '
- 'null}}, "drop percentage": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": '
- '{"field": "full survival"}, "else": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 2}}, '
- '"then": {"field": "first percentage"}, "else": {"literal": null}}}}}, {"derive": {"label time": {"if": {"op": "==", '
- '"left": {"window": "rank"}, "right": {"literal": 1}}, "then": {"field": "curve end"}, "else": {"literal": null}}}}, '
- '{"derive": {"censor time": {"if": {"op": ">", "left": {"field": "censored"}, "right": {"literal": 0}}, "then": '
- '{"field": "<D1>"}, "else": {"literal": null}}}}, {"derive": {"_label_offset": {"op": "+", "left": {"field": "final '
+ '"right": {"fn": "exp", "args": [{"op": "*", "left": {"literal": -1.959963984540054}, "right": {"field": "km log '
+ 'se"}}]}}]}, "right": {"literal": 100}}, "else": {"field": "km percentage"}}}, "else": {"literal": null}}}}, '
+ '{"derive": {"horizon years": "<HORIZON>"}}, {"derive": {"horizon time": {"op": "*", "left": {"field": "horizon '
+ 'years"}, "right": {"literal": 1}}}}, {"derive": {"curve cut": {"if": {"op": ">", "left": {"field": "cohort end"}, '
+ '"right": {"field": "horizon time"}}, "then": {"literal": 1}, "else": {"literal": 0}}}}, {"filter": {"op": "<=", '
+ '"left": {"field": "survival years"}, "right": {"field": "horizon time"}}}, {"derive": {"curve end": {"agg": "max", '
+ '"field": "survival years"}, "events in window": {"agg": "sum", "field": "events"}}}, {"derive": {"final percentage": '
+ '{"agg": "min", "field": "survival percentage"}}}, {"derive": {"full survival": {"literal": 100}}}, {"derive": '
+ '{"first time": {"agg": "min", "field": "survival years"}}}, {"derive": {"first percentage": {"agg": "max", "field": '
+ '"survival percentage"}}}, {"derive": {"lead time": {"if": {"op": "==", "left": {"window": "rank"}, "right": '
+ '{"literal": 1}}, "then": {"literal": 0}, "else": {"if": {"op": "==", "left": {"window": "rank"}, "right": '
+ '{"literal": 2}}, "then": {"field": "first time"}, "else": {"literal": null}}}, "drop time": {"if": {"op": "<=", '
+ '"left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": "first time"}, "else": {"literal": null}}, '
+ '"drop percentage": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": {"field": "full '
+ 'survival"}, "else": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": '
+ '"first percentage"}, "else": {"literal": null}}}}}, {"derive": {"label time": {"if": {"op": "==", "left": {"window": '
+ '"rank"}, "right": {"literal": 1}}, "then": {"field": "curve end"}, "else": {"literal": null}}}}, {"derive": {"censor '
+ 'time": {"if": {"op": ">", "left": {"field": "censored"}, "right": {"literal": 0}}, "then": {"field": "survival '
+ 'years"}, "else": {"literal": null}}}}, {"derive": {"_label_offset": {"op": "+", "left": {"field": "final '
  'percentage"}, "right": {"literal": 0.5}}}}, {"derive": {"final survival": {"op": "-", "left": {"field": '
  '"_label_offset"}, "right": {"op": "%", "left": {"field": "_label_offset"}, "right": {"literal": 1}}}}}, {"derive": '
  '{"final label": {"concat": [{"field": "final survival"}, {"literal": "%"}, {"if": {"op": "==", "left": {"field": '
@@ -1583,35 +1585,39 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '"left": {"field": "final percentage"}, "right": {"literal": 85}}, "then": {"literal": null}, "else": {"field": '
  '"label time"}}, "label time below": {"if": {"op": ">=", "left": {"field": "final percentage"}, "right": {"literal": '
  '85}}, "then": {"field": "label time"}, "else": {"literal": null}}}}], "representation": [{"mark": "line", "mapping": '
- '[{"encoding": "x", "field": "lead time", "type": "quantitative", "title": "time", "domain": {"min": 0}}, '
+ '[{"encoding": "x", "field": "lead time", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, '
  '{"encoding": "y", "field": "full survival", "type": "quantitative", "domain": {"min": 0, "max": 100}}]}, {"mark": '
- '"line", "mapping": [{"encoding": "x", "field": "drop time", "type": "quantitative", "title": "time", "domain": '
- '{"min": 0}}, {"encoding": "y", "field": "drop percentage", "type": "quantitative", "domain": {"min": 0, "max": '
- '100}}]}, {"mark": "area", "mapping": [{"encoding": "x", "field": "<D1>", "type": "quantitative", "title": "time", '
- '"domain": {"min": 0}}, {"encoding": "y", "field": "ci lower", "type": "quantitative", "domain": {"min": 0, "max": '
- '100}, "title": "event-free (%)"}, {"encoding": "y2", "field": "ci upper", "type": "quantitative"}, {"encoding": '
- '"opacity", "value": 0.12}], "interpolate": "step-after"}, {"mark": "line", "mapping": [{"encoding": "x", "field": '
- '"<D1>", "type": "quantitative", "title": "time", "domain": {"min": 0}}, {"encoding": "y", "field": "survival '
- 'percentage", "title": "event-free (%)", "type": "quantitative", "domain": {"min": 0, "max": 100}}], "interpolate": '
- '"step-after"}, {"mark": "point", "mapping": [{"encoding": "x", "field": "censor time", "type": "quantitative", '
- '"title": "time", "domain": {"min": 0}}, {"encoding": "y", "field": "survival percentage", "type": "quantitative", '
- '"domain": {"min": 0, "max": 100}}, {"encoding": "shape", "value": "M-0.09,-0.5L0.09,-0.5L0.09,0.5L-0.09,0.5Z"}, '
- '{"encoding": "size", "value": 500}]}, {"mark": "text", "mapping": [{"encoding": "x", "field": "label time above", '
- '"type": "quantitative", "title": "time", "domain": {"min": 0}}, {"encoding": "y", "field": "final percentage", '
- '"type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "text", "field": "final label", "type": '
- '"nominal"}], "align": "right", "dy": -9, "stroke": "white", "strokeWidth": 3, "strokeOpacity": 0.7, "avoidOverlap": '
- '8}, {"mark": "text", "mapping": [{"encoding": "x", "field": "label time below", "type": "quantitative", "title": '
- '"time", "domain": {"min": 0}}, {"encoding": "y", "field": "final percentage", "type": "quantitative", "domain": '
- '{"min": 0, "max": 100}}, {"encoding": "text", "field": "final label", "type": "nominal"}], "align": "right", "dy": '
- '10, "stroke": "white", "strokeWidth": 3, "strokeOpacity": 0.7, "avoidOverlap": 8}]}',
- '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"filter": "<MARGINAL:D1,D2,D3>"}, {"derive": '
- '{"events": {"if": {"op": "==", "left": {"field": "<D2:n>"}, "right": {"literal": "<V1>"}}, "then": {"field": "<M>"}, '
- '"else": {"literal": 0}}, "censored": {"if": {"op": "==", "left": {"field": "<D2:n>"}, "right": {"literal": "<V2>"}}, '
- '"then": {"field": "<M>"}, "else": {"literal": 0}}}}, {"groupby": ["<D3>", "<D1>"]}, {"rollup": {"events": {"op": '
- '"sum", "field": "events"}, "censored": {"op": "sum", "field": "censored"}}}, {"derive": {"observed": {"op": "+", '
- '"left": {"field": "events"}, "right": {"field": "censored"}}}}, {"derive": {"cohort end": {"agg": "max", "field": '
- '"<D1>"}}}, {"groupby": "<D3>"}, {"derive": {"subjects": {"agg": "sum", "field": "observed"}, "deaths": {"agg": '
- '"sum", "field": "events"}}}, {"orderby": {"field": "<D1>", "order": "asc"}}, {"derive": {"left so far": {"rolling": '
+ '"line", "mapping": [{"encoding": "x", "field": "drop time", "type": "quantitative", "title": "survival years", '
+ '"domain": {"min": 0}}, {"encoding": "y", "field": "drop percentage", "type": "quantitative", "domain": {"min": 0, '
+ '"max": 100}}]}, {"mark": "area", "mapping": [{"encoding": "x", "field": "survival years", "type": "quantitative", '
+ '"title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "ci lower", "type": "quantitative", '
+ '"domain": {"min": 0, "max": 100}, "title": "event-free (%)"}, {"encoding": "y2", "field": "ci upper", "type": '
+ '"quantitative"}, {"encoding": "opacity", "value": 0.12}], "interpolate": "step-after"}, {"mark": "line", "mapping": '
+ '[{"encoding": "x", "field": "survival years", "type": "quantitative", "title": "survival years", "domain": {"min": '
+ '0}}, {"encoding": "y", "field": "survival percentage", "title": "event-free (%)", "type": "quantitative", "domain": '
+ '{"min": 0, "max": 100}}], "interpolate": "step-after"}, {"mark": "point", "mapping": [{"encoding": "x", "field": '
+ '"censor time", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": '
+ '"survival percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "shape", "value": '
+ '"M-0.09,-0.5L0.09,-0.5L0.09,0.5L-0.09,0.5Z"}, {"encoding": "size", "value": 500}]}, {"mark": "text", "mapping": '
+ '[{"encoding": "x", "field": "label time above", "type": "quantitative", "title": "survival years", "domain": {"min": '
+ '0}}, {"encoding": "y", "field": "final percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, '
+ '{"encoding": "text", "field": "final label", "type": "nominal"}], "align": "right", "dy": -9, "stroke": "white", '
+ '"strokeWidth": 3, "strokeOpacity": 0.7, "avoidOverlap": 8}, {"mark": "text", "mapping": [{"encoding": "x", "field": '
+ '"label time below", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", '
+ '"field": "final percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "text", '
+ '"field": "final label", "type": "nominal"}], "align": "right", "dy": 10, "stroke": "white", "strokeWidth": 3, '
+ '"strokeOpacity": 0.7, "avoidOverlap": 8}]}',
+ '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"filter": "<MARGINAL:D1,D2,D3>"}, {"filter": '
+ '{"op": ">=", "left": {"field": "<D1>"}, "right": {"literal": 0}}}, {"derive": {"stratum": "<GROUP:D3>"}}, {"filter": '
+ '{"op": "!=", "left": {"field": "stratum"}, "right": {"literal": null}}}, {"derive": {"events": {"if": {"op": "==", '
+ '"left": {"field": "<D2:n>"}, "right": {"literal": "<V1>"}}, "then": {"field": "<M>"}, "else": {"literal": 0}}, '
+ '"censored": {"if": {"op": "==", "left": {"field": "<D2:n>"}, "right": {"literal": "<V2>"}}, "then": {"field": '
+ '"<M>"}, "else": {"literal": 0}}}}, {"groupby": ["stratum", "<D1>"]}, {"rollup": {"events": {"op": "sum", "field": '
+ '"events"}, "censored": {"op": "sum", "field": "censored"}}}, {"derive": {"observed": {"op": "+", "left": {"field": '
+ '"events"}, "right": {"field": "censored"}}}}, {"derive": {"survival years": {"op": "/", "left": {"field": "<D1>"}, '
+ '"right": {"literal": 12}}}}, {"derive": {"cohort end": {"agg": "max", "field": "survival years"}}}, {"groupby": '
+ '"stratum"}, {"derive": {"subjects": {"agg": "sum", "field": "observed"}, "deaths": {"agg": "sum", "field": '
+ '"events"}}}, {"orderby": {"field": "survival years", "order": "asc"}}, {"derive": {"left so far": {"rolling": '
  '{"expression": {"agg": "sum", "field": "observed"}}}}}, {"derive": {"at risk": {"op": "+", "left": {"op": "-", '
  '"left": {"field": "subjects"}, "right": {"field": "left so far"}}, "right": {"field": "observed"}}}}, {"derive": '
  '{"km factor": {"op": "-", "left": {"literal": 1}, "right": {"op": "/", "left": {"field": "events"}, "right": '
@@ -1648,58 +1654,59 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '"exp", "args": [{"op": "*", "left": {"field": "km log sum"}, "right": {"fn": "exp", "args": [{"op": "*", "left": '
  '{"literal": -1.959963984540054}, "right": {"field": "km log se"}}]}}]}, "right": {"literal": 100}}, "else": '
  '{"field": "km percentage"}}}, "else": {"literal": null}}}}, {"derive": {"horizon years": "<HORIZON>"}}, {"derive": '
- '{"horizon time": {"op": "*", "left": {"field": "horizon years"}, "right": {"literal": 12}}}}, {"derive": {"curve '
+ '{"horizon time": {"op": "*", "left": {"field": "horizon years"}, "right": {"literal": 1}}}}, {"derive": {"curve '
  'cut": {"if": {"op": ">", "left": {"field": "cohort end"}, "right": {"field": "horizon time"}}, "then": {"literal": '
- '1}, "else": {"literal": 0}}}}, {"filter": {"op": "<=", "left": {"field": "<D1>"}, "right": {"field": "horizon '
- 'time"}}}, {"derive": {"curve end": {"agg": "max", "field": "<D1>"}, "events in window": {"agg": "sum", "field": '
- '"events"}}}, {"derive": {"final percentage": {"agg": "min", "field": "survival percentage"}}}, {"derive": {"full '
- 'survival": {"literal": 100}}}, {"derive": {"first time": {"agg": "min", "field": "<D1>"}}}, {"derive": {"first '
- 'percentage": {"agg": "max", "field": "survival percentage"}}}, {"derive": {"lead time": {"if": {"op": "==", "left": '
- '{"window": "rank"}, "right": {"literal": 1}}, "then": {"literal": 0}, "else": {"if": {"op": "==", "left": {"window": '
- '"rank"}, "right": {"literal": 2}}, "then": {"field": "first time"}, "else": {"literal": null}}}, "drop time": {"if": '
- '{"op": "<=", "left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": "first time"}, "else": '
- '{"literal": null}}, "drop percentage": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, '
- '"then": {"field": "full survival"}, "else": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": '
- '2}}, "then": {"field": "first percentage"}, "else": {"literal": null}}}}}, {"derive": {"label time": {"if": {"op": '
- '"==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": {"field": "curve end"}, "else": {"literal": '
- 'null}}}}, {"derive": {"censor time": {"if": {"op": ">", "left": {"field": "censored"}, "right": {"literal": 0}}, '
- '"then": {"field": "<D1>"}, "else": {"literal": null}}}}, {"derive": {"_label_offset": {"op": "+", "left": {"field": '
- '"final percentage"}, "right": {"literal": 0.5}}}}, {"derive": {"final survival": {"op": "-", "left": {"field": '
- '"_label_offset"}, "right": {"op": "%", "left": {"field": "_label_offset"}, "right": {"literal": 1}}}}}, {"derive": '
- '{"final label": {"concat": [{"field": "<D3>"}, {"literal": " "}, {"field": "final survival"}, {"literal": "%"}, '
- '{"if": {"op": "==", "left": {"field": "curve cut"}, "right": {"literal": 1}}, "then": {"concat": [{"literal": " at '
- '"}, {"field": "horizon years"}, {"literal": "y"}]}, "else": {"literal": ""}}, {"literal": " (n="}, {"field": '
- '"subjects"}, {"literal": ", "}, {"field": "events in window"}, {"literal": " events)"}]}}}, {"derive": {"label time '
- 'above": {"if": {"op": ">=", "left": {"field": "final percentage"}, "right": {"literal": 85}}, "then": {"literal": '
- 'null}, "else": {"field": "label time"}}, "label time below": {"if": {"op": ">=", "left": {"field": "final '
- 'percentage"}, "right": {"literal": 85}}, "then": {"field": "label time"}, "else": {"literal": null}}}}], '
- '"representation": [{"mark": "line", "mapping": [{"encoding": "x", "field": "lead time", "type": "quantitative", '
- '"title": "time", "domain": {"min": 0}}, {"encoding": "y", "field": "full survival", "type": "quantitative", '
- '"domain": {"min": 0, "max": 100}}, {"encoding": "color", "field": "<D3>", "type": "nominal", "omitLegend": true}]}, '
- '{"mark": "line", "mapping": [{"encoding": "x", "field": "drop time", "type": "quantitative", "title": "time", '
- '"domain": {"min": 0}}, {"encoding": "y", "field": "drop percentage", "type": "quantitative", "domain": {"min": 0, '
- '"max": 100}}, {"encoding": "color", "field": "<D3>", "type": "nominal", "omitLegend": true}]}, {"mark": "area", '
- '"mapping": [{"encoding": "x", "field": "<D1>", "type": "quantitative", "title": "time", "domain": {"min": 0}}, '
- '{"encoding": "y", "field": "ci lower", "type": "quantitative", "domain": {"min": 0, "max": 100}, "title": '
- '"event-free (%)"}, {"encoding": "y2", "field": "ci upper", "type": "quantitative"}, {"encoding": "opacity", "value": '
- '0.12}, {"encoding": "color", "field": "<D3>", "type": "nominal", "omitLegend": true}], "interpolate": "step-after"}, '
- '{"mark": "line", "mapping": [{"encoding": "x", "field": "<D1>", "type": "quantitative", "title": "time", "domain": '
- '{"min": 0}}, {"encoding": "y", "field": "survival percentage", "title": "event-free (%)", "type": "quantitative", '
- '"domain": {"min": 0, "max": 100}}, {"encoding": "color", "field": "<D3>", "type": "nominal", "omitLegend": true}], '
+ '1}, "else": {"literal": 0}}}}, {"filter": {"op": "<=", "left": {"field": "survival years"}, "right": {"field": '
+ '"horizon time"}}}, {"derive": {"curve end": {"agg": "max", "field": "survival years"}, "events in window": {"agg": '
+ '"sum", "field": "events"}}}, {"derive": {"final percentage": {"agg": "min", "field": "survival percentage"}}}, '
+ '{"derive": {"full survival": {"literal": 100}}}, {"derive": {"first time": {"agg": "min", "field": "survival '
+ 'years"}}}, {"derive": {"first percentage": {"agg": "max", "field": "survival percentage"}}}, {"derive": {"lead '
+ 'time": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": {"literal": 0}, "else": '
+ '{"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": "first time"}, "else": '
+ '{"literal": null}}}, "drop time": {"if": {"op": "<=", "left": {"window": "rank"}, "right": {"literal": 2}}, "then": '
+ '{"field": "first time"}, "else": {"literal": null}}, "drop percentage": {"if": {"op": "==", "left": {"window": '
+ '"rank"}, "right": {"literal": 1}}, "then": {"field": "full survival"}, "else": {"if": {"op": "==", "left": '
+ '{"window": "rank"}, "right": {"literal": 2}}, "then": {"field": "first percentage"}, "else": {"literal": null}}}}}, '
+ '{"derive": {"label time": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": '
+ '{"field": "curve end"}, "else": {"literal": null}}}}, {"derive": {"censor time": {"if": {"op": ">", "left": '
+ '{"field": "censored"}, "right": {"literal": 0}}, "then": {"field": "survival years"}, "else": {"literal": null}}}}, '
+ '{"derive": {"_label_offset": {"op": "+", "left": {"field": "final percentage"}, "right": {"literal": 0.5}}}}, '
+ '{"derive": {"final survival": {"op": "-", "left": {"field": "_label_offset"}, "right": {"op": "%", "left": {"field": '
+ '"_label_offset"}, "right": {"literal": 1}}}}}, {"derive": {"final label": {"concat": [{"field": "stratum"}, '
+ '{"literal": " "}, {"field": "final survival"}, {"literal": "%"}, {"if": {"op": "==", "left": {"field": "curve cut"}, '
+ '"right": {"literal": 1}}, "then": {"concat": [{"literal": " at "}, {"field": "horizon years"}, {"literal": "y"}]}, '
+ '"else": {"literal": ""}}, {"literal": " (n="}, {"field": "subjects"}, {"literal": ", "}, {"field": "events in '
+ 'window"}, {"literal": " events)"}]}}}, {"derive": {"label time above": {"if": {"op": ">=", "left": {"field": "final '
+ 'percentage"}, "right": {"literal": 85}}, "then": {"literal": null}, "else": {"field": "label time"}}, "label time '
+ 'below": {"if": {"op": ">=", "left": {"field": "final percentage"}, "right": {"literal": 85}}, "then": {"field": '
+ '"label time"}, "else": {"literal": null}}}}], "representation": [{"mark": "line", "mapping": [{"encoding": "x", '
+ '"field": "lead time", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", '
+ '"field": "full survival", "type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "color", "field": '
+ '"stratum", "type": "nominal", "omitLegend": true}]}, {"mark": "line", "mapping": [{"encoding": "x", "field": "drop '
+ 'time", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "drop '
+ 'percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "color", "field": "stratum", '
+ '"type": "nominal", "omitLegend": true}]}, {"mark": "area", "mapping": [{"encoding": "x", "field": "survival years", '
+ '"type": "quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "ci lower", '
+ '"type": "quantitative", "domain": {"min": 0, "max": 100}, "title": "event-free (%)"}, {"encoding": "y2", "field": '
+ '"ci upper", "type": "quantitative"}, {"encoding": "opacity", "value": 0.12}, {"encoding": "color", "field": '
+ '"stratum", "type": "nominal", "omitLegend": true}], "interpolate": "step-after"}, {"mark": "line", "mapping": '
+ '[{"encoding": "x", "field": "survival years", "type": "quantitative", "title": "survival years", "domain": {"min": '
+ '0}}, {"encoding": "y", "field": "survival percentage", "title": "event-free (%)", "type": "quantitative", "domain": '
+ '{"min": 0, "max": 100}}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": true}], '
  '"interpolate": "step-after"}, {"mark": "point", "mapping": [{"encoding": "x", "field": "censor time", "type": '
- '"quantitative", "title": "time", "domain": {"min": 0}}, {"encoding": "y", "field": "survival percentage", "type": '
- '"quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "shape", "value": '
+ '"quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "survival percentage", '
+ '"type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "shape", "value": '
  '"M-0.09,-0.5L0.09,-0.5L0.09,0.5L-0.09,0.5Z"}, {"encoding": "size", "value": 500}, {"encoding": "color", "field": '
- '"<D3>", "type": "nominal", "omitLegend": true}]}, {"mark": "text", "mapping": [{"encoding": "x", "field": "label '
- 'time above", "type": "quantitative", "title": "time", "domain": {"min": 0}}, {"encoding": "y", "field": "final '
- 'percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "text", "field": "final label", '
- '"type": "nominal"}, {"encoding": "color", "field": "<D3>", "type": "nominal", "omitLegend": true}], "align": '
- '"right", "dy": -9, "stroke": "white", "strokeWidth": 3, "strokeOpacity": 0.7, "avoidOverlap": 8}, {"mark": "text", '
- '"mapping": [{"encoding": "x", "field": "label time below", "type": "quantitative", "title": "time", "domain": '
- '{"min": 0}}, {"encoding": "y", "field": "final percentage", "type": "quantitative", "domain": {"min": 0, "max": '
- '100}}, {"encoding": "text", "field": "final label", "type": "nominal"}, {"encoding": "color", "field": "<D3>", '
- '"type": "nominal", "omitLegend": true}], "align": "right", "dy": 10, "stroke": "white", "strokeWidth": 3, '
- '"strokeOpacity": 0.7, "avoidOverlap": 8}], "title": {"text": "<D3>", "align": "right"}}',
+ '"stratum", "type": "nominal", "omitLegend": true}]}, {"mark": "text", "mapping": [{"encoding": "x", "field": "label '
+ 'time above", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": '
+ '"final percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "text", "field": "final '
+ 'label", "type": "nominal"}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": true}], '
+ '"align": "right", "dy": -9, "stroke": "white", "strokeWidth": 3, "strokeOpacity": 0.7, "avoidOverlap": 8}, {"mark": '
+ '"text", "mapping": [{"encoding": "x", "field": "label time below", "type": "quantitative", "title": "survival '
+ 'years", "domain": {"min": 0}}, {"encoding": "y", "field": "final percentage", "type": "quantitative", "domain": '
+ '{"min": 0, "max": 100}}, {"encoding": "text", "field": "final label", "type": "nominal"}, {"encoding": "color", '
+ '"field": "stratum", "type": "nominal", "omitLegend": true}], "align": "right", "dy": 10, "stroke": "white", '
+ '"strokeWidth": 3, "strokeOpacity": 0.7, "avoidOverlap": 8}], "title": {"text": "<D3>", "align": "right"}}',
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"groupby": ["<F2>", "<F1>"]}, {"rollup": '
  '{"count <E>": {"op": "count"}}}], "representation": [{"mark": "rect", "mapping": [{"encoding": "color", "field": '
  '"count <E>", "type": "quantitative"}, {"encoding": "y", "field": "<F1>", "type": "nominal"}, {"encoding": "x", '
@@ -1840,16 +1847,18 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'type': 'object'}},
   'type': 'function'},
  {'function': {'description': '[barchart] Shows the pre-aggregated cube measure for each category of a nominal '
-                              'dimension as a bar chart. Design: Reads the cube marginal by filtering to rows where '
-                              'the chosen dimension(s) are present and every other dimension is empty; the measure is '
-                              'mapped directly with no re-aggregation. The marginal filter is expanded from the '
-                              "per-request schema's dimension list, so this template works for any cube. Tasks: "
-                              'Compare the measure across categories; identify the most or least common category. '
-                              'Query patterns: How many are there by <dimension>?; Make a bar chart of the measure by '
-                              'a categorical dimension.',
-               'name': 'vis_004_barchart_basic',
+                              'dimension as a horizontal bar chart. Design: Reads the cube marginal by filtering to '
+                              'rows where the chosen dimension(s) are present and every other dimension is empty; the '
+                              'measure is mapped directly with no re-aggregation. The marginal filter is expanded from '
+                              "the per-request schema's dimension list, so this template works for any cube. "
+                              'Horizontal, whatever the category count: cube dimensions carry long labels (protocol '
+                              'arms, site names) that a vertical axis would rotate or truncate. Tasks: Compare the '
+                              'measure across categories; identify the most or least common category. Query patterns: '
+                              'How many are there by <dimension>?; Make a bar chart of the measure by a categorical '
+                              'dimension.',
+               'name': 'vis_004_barchart_horiz',
                'parameters': {'additionalProperties': False,
-                              'properties': {'dimension': {'description': 'cube nominal dimension, encodes x-axis.',
+                              'properties': {'dimension': {'description': 'cube nominal dimension, encodes y-axis.',
                                                            'type': 'string'},
                                              'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'}},
@@ -2668,14 +2677,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                  'enum': ['show', 'hide'],
                                                                  'type': 'string'},
                                              'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
-                                                                         'chart title, and must match the end events '
-                                                                         "in value2: 'overall_survival' when death "
-                                                                         'alone ends the curve; '
-                                                                         "'progression_free_survival' for progression "
-                                                                         "or death; 'event_free_survival' for "
-                                                                         'progression, recurrence, relapse, a second '
-                                                                         'malignancy or death. Omit it when the end '
-                                                                         'events are none of these; the title then '
+                                                                         'chart title, and must match the events that '
+                                                                         'end the curve (for a cube, what its time and '
+                                                                         'status dimensions describe): '
+                                                                         "'overall_survival' when death alone ends the "
+                                                                         "curve; 'progression_free_survival' for "
+                                                                         "progression or death; 'event_free_survival' "
+                                                                         'for progression, recurrence, relapse, a '
+                                                                         'second malignancy or death. Omit it when the '
+                                                                         'end events are none of these; the title then '
                                                                          "just says 'Survival'.",
                                                           'enum': ['overall_survival',
                                                                    'event_free_survival',
@@ -2720,25 +2730,36 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                           'data.',
                                                            'enum': ['kaplan_meier', 'basic'],
                                                            'type': 'string'},
-                                             'time_horizon': {'description': 'OPTIONAL. How many years of follow-up '
-                                                                             'the survival curve shows. Omit it for '
-                                                                             'the default of 5 years. Set it only when '
-                                                                             'the request names a different span '
-                                                                             "('10-year survival', 'the first 2 "
-                                                                             "years'), or 'full' when it asks for the "
-                                                                             "whole follow-up ('all follow-up', 'as "
-                                                                             "far as the data goes').",
+                                             'time_horizon': {'description': 'OPTIONAL — leave it out. How many years '
+                                                                             'of follow-up the survival curve shows; '
+                                                                             'omitted, it is 5 years. Set it ONLY when '
+                                                                             'the request names a different span of '
+                                                                             "TIME ('10-year survival', 'the first 2 "
+                                                                             "years'), or 'full' when it explicitly "
+                                                                             "asks for the whole follow-up TIME ('all "
+                                                                             "follow-up', 'as far as the data goes'). "
+                                                                             "Words about which patients or data ('all "
+                                                                             "data', 'the full data', 'the whole "
+                                                                             "cohort', 'all patients') are not a time "
+                                                                             'span: leave it out for them.',
                                                               'enum': ['1', '2', '3', '5', '10', 'full'],
                                                               'type': 'string'},
-                                             'value1': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
+                                             'value1': {'description': 'The event type that STARTS the clock (e.g. '
+                                                                       "'Initial CNS Tumor', 'diagnosis'), from the "
+                                                                       'event-type column. A literal data VALUE to '
+                                                                       'match (not a column name) — one of the values '
+                                                                       'actually present in the relevant column, '
+                                                                       'copied exactly, including case and spacing.',
                                                         'type': 'string'},
-                                             'value2': {'description': 'One or more literal data VALUES (not column '
-                                                                       'names); a row holding ANY of them matches. '
-                                                                       'Each copied exactly from the relevant column, '
-                                                                       'including case and spacing.',
+                                             'value2': {'description': 'The event types that END the clock, from the '
+                                                                       'event-type column: the death value alone for '
+                                                                       'overall survival; progression, recurrence, '
+                                                                       'second malignancy and death for event-free '
+                                                                       'survival. Never the start event. One or more '
+                                                                       'literal data VALUES (not column names); a row '
+                                                                       'holding ANY of them matches. Each copied '
+                                                                       'exactly from the relevant column, including '
+                                                                       'case and spacing.',
                                                         'items': {'description': 'A literal data VALUE to match (not a '
                                                                                  'column name) — one of the values '
                                                                                  'actually present in the relevant '
@@ -2747,10 +2768,14 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                   'type': 'string'},
                                                         'minItems': 1,
                                                         'type': 'array'},
-                                             'value3': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
+                                             'value3': {'description': 'The status value meaning the subject had NO '
+                                                                       'end event when last seen, so is censored (e.g. '
+                                                                       "'alive', 'event-free'), from the status "
+                                                                       'column. Never the death value. A literal data '
+                                                                       'VALUE to match (not a column name) — one of '
+                                                                       'the values actually present in the relevant '
+                                                                       'column, copied exactly, including case and '
+                                                                       'spacing.',
                                                         'type': 'string'}},
                               'required': ['entity1',
                                            'entity2',
@@ -2790,14 +2815,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                  'enum': ['show', 'hide'],
                                                                  'type': 'string'},
                                              'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
-                                                                         'chart title, and must match the end events '
-                                                                         "in value2: 'overall_survival' when death "
-                                                                         'alone ends the curve; '
-                                                                         "'progression_free_survival' for progression "
-                                                                         "or death; 'event_free_survival' for "
-                                                                         'progression, recurrence, relapse, a second '
-                                                                         'malignancy or death. Omit it when the end '
-                                                                         'events are none of these; the title then '
+                                                                         'chart title, and must match the events that '
+                                                                         'end the curve (for a cube, what its time and '
+                                                                         'status dimensions describe): '
+                                                                         "'overall_survival' when death alone ends the "
+                                                                         "curve; 'progression_free_survival' for "
+                                                                         "progression or death; 'event_free_survival' "
+                                                                         'for progression, recurrence, relapse, a '
+                                                                         'second malignancy or death. Omit it when the '
+                                                                         'end events are none of these; the title then '
                                                                          "just says 'Survival'.",
                                                           'enum': ['overall_survival',
                                                                    'event_free_survival',
@@ -2924,25 +2950,36 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                   'type': 'string'}},
                                                           'required': ['type'],
                                                           'type': 'object'},
-                                             'time_horizon': {'description': 'OPTIONAL. How many years of follow-up '
-                                                                             'the survival curve shows. Omit it for '
-                                                                             'the default of 5 years. Set it only when '
-                                                                             'the request names a different span '
-                                                                             "('10-year survival', 'the first 2 "
-                                                                             "years'), or 'full' when it asks for the "
-                                                                             "whole follow-up ('all follow-up', 'as "
-                                                                             "far as the data goes').",
+                                             'time_horizon': {'description': 'OPTIONAL — leave it out. How many years '
+                                                                             'of follow-up the survival curve shows; '
+                                                                             'omitted, it is 5 years. Set it ONLY when '
+                                                                             'the request names a different span of '
+                                                                             "TIME ('10-year survival', 'the first 2 "
+                                                                             "years'), or 'full' when it explicitly "
+                                                                             "asks for the whole follow-up TIME ('all "
+                                                                             "follow-up', 'as far as the data goes'). "
+                                                                             "Words about which patients or data ('all "
+                                                                             "data', 'the full data', 'the whole "
+                                                                             "cohort', 'all patients') are not a time "
+                                                                             'span: leave it out for them.',
                                                               'enum': ['1', '2', '3', '5', '10', 'full'],
                                                               'type': 'string'},
-                                             'value1': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
+                                             'value1': {'description': 'The event type that STARTS the clock (e.g. '
+                                                                       "'Initial CNS Tumor', 'diagnosis'), from the "
+                                                                       'event-type column. A literal data VALUE to '
+                                                                       'match (not a column name) — one of the values '
+                                                                       'actually present in the relevant column, '
+                                                                       'copied exactly, including case and spacing.',
                                                         'type': 'string'},
-                                             'value2': {'description': 'One or more literal data VALUES (not column '
-                                                                       'names); a row holding ANY of them matches. '
-                                                                       'Each copied exactly from the relevant column, '
-                                                                       'including case and spacing.',
+                                             'value2': {'description': 'The event types that END the clock, from the '
+                                                                       'event-type column: the death value alone for '
+                                                                       'overall survival; progression, recurrence, '
+                                                                       'second malignancy and death for event-free '
+                                                                       'survival. Never the start event. One or more '
+                                                                       'literal data VALUES (not column names); a row '
+                                                                       'holding ANY of them matches. Each copied '
+                                                                       'exactly from the relevant column, including '
+                                                                       'case and spacing.',
                                                         'items': {'description': 'A literal data VALUE to match (not a '
                                                                                  'column name) — one of the values '
                                                                                  'actually present in the relevant '
@@ -2951,10 +2988,14 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                   'type': 'string'},
                                                         'minItems': 1,
                                                         'type': 'array'},
-                                             'value3': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
+                                             'value3': {'description': 'The status value meaning the subject had NO '
+                                                                       'end event when last seen, so is censored (e.g. '
+                                                                       "'alive', 'event-free'), from the status "
+                                                                       'column. Never the death value. A literal data '
+                                                                       'VALUE to match (not a column name) — one of '
+                                                                       'the values actually present in the relevant '
+                                                                       'column, copied exactly, including case and '
+                                                                       'spacing.',
                                                         'type': 'string'}},
                               'required': ['entity1',
                                            'entity2',
@@ -2995,14 +3036,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                  'enum': ['show', 'hide'],
                                                                  'type': 'string'},
                                              'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
-                                                                         'chart title, and must match the end events '
-                                                                         "in value2: 'overall_survival' when death "
-                                                                         'alone ends the curve; '
-                                                                         "'progression_free_survival' for progression "
-                                                                         "or death; 'event_free_survival' for "
-                                                                         'progression, recurrence, relapse, a second '
-                                                                         'malignancy or death. Omit it when the end '
-                                                                         'events are none of these; the title then '
+                                                                         'chart title, and must match the events that '
+                                                                         'end the curve (for a cube, what its time and '
+                                                                         'status dimensions describe): '
+                                                                         "'overall_survival' when death alone ends the "
+                                                                         "curve; 'progression_free_survival' for "
+                                                                         "progression or death; 'event_free_survival' "
+                                                                         'for progression, recurrence, relapse, a '
+                                                                         'second malignancy or death. Omit it when the '
+                                                                         'end events are none of these; the title then '
                                                                          "just says 'Survival'.",
                                                           'enum': ['overall_survival',
                                                                    'event_free_survival',
@@ -3129,25 +3171,36 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                   'type': 'string'}},
                                                           'required': ['type'],
                                                           'type': 'object'},
-                                             'time_horizon': {'description': 'OPTIONAL. How many years of follow-up '
-                                                                             'the survival curve shows. Omit it for '
-                                                                             'the default of 5 years. Set it only when '
-                                                                             'the request names a different span '
-                                                                             "('10-year survival', 'the first 2 "
-                                                                             "years'), or 'full' when it asks for the "
-                                                                             "whole follow-up ('all follow-up', 'as "
-                                                                             "far as the data goes').",
+                                             'time_horizon': {'description': 'OPTIONAL — leave it out. How many years '
+                                                                             'of follow-up the survival curve shows; '
+                                                                             'omitted, it is 5 years. Set it ONLY when '
+                                                                             'the request names a different span of '
+                                                                             "TIME ('10-year survival', 'the first 2 "
+                                                                             "years'), or 'full' when it explicitly "
+                                                                             "asks for the whole follow-up TIME ('all "
+                                                                             "follow-up', 'as far as the data goes'). "
+                                                                             "Words about which patients or data ('all "
+                                                                             "data', 'the full data', 'the whole "
+                                                                             "cohort', 'all patients') are not a time "
+                                                                             'span: leave it out for them.',
                                                               'enum': ['1', '2', '3', '5', '10', 'full'],
                                                               'type': 'string'},
-                                             'value1': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
+                                             'value1': {'description': 'The event type that STARTS the clock (e.g. '
+                                                                       "'Initial CNS Tumor', 'diagnosis'), from the "
+                                                                       'event-type column. A literal data VALUE to '
+                                                                       'match (not a column name) — one of the values '
+                                                                       'actually present in the relevant column, '
+                                                                       'copied exactly, including case and spacing.',
                                                         'type': 'string'},
-                                             'value2': {'description': 'One or more literal data VALUES (not column '
-                                                                       'names); a row holding ANY of them matches. '
-                                                                       'Each copied exactly from the relevant column, '
-                                                                       'including case and spacing.',
+                                             'value2': {'description': 'The event types that END the clock, from the '
+                                                                       'event-type column: the death value alone for '
+                                                                       'overall survival; progression, recurrence, '
+                                                                       'second malignancy and death for event-free '
+                                                                       'survival. Never the start event. One or more '
+                                                                       'literal data VALUES (not column names); a row '
+                                                                       'holding ANY of them matches. Each copied '
+                                                                       'exactly from the relevant column, including '
+                                                                       'case and spacing.',
                                                         'items': {'description': 'A literal data VALUE to match (not a '
                                                                                  'column name) — one of the values '
                                                                                  'actually present in the relevant '
@@ -3156,10 +3209,14 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                   'type': 'string'},
                                                         'minItems': 1,
                                                         'type': 'array'},
-                                             'value3': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
+                                             'value3': {'description': 'The status value meaning the subject had NO '
+                                                                       'end event when last seen, so is censored (e.g. '
+                                                                       "'alive', 'event-free'), from the status "
+                                                                       'column. Never the death value. A literal data '
+                                                                       'VALUE to match (not a column name) — one of '
+                                                                       'the values actually present in the relevant '
+                                                                       'column, copied exactly, including case and '
+                                                                       'spacing.',
                                                         'type': 'string'}},
                               'required': ['entity1',
                                            'entity2',
@@ -3200,14 +3257,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                  'enum': ['show', 'hide'],
                                                                  'type': 'string'},
                                              'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
-                                                                         'chart title, and must match the end events '
-                                                                         "in value2: 'overall_survival' when death "
-                                                                         'alone ends the curve; '
-                                                                         "'progression_free_survival' for progression "
-                                                                         "or death; 'event_free_survival' for "
-                                                                         'progression, recurrence, relapse, a second '
-                                                                         'malignancy or death. Omit it when the end '
-                                                                         'events are none of these; the title then '
+                                                                         'chart title, and must match the events that '
+                                                                         'end the curve (for a cube, what its time and '
+                                                                         'status dimensions describe): '
+                                                                         "'overall_survival' when death alone ends the "
+                                                                         "curve; 'progression_free_survival' for "
+                                                                         "progression or death; 'event_free_survival' "
+                                                                         'for progression, recurrence, relapse, a '
+                                                                         'second malignancy or death. Omit it when the '
+                                                                         'end events are none of these; the title then '
                                                                          "just says 'Survival'.",
                                                           'enum': ['overall_survival',
                                                                    'event_free_survival',
@@ -3334,25 +3392,36 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                   'type': 'string'}},
                                                           'required': ['type'],
                                                           'type': 'object'},
-                                             'time_horizon': {'description': 'OPTIONAL. How many years of follow-up '
-                                                                             'the survival curve shows. Omit it for '
-                                                                             'the default of 5 years. Set it only when '
-                                                                             'the request names a different span '
-                                                                             "('10-year survival', 'the first 2 "
-                                                                             "years'), or 'full' when it asks for the "
-                                                                             "whole follow-up ('all follow-up', 'as "
-                                                                             "far as the data goes').",
+                                             'time_horizon': {'description': 'OPTIONAL — leave it out. How many years '
+                                                                             'of follow-up the survival curve shows; '
+                                                                             'omitted, it is 5 years. Set it ONLY when '
+                                                                             'the request names a different span of '
+                                                                             "TIME ('10-year survival', 'the first 2 "
+                                                                             "years'), or 'full' when it explicitly "
+                                                                             "asks for the whole follow-up TIME ('all "
+                                                                             "follow-up', 'as far as the data goes'). "
+                                                                             "Words about which patients or data ('all "
+                                                                             "data', 'the full data', 'the whole "
+                                                                             "cohort', 'all patients') are not a time "
+                                                                             'span: leave it out for them.',
                                                               'enum': ['1', '2', '3', '5', '10', 'full'],
                                                               'type': 'string'},
-                                             'value1': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
+                                             'value1': {'description': 'The event type that STARTS the clock (e.g. '
+                                                                       "'Initial CNS Tumor', 'diagnosis'), from the "
+                                                                       'event-type column. A literal data VALUE to '
+                                                                       'match (not a column name) — one of the values '
+                                                                       'actually present in the relevant column, '
+                                                                       'copied exactly, including case and spacing.',
                                                         'type': 'string'},
-                                             'value2': {'description': 'One or more literal data VALUES (not column '
-                                                                       'names); a row holding ANY of them matches. '
-                                                                       'Each copied exactly from the relevant column, '
-                                                                       'including case and spacing.',
+                                             'value2': {'description': 'The event types that END the clock, from the '
+                                                                       'event-type column: the death value alone for '
+                                                                       'overall survival; progression, recurrence, '
+                                                                       'second malignancy and death for event-free '
+                                                                       'survival. Never the start event. One or more '
+                                                                       'literal data VALUES (not column names); a row '
+                                                                       'holding ANY of them matches. Each copied '
+                                                                       'exactly from the relevant column, including '
+                                                                       'case and spacing.',
                                                         'items': {'description': 'A literal data VALUE to match (not a '
                                                                                  'column name) — one of the values '
                                                                                  'actually present in the relevant '
@@ -3361,10 +3430,14 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                   'type': 'string'},
                                                         'minItems': 1,
                                                         'type': 'array'},
-                                             'value3': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
+                                             'value3': {'description': 'The status value meaning the subject had NO '
+                                                                       'end event when last seen, so is censored (e.g. '
+                                                                       "'alive', 'event-free'), from the status "
+                                                                       'column. Never the death value. A literal data '
+                                                                       'VALUE to match (not a column name) — one of '
+                                                                       'the values actually present in the relevant '
+                                                                       'column, copied exactly, including case and '
+                                                                       'spacing.',
                                                         'type': 'string'}},
                               'required': ['entity1',
                                            'entity2',
@@ -3406,14 +3479,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                  'enum': ['show', 'hide'],
                                                                  'type': 'string'},
                                              'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
-                                                                         'chart title, and must match the end events '
-                                                                         "in value2: 'overall_survival' when death "
-                                                                         'alone ends the curve; '
-                                                                         "'progression_free_survival' for progression "
-                                                                         "or death; 'event_free_survival' for "
-                                                                         'progression, recurrence, relapse, a second '
-                                                                         'malignancy or death. Omit it when the end '
-                                                                         'events are none of these; the title then '
+                                                                         'chart title, and must match the events that '
+                                                                         'end the curve (for a cube, what its time and '
+                                                                         'status dimensions describe): '
+                                                                         "'overall_survival' when death alone ends the "
+                                                                         "curve; 'progression_free_survival' for "
+                                                                         "progression or death; 'event_free_survival' "
+                                                                         'for progression, recurrence, relapse, a '
+                                                                         'second malignancy or death. Omit it when the '
+                                                                         'end events are none of these; the title then '
                                                                          "just says 'Survival'.",
                                                           'enum': ['overall_survival',
                                                                    'event_free_survival',
@@ -3540,25 +3614,36 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                   'type': 'string'}},
                                                           'required': ['type'],
                                                           'type': 'object'},
-                                             'time_horizon': {'description': 'OPTIONAL. How many years of follow-up '
-                                                                             'the survival curve shows. Omit it for '
-                                                                             'the default of 5 years. Set it only when '
-                                                                             'the request names a different span '
-                                                                             "('10-year survival', 'the first 2 "
-                                                                             "years'), or 'full' when it asks for the "
-                                                                             "whole follow-up ('all follow-up', 'as "
-                                                                             "far as the data goes').",
+                                             'time_horizon': {'description': 'OPTIONAL — leave it out. How many years '
+                                                                             'of follow-up the survival curve shows; '
+                                                                             'omitted, it is 5 years. Set it ONLY when '
+                                                                             'the request names a different span of '
+                                                                             "TIME ('10-year survival', 'the first 2 "
+                                                                             "years'), or 'full' when it explicitly "
+                                                                             "asks for the whole follow-up TIME ('all "
+                                                                             "follow-up', 'as far as the data goes'). "
+                                                                             "Words about which patients or data ('all "
+                                                                             "data', 'the full data', 'the whole "
+                                                                             "cohort', 'all patients') are not a time "
+                                                                             'span: leave it out for them.',
                                                               'enum': ['1', '2', '3', '5', '10', 'full'],
                                                               'type': 'string'},
-                                             'value1': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
+                                             'value1': {'description': 'The event type that STARTS the clock (e.g. '
+                                                                       "'Initial CNS Tumor', 'diagnosis'), from the "
+                                                                       'event-type column. A literal data VALUE to '
+                                                                       'match (not a column name) — one of the values '
+                                                                       'actually present in the relevant column, '
+                                                                       'copied exactly, including case and spacing.',
                                                         'type': 'string'},
-                                             'value2': {'description': 'One or more literal data VALUES (not column '
-                                                                       'names); a row holding ANY of them matches. '
-                                                                       'Each copied exactly from the relevant column, '
-                                                                       'including case and spacing.',
+                                             'value2': {'description': 'The event types that END the clock, from the '
+                                                                       'event-type column: the death value alone for '
+                                                                       'overall survival; progression, recurrence, '
+                                                                       'second malignancy and death for event-free '
+                                                                       'survival. Never the start event. One or more '
+                                                                       'literal data VALUES (not column names); a row '
+                                                                       'holding ANY of them matches. Each copied '
+                                                                       'exactly from the relevant column, including '
+                                                                       'case and spacing.',
                                                         'items': {'description': 'A literal data VALUE to match (not a '
                                                                                  'column name) — one of the values '
                                                                                  'actually present in the relevant '
@@ -3567,10 +3652,14 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                   'type': 'string'},
                                                         'minItems': 1,
                                                         'type': 'array'},
-                                             'value3': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
+                                             'value3': {'description': 'The status value meaning the subject had NO '
+                                                                       'end event when last seen, so is censored (e.g. '
+                                                                       "'alive', 'event-free'), from the status "
+                                                                       'column. Never the death value. A literal data '
+                                                                       'VALUE to match (not a column name) — one of '
+                                                                       'the values actually present in the relevant '
+                                                                       'column, copied exactly, including case and '
+                                                                       'spacing.',
                                                         'type': 'string'}},
                               'required': ['entity1',
                                            'entity2',
@@ -3611,14 +3700,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                  'enum': ['show', 'hide'],
                                                                  'type': 'string'},
                                              'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
-                                                                         'chart title, and must match the end events '
-                                                                         "in value2: 'overall_survival' when death "
-                                                                         'alone ends the curve; '
-                                                                         "'progression_free_survival' for progression "
-                                                                         "or death; 'event_free_survival' for "
-                                                                         'progression, recurrence, relapse, a second '
-                                                                         'malignancy or death. Omit it when the end '
-                                                                         'events are none of these; the title then '
+                                                                         'chart title, and must match the events that '
+                                                                         'end the curve (for a cube, what its time and '
+                                                                         'status dimensions describe): '
+                                                                         "'overall_survival' when death alone ends the "
+                                                                         "curve; 'progression_free_survival' for "
+                                                                         "progression or death; 'event_free_survival' "
+                                                                         'for progression, recurrence, relapse, a '
+                                                                         'second malignancy or death. Omit it when the '
+                                                                         'end events are none of these; the title then '
                                                                          "just says 'Survival'.",
                                                           'enum': ['overall_survival',
                                                                    'event_free_survival',
@@ -3756,25 +3846,36 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                   'type': 'string'}},
                                                           'required': ['type'],
                                                           'type': 'object'},
-                                             'time_horizon': {'description': 'OPTIONAL. How many years of follow-up '
-                                                                             'the survival curve shows. Omit it for '
-                                                                             'the default of 5 years. Set it only when '
-                                                                             'the request names a different span '
-                                                                             "('10-year survival', 'the first 2 "
-                                                                             "years'), or 'full' when it asks for the "
-                                                                             "whole follow-up ('all follow-up', 'as "
-                                                                             "far as the data goes').",
+                                             'time_horizon': {'description': 'OPTIONAL — leave it out. How many years '
+                                                                             'of follow-up the survival curve shows; '
+                                                                             'omitted, it is 5 years. Set it ONLY when '
+                                                                             'the request names a different span of '
+                                                                             "TIME ('10-year survival', 'the first 2 "
+                                                                             "years'), or 'full' when it explicitly "
+                                                                             "asks for the whole follow-up TIME ('all "
+                                                                             "follow-up', 'as far as the data goes'). "
+                                                                             "Words about which patients or data ('all "
+                                                                             "data', 'the full data', 'the whole "
+                                                                             "cohort', 'all patients') are not a time "
+                                                                             'span: leave it out for them.',
                                                               'enum': ['1', '2', '3', '5', '10', 'full'],
                                                               'type': 'string'},
-                                             'value1': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
+                                             'value1': {'description': 'The event type that STARTS the clock (e.g. '
+                                                                       "'Initial CNS Tumor', 'diagnosis'), from the "
+                                                                       'event-type column. A literal data VALUE to '
+                                                                       'match (not a column name) — one of the values '
+                                                                       'actually present in the relevant column, '
+                                                                       'copied exactly, including case and spacing.',
                                                         'type': 'string'},
-                                             'value2': {'description': 'One or more literal data VALUES (not column '
-                                                                       'names); a row holding ANY of them matches. '
-                                                                       'Each copied exactly from the relevant column, '
-                                                                       'including case and spacing.',
+                                             'value2': {'description': 'The event types that END the clock, from the '
+                                                                       'event-type column: the death value alone for '
+                                                                       'overall survival; progression, recurrence, '
+                                                                       'second malignancy and death for event-free '
+                                                                       'survival. Never the start event. One or more '
+                                                                       'literal data VALUES (not column names); a row '
+                                                                       'holding ANY of them matches. Each copied '
+                                                                       'exactly from the relevant column, including '
+                                                                       'case and spacing.',
                                                         'items': {'description': 'A literal data VALUE to match (not a '
                                                                                  'column name) — one of the values '
                                                                                  'actually present in the relevant '
@@ -3783,10 +3884,14 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                   'type': 'string'},
                                                         'minItems': 1,
                                                         'type': 'array'},
-                                             'value3': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
+                                             'value3': {'description': 'The status value meaning the subject had NO '
+                                                                       'end event when last seen, so is censored (e.g. '
+                                                                       "'alive', 'event-free'), from the status "
+                                                                       'column. Never the death value. A literal data '
+                                                                       'VALUE to match (not a column name) — one of '
+                                                                       'the values actually present in the relevant '
+                                                                       'column, copied exactly, including case and '
+                                                                       'spacing.',
                                                         'type': 'string'}},
                               'required': ['entity1',
                                            'entity2',
@@ -3828,14 +3933,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                  'enum': ['show', 'hide'],
                                                                  'type': 'string'},
                                              'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
-                                                                         'chart title, and must match the end events '
-                                                                         "in value2: 'overall_survival' when death "
-                                                                         'alone ends the curve; '
-                                                                         "'progression_free_survival' for progression "
-                                                                         "or death; 'event_free_survival' for "
-                                                                         'progression, recurrence, relapse, a second '
-                                                                         'malignancy or death. Omit it when the end '
-                                                                         'events are none of these; the title then '
+                                                                         'chart title, and must match the events that '
+                                                                         'end the curve (for a cube, what its time and '
+                                                                         'status dimensions describe): '
+                                                                         "'overall_survival' when death alone ends the "
+                                                                         "curve; 'progression_free_survival' for "
+                                                                         "progression or death; 'event_free_survival' "
+                                                                         'for progression, recurrence, relapse, a '
+                                                                         'second malignancy or death. Omit it when the '
+                                                                         'end events are none of these; the title then '
                                                                          "just says 'Survival'.",
                                                           'enum': ['overall_survival',
                                                                    'event_free_survival',
@@ -3973,25 +4079,36 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                   'type': 'string'}},
                                                           'required': ['type'],
                                                           'type': 'object'},
-                                             'time_horizon': {'description': 'OPTIONAL. How many years of follow-up '
-                                                                             'the survival curve shows. Omit it for '
-                                                                             'the default of 5 years. Set it only when '
-                                                                             'the request names a different span '
-                                                                             "('10-year survival', 'the first 2 "
-                                                                             "years'), or 'full' when it asks for the "
-                                                                             "whole follow-up ('all follow-up', 'as "
-                                                                             "far as the data goes').",
+                                             'time_horizon': {'description': 'OPTIONAL — leave it out. How many years '
+                                                                             'of follow-up the survival curve shows; '
+                                                                             'omitted, it is 5 years. Set it ONLY when '
+                                                                             'the request names a different span of '
+                                                                             "TIME ('10-year survival', 'the first 2 "
+                                                                             "years'), or 'full' when it explicitly "
+                                                                             "asks for the whole follow-up TIME ('all "
+                                                                             "follow-up', 'as far as the data goes'). "
+                                                                             "Words about which patients or data ('all "
+                                                                             "data', 'the full data', 'the whole "
+                                                                             "cohort', 'all patients') are not a time "
+                                                                             'span: leave it out for them.',
                                                               'enum': ['1', '2', '3', '5', '10', 'full'],
                                                               'type': 'string'},
-                                             'value1': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
+                                             'value1': {'description': 'The event type that STARTS the clock (e.g. '
+                                                                       "'Initial CNS Tumor', 'diagnosis'), from the "
+                                                                       'event-type column. A literal data VALUE to '
+                                                                       'match (not a column name) — one of the values '
+                                                                       'actually present in the relevant column, '
+                                                                       'copied exactly, including case and spacing.',
                                                         'type': 'string'},
-                                             'value2': {'description': 'One or more literal data VALUES (not column '
-                                                                       'names); a row holding ANY of them matches. '
-                                                                       'Each copied exactly from the relevant column, '
-                                                                       'including case and spacing.',
+                                             'value2': {'description': 'The event types that END the clock, from the '
+                                                                       'event-type column: the death value alone for '
+                                                                       'overall survival; progression, recurrence, '
+                                                                       'second malignancy and death for event-free '
+                                                                       'survival. Never the start event. One or more '
+                                                                       'literal data VALUES (not column names); a row '
+                                                                       'holding ANY of them matches. Each copied '
+                                                                       'exactly from the relevant column, including '
+                                                                       'case and spacing.',
                                                         'items': {'description': 'A literal data VALUE to match (not a '
                                                                                  'column name) — one of the values '
                                                                                  'actually present in the relevant '
@@ -4000,10 +4117,14 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                   'type': 'string'},
                                                         'minItems': 1,
                                                         'type': 'array'},
-                                             'value3': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
+                                             'value3': {'description': 'The status value meaning the subject had NO '
+                                                                       'end event when last seen, so is censored (e.g. '
+                                                                       "'alive', 'event-free'), from the status "
+                                                                       'column. Never the death value. A literal data '
+                                                                       'VALUE to match (not a column name) — one of '
+                                                                       'the values actually present in the relevant '
+                                                                       'column, copied exactly, including case and '
+                                                                       'spacing.',
                                                         'type': 'string'}},
                               'required': ['entity1',
                                            'entity2',
@@ -4047,14 +4168,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                  'enum': ['show', 'hide'],
                                                                  'type': 'string'},
                                              'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
-                                                                         'chart title, and must match the end events '
-                                                                         "in value2: 'overall_survival' when death "
-                                                                         'alone ends the curve; '
-                                                                         "'progression_free_survival' for progression "
-                                                                         "or death; 'event_free_survival' for "
-                                                                         'progression, recurrence, relapse, a second '
-                                                                         'malignancy or death. Omit it when the end '
-                                                                         'events are none of these; the title then '
+                                                                         'chart title, and must match the events that '
+                                                                         'end the curve (for a cube, what its time and '
+                                                                         'status dimensions describe): '
+                                                                         "'overall_survival' when death alone ends the "
+                                                                         "curve; 'progression_free_survival' for "
+                                                                         "progression or death; 'event_free_survival' "
+                                                                         'for progression, recurrence, relapse, a '
+                                                                         'second malignancy or death. Omit it when the '
+                                                                         'end events are none of these; the title then '
                                                                          "just says 'Survival'.",
                                                           'enum': ['overall_survival',
                                                                    'event_free_survival',
@@ -4192,25 +4314,36 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                   'type': 'string'}},
                                                           'required': ['type'],
                                                           'type': 'object'},
-                                             'time_horizon': {'description': 'OPTIONAL. How many years of follow-up '
-                                                                             'the survival curve shows. Omit it for '
-                                                                             'the default of 5 years. Set it only when '
-                                                                             'the request names a different span '
-                                                                             "('10-year survival', 'the first 2 "
-                                                                             "years'), or 'full' when it asks for the "
-                                                                             "whole follow-up ('all follow-up', 'as "
-                                                                             "far as the data goes').",
+                                             'time_horizon': {'description': 'OPTIONAL — leave it out. How many years '
+                                                                             'of follow-up the survival curve shows; '
+                                                                             'omitted, it is 5 years. Set it ONLY when '
+                                                                             'the request names a different span of '
+                                                                             "TIME ('10-year survival', 'the first 2 "
+                                                                             "years'), or 'full' when it explicitly "
+                                                                             "asks for the whole follow-up TIME ('all "
+                                                                             "follow-up', 'as far as the data goes'). "
+                                                                             "Words about which patients or data ('all "
+                                                                             "data', 'the full data', 'the whole "
+                                                                             "cohort', 'all patients') are not a time "
+                                                                             'span: leave it out for them.',
                                                               'enum': ['1', '2', '3', '5', '10', 'full'],
                                                               'type': 'string'},
-                                             'value1': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
+                                             'value1': {'description': 'The event type that STARTS the clock (e.g. '
+                                                                       "'Initial CNS Tumor', 'diagnosis'), from the "
+                                                                       'event-type column. A literal data VALUE to '
+                                                                       'match (not a column name) — one of the values '
+                                                                       'actually present in the relevant column, '
+                                                                       'copied exactly, including case and spacing.',
                                                         'type': 'string'},
-                                             'value2': {'description': 'One or more literal data VALUES (not column '
-                                                                       'names); a row holding ANY of them matches. '
-                                                                       'Each copied exactly from the relevant column, '
-                                                                       'including case and spacing.',
+                                             'value2': {'description': 'The event types that END the clock, from the '
+                                                                       'event-type column: the death value alone for '
+                                                                       'overall survival; progression, recurrence, '
+                                                                       'second malignancy and death for event-free '
+                                                                       'survival. Never the start event. One or more '
+                                                                       'literal data VALUES (not column names); a row '
+                                                                       'holding ANY of them matches. Each copied '
+                                                                       'exactly from the relevant column, including '
+                                                                       'case and spacing.',
                                                         'items': {'description': 'A literal data VALUE to match (not a '
                                                                                  'column name) — one of the values '
                                                                                  'actually present in the relevant '
@@ -4219,10 +4352,14 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                   'type': 'string'},
                                                         'minItems': 1,
                                                         'type': 'array'},
-                                             'value3': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
+                                             'value3': {'description': 'The status value meaning the subject had NO '
+                                                                       'end event when last seen, so is censored (e.g. '
+                                                                       "'alive', 'event-free'), from the status "
+                                                                       'column. Never the death value. A literal data '
+                                                                       'VALUE to match (not a column name) — one of '
+                                                                       'the values actually present in the relevant '
+                                                                       'column, copied exactly, including case and '
+                                                                       'spacing.',
                                                         'type': 'string'}},
                               'required': ['entity1',
                                            'entity2',
@@ -4265,14 +4402,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                  'enum': ['show', 'hide'],
                                                                  'type': 'string'},
                                              'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
-                                                                         'chart title, and must match the end events '
-                                                                         "in value2: 'overall_survival' when death "
-                                                                         'alone ends the curve; '
-                                                                         "'progression_free_survival' for progression "
-                                                                         "or death; 'event_free_survival' for "
-                                                                         'progression, recurrence, relapse, a second '
-                                                                         'malignancy or death. Omit it when the end '
-                                                                         'events are none of these; the title then '
+                                                                         'chart title, and must match the events that '
+                                                                         'end the curve (for a cube, what its time and '
+                                                                         'status dimensions describe): '
+                                                                         "'overall_survival' when death alone ends the "
+                                                                         "curve; 'progression_free_survival' for "
+                                                                         "progression or death; 'event_free_survival' "
+                                                                         'for progression, recurrence, relapse, a '
+                                                                         'second malignancy or death. Omit it when the '
+                                                                         'end events are none of these; the title then '
                                                                          "just says 'Survival'.",
                                                           'enum': ['overall_survival',
                                                                    'event_free_survival',
@@ -4410,25 +4548,36 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                   'type': 'string'}},
                                                           'required': ['type'],
                                                           'type': 'object'},
-                                             'time_horizon': {'description': 'OPTIONAL. How many years of follow-up '
-                                                                             'the survival curve shows. Omit it for '
-                                                                             'the default of 5 years. Set it only when '
-                                                                             'the request names a different span '
-                                                                             "('10-year survival', 'the first 2 "
-                                                                             "years'), or 'full' when it asks for the "
-                                                                             "whole follow-up ('all follow-up', 'as "
-                                                                             "far as the data goes').",
+                                             'time_horizon': {'description': 'OPTIONAL — leave it out. How many years '
+                                                                             'of follow-up the survival curve shows; '
+                                                                             'omitted, it is 5 years. Set it ONLY when '
+                                                                             'the request names a different span of '
+                                                                             "TIME ('10-year survival', 'the first 2 "
+                                                                             "years'), or 'full' when it explicitly "
+                                                                             "asks for the whole follow-up TIME ('all "
+                                                                             "follow-up', 'as far as the data goes'). "
+                                                                             "Words about which patients or data ('all "
+                                                                             "data', 'the full data', 'the whole "
+                                                                             "cohort', 'all patients') are not a time "
+                                                                             'span: leave it out for them.',
                                                               'enum': ['1', '2', '3', '5', '10', 'full'],
                                                               'type': 'string'},
-                                             'value1': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
+                                             'value1': {'description': 'The event type that STARTS the clock (e.g. '
+                                                                       "'Initial CNS Tumor', 'diagnosis'), from the "
+                                                                       'event-type column. A literal data VALUE to '
+                                                                       'match (not a column name) — one of the values '
+                                                                       'actually present in the relevant column, '
+                                                                       'copied exactly, including case and spacing.',
                                                         'type': 'string'},
-                                             'value2': {'description': 'One or more literal data VALUES (not column '
-                                                                       'names); a row holding ANY of them matches. '
-                                                                       'Each copied exactly from the relevant column, '
-                                                                       'including case and spacing.',
+                                             'value2': {'description': 'The event types that END the clock, from the '
+                                                                       'event-type column: the death value alone for '
+                                                                       'overall survival; progression, recurrence, '
+                                                                       'second malignancy and death for event-free '
+                                                                       'survival. Never the start event. One or more '
+                                                                       'literal data VALUES (not column names); a row '
+                                                                       'holding ANY of them matches. Each copied '
+                                                                       'exactly from the relevant column, including '
+                                                                       'case and spacing.',
                                                         'items': {'description': 'A literal data VALUE to match (not a '
                                                                                  'column name) — one of the values '
                                                                                  'actually present in the relevant '
@@ -4437,10 +4586,14 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                   'type': 'string'},
                                                         'minItems': 1,
                                                         'type': 'array'},
-                                             'value3': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
+                                             'value3': {'description': 'The status value meaning the subject had NO '
+                                                                       'end event when last seen, so is censored (e.g. '
+                                                                       "'alive', 'event-free'), from the status "
+                                                                       'column. Never the death value. A literal data '
+                                                                       'VALUE to match (not a column name) — one of '
+                                                                       'the values actually present in the relevant '
+                                                                       'column, copied exactly, including case and '
+                                                                       'spacing.',
                                                         'type': 'string'}},
                               'required': ['entity1',
                                            'entity2',
@@ -4484,14 +4637,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                  'enum': ['show', 'hide'],
                                                                  'type': 'string'},
                                              'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
-                                                                         'chart title, and must match the end events '
-                                                                         "in value2: 'overall_survival' when death "
-                                                                         'alone ends the curve; '
-                                                                         "'progression_free_survival' for progression "
-                                                                         "or death; 'event_free_survival' for "
-                                                                         'progression, recurrence, relapse, a second '
-                                                                         'malignancy or death. Omit it when the end '
-                                                                         'events are none of these; the title then '
+                                                                         'chart title, and must match the events that '
+                                                                         'end the curve (for a cube, what its time and '
+                                                                         'status dimensions describe): '
+                                                                         "'overall_survival' when death alone ends the "
+                                                                         "curve; 'progression_free_survival' for "
+                                                                         "progression or death; 'event_free_survival' "
+                                                                         'for progression, recurrence, relapse, a '
+                                                                         'second malignancy or death. Omit it when the '
+                                                                         'end events are none of these; the title then '
                                                                          "just says 'Survival'.",
                                                           'enum': ['overall_survival',
                                                                    'event_free_survival',
@@ -4547,25 +4701,36 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                           'data.',
                                                            'enum': ['kaplan_meier', 'basic'],
                                                            'type': 'string'},
-                                             'time_horizon': {'description': 'OPTIONAL. How many years of follow-up '
-                                                                             'the survival curve shows. Omit it for '
-                                                                             'the default of 5 years. Set it only when '
-                                                                             'the request names a different span '
-                                                                             "('10-year survival', 'the first 2 "
-                                                                             "years'), or 'full' when it asks for the "
-                                                                             "whole follow-up ('all follow-up', 'as "
-                                                                             "far as the data goes').",
+                                             'time_horizon': {'description': 'OPTIONAL — leave it out. How many years '
+                                                                             'of follow-up the survival curve shows; '
+                                                                             'omitted, it is 5 years. Set it ONLY when '
+                                                                             'the request names a different span of '
+                                                                             "TIME ('10-year survival', 'the first 2 "
+                                                                             "years'), or 'full' when it explicitly "
+                                                                             "asks for the whole follow-up TIME ('all "
+                                                                             "follow-up', 'as far as the data goes'). "
+                                                                             "Words about which patients or data ('all "
+                                                                             "data', 'the full data', 'the whole "
+                                                                             "cohort', 'all patients') are not a time "
+                                                                             'span: leave it out for them.',
                                                               'enum': ['1', '2', '3', '5', '10', 'full'],
                                                               'type': 'string'},
-                                             'value1': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
+                                             'value1': {'description': 'The event type that STARTS the clock (e.g. '
+                                                                       "'Initial CNS Tumor', 'diagnosis'), from the "
+                                                                       'event-type column. A literal data VALUE to '
+                                                                       'match (not a column name) — one of the values '
+                                                                       'actually present in the relevant column, '
+                                                                       'copied exactly, including case and spacing.',
                                                         'type': 'string'},
-                                             'value2': {'description': 'One or more literal data VALUES (not column '
-                                                                       'names); a row holding ANY of them matches. '
-                                                                       'Each copied exactly from the relevant column, '
-                                                                       'including case and spacing.',
+                                             'value2': {'description': 'The event types that END the clock, from the '
+                                                                       'event-type column: the death value alone for '
+                                                                       'overall survival; progression, recurrence, '
+                                                                       'second malignancy and death for event-free '
+                                                                       'survival. Never the start event. One or more '
+                                                                       'literal data VALUES (not column names); a row '
+                                                                       'holding ANY of them matches. Each copied '
+                                                                       'exactly from the relevant column, including '
+                                                                       'case and spacing.',
                                                         'items': {'description': 'A literal data VALUE to match (not a '
                                                                                  'column name) — one of the values '
                                                                                  'actually present in the relevant '
@@ -4574,10 +4739,14 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                   'type': 'string'},
                                                         'minItems': 1,
                                                         'type': 'array'},
-                                             'value3': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
+                                             'value3': {'description': 'The status value meaning the subject had NO '
+                                                                       'end event when last seen, so is censored (e.g. '
+                                                                       "'alive', 'event-free'), from the status "
+                                                                       'column. Never the death value. A literal data '
+                                                                       'VALUE to match (not a column name) — one of '
+                                                                       'the values actually present in the relevant '
+                                                                       'column, copied exactly, including case and '
+                                                                       'spacing.',
                                                         'type': 'string'}},
                               'required': ['entity1',
                                            'entity2',
@@ -4619,14 +4788,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                  'enum': ['show', 'hide'],
                                                                  'type': 'string'},
                                              'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
-                                                                         'chart title, and must match the end events '
-                                                                         "in value2: 'overall_survival' when death "
-                                                                         'alone ends the curve; '
-                                                                         "'progression_free_survival' for progression "
-                                                                         "or death; 'event_free_survival' for "
-                                                                         'progression, recurrence, relapse, a second '
-                                                                         'malignancy or death. Omit it when the end '
-                                                                         'events are none of these; the title then '
+                                                                         'chart title, and must match the events that '
+                                                                         'end the curve (for a cube, what its time and '
+                                                                         'status dimensions describe): '
+                                                                         "'overall_survival' when death alone ends the "
+                                                                         "curve; 'progression_free_survival' for "
+                                                                         "progression or death; 'event_free_survival' "
+                                                                         'for progression, recurrence, relapse, a '
+                                                                         'second malignancy or death. Omit it when the '
+                                                                         'end events are none of these; the title then '
                                                                          "just says 'Survival'.",
                                                           'enum': ['overall_survival',
                                                                    'event_free_survival',
@@ -4692,25 +4862,36 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                           'data.',
                                                            'enum': ['kaplan_meier', 'basic'],
                                                            'type': 'string'},
-                                             'time_horizon': {'description': 'OPTIONAL. How many years of follow-up '
-                                                                             'the survival curve shows. Omit it for '
-                                                                             'the default of 5 years. Set it only when '
-                                                                             'the request names a different span '
-                                                                             "('10-year survival', 'the first 2 "
-                                                                             "years'), or 'full' when it asks for the "
-                                                                             "whole follow-up ('all follow-up', 'as "
-                                                                             "far as the data goes').",
+                                             'time_horizon': {'description': 'OPTIONAL — leave it out. How many years '
+                                                                             'of follow-up the survival curve shows; '
+                                                                             'omitted, it is 5 years. Set it ONLY when '
+                                                                             'the request names a different span of '
+                                                                             "TIME ('10-year survival', 'the first 2 "
+                                                                             "years'), or 'full' when it explicitly "
+                                                                             "asks for the whole follow-up TIME ('all "
+                                                                             "follow-up', 'as far as the data goes'). "
+                                                                             "Words about which patients or data ('all "
+                                                                             "data', 'the full data', 'the whole "
+                                                                             "cohort', 'all patients') are not a time "
+                                                                             'span: leave it out for them.',
                                                               'enum': ['1', '2', '3', '5', '10', 'full'],
                                                               'type': 'string'},
-                                             'value1': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
+                                             'value1': {'description': 'The event type that STARTS the clock (e.g. '
+                                                                       "'Initial CNS Tumor', 'diagnosis'), from the "
+                                                                       'event-type column. A literal data VALUE to '
+                                                                       'match (not a column name) — one of the values '
+                                                                       'actually present in the relevant column, '
+                                                                       'copied exactly, including case and spacing.',
                                                         'type': 'string'},
-                                             'value2': {'description': 'One or more literal data VALUES (not column '
-                                                                       'names); a row holding ANY of them matches. '
-                                                                       'Each copied exactly from the relevant column, '
-                                                                       'including case and spacing.',
+                                             'value2': {'description': 'The event types that END the clock, from the '
+                                                                       'event-type column: the death value alone for '
+                                                                       'overall survival; progression, recurrence, '
+                                                                       'second malignancy and death for event-free '
+                                                                       'survival. Never the start event. One or more '
+                                                                       'literal data VALUES (not column names); a row '
+                                                                       'holding ANY of them matches. Each copied '
+                                                                       'exactly from the relevant column, including '
+                                                                       'case and spacing.',
                                                         'items': {'description': 'A literal data VALUE to match (not a '
                                                                                  'column name) — one of the values '
                                                                                  'actually present in the relevant '
@@ -4719,10 +4900,14 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                   'type': 'string'},
                                                         'minItems': 1,
                                                         'type': 'array'},
-                                             'value3': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
+                                             'value3': {'description': 'The status value meaning the subject had NO '
+                                                                       'end event when last seen, so is censored (e.g. '
+                                                                       "'alive', 'event-free'), from the status "
+                                                                       'column. Never the death value. A literal data '
+                                                                       'VALUE to match (not a column name) — one of '
+                                                                       'the values actually present in the relevant '
+                                                                       'column, copied exactly, including case and '
+                                                                       'spacing.',
                                                         'type': 'string'}},
                               'required': ['entity1',
                                            'entity2',
@@ -4744,14 +4929,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
  {'function': {'description': '[line] Survival curve from a pre-aggregated CUBE: one step per time point, falling as '
                               'events accumulate. Needs two dimensions — a QUANTITATIVE elapsed-time dimension and a '
                               'status dimension whose values say whether the subject had the event or was still '
-                              "event-free when last seen — plus the two status values themselves. Counts the cube's "
-                              'measure rather than reconstructing subjects, so it needs no event log. Censored time '
-                              'points carry a tick on the curve. Design: Reads the cube marginal by filtering to rows '
-                              'where the chosen dimension(s) are present and every other dimension is empty; the '
-                              'measure is mapped directly with no re-aggregation. The marginal filter is expanded from '
-                              "the per-request schema's dimension list, so this template works for any cube. The "
-                              'marginal broken out here is time x status, so each subject is counted exactly once and '
-                              'the cells add up to the cohort. The elapsed-time dimension must be quantitative.',
+                              'event-free when last seen — plus the two status values themselves: value1 the one '
+                              "meaning the event happened, value2 the one meaning censored. Counts the cube's measure "
+                              'rather than reconstructing subjects, so it needs no event log. Censored time points '
+                              'carry a tick on the curve. Design: Reads the cube marginal by filtering to rows where '
+                              'the chosen dimension(s) are present and every other dimension is empty; the measure is '
+                              'mapped directly with no re-aggregation. The marginal filter is expanded from the '
+                              "per-request schema's dimension list, so this template works for any cube. The marginal "
+                              'broken out here is time x status, so each subject is counted exactly once and the cells '
+                              'add up to the cohort. The elapsed-time dimension must be quantitative.',
                'name': 'vis_063_line_survival_cube',
                'parameters': {'additionalProperties': False,
                               'properties': {'confidence_band': {'description': 'OPTIONAL — leave it out. The 95% '
@@ -4771,6 +4957,21 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                              'dimension2': {'description': 'cube nominal dimension — the column whose '
                                                                            'values value1, value2 name.',
                                                             'type': 'string'},
+                                             'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
+                                                                         'chart title, and must match the events that '
+                                                                         'end the curve (for a cube, what its time and '
+                                                                         'status dimensions describe): '
+                                                                         "'overall_survival' when death alone ends the "
+                                                                         "curve; 'progression_free_survival' for "
+                                                                         "progression or death; 'event_free_survival' "
+                                                                         'for progression, recurrence, relapse, a '
+                                                                         'second malignancy or death. Omit it when the '
+                                                                         'end events are none of these; the title then '
+                                                                         "just says 'Survival'.",
+                                                          'enum': ['overall_survival',
+                                                                   'event_free_survival',
+                                                                   'progression_free_survival'],
+                                                          'type': 'string'},
                                              'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
                                              'estimator': {'description': 'OPTIONAL — leave it out. The curve is '
@@ -4784,22 +4985,31 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                           'data.',
                                                            'enum': ['kaplan_meier', 'basic'],
                                                            'type': 'string'},
-                                             'time_horizon': {'description': 'OPTIONAL. How many years of follow-up '
-                                                                             'the survival curve shows. Omit it for '
-                                                                             'the default of 5 years. Set it only when '
-                                                                             'the request names a different span '
-                                                                             "('10-year survival', 'the first 2 "
-                                                                             "years'), or 'full' when it asks for the "
-                                                                             "whole follow-up ('all follow-up', 'as "
-                                                                             "far as the data goes').",
+                                             'time_horizon': {'description': 'OPTIONAL — leave it out. How many years '
+                                                                             'of follow-up the survival curve shows; '
+                                                                             'omitted, it is 5 years. Set it ONLY when '
+                                                                             'the request names a different span of '
+                                                                             "TIME ('10-year survival', 'the first 2 "
+                                                                             "years'), or 'full' when it explicitly "
+                                                                             "asks for the whole follow-up TIME ('all "
+                                                                             "follow-up', 'as far as the data goes'). "
+                                                                             "Words about which patients or data ('all "
+                                                                             "data', 'the full data', 'the whole "
+                                                                             "cohort', 'all patients') are not a time "
+                                                                             'span: leave it out for them.',
                                                               'enum': ['1', '2', '3', '5', '10', 'full'],
                                                               'type': 'string'},
-                                             'value1': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
+                                             'value1': {'description': 'The status value meaning the EVENT HAPPENED '
+                                                                       "(e.g. 'event', 'deceased', 'dead') — counted "
+                                                                       'as an event. A literal data VALUE to match '
+                                                                       '(not a column name) — one of the values '
+                                                                       'actually present in the relevant column, '
+                                                                       'copied exactly, including case and spacing.',
                                                         'type': 'string'},
-                                             'value2': {'description': 'A literal data VALUE to match (not a column '
+                                             'value2': {'description': 'The status value meaning the subject was '
+                                                                       'CENSORED: still alive or event-free when last '
+                                                                       "seen (e.g. 'event-free', 'alive', 'censored'). "
+                                                                       'A literal data VALUE to match (not a column '
                                                                        'name) — one of the values actually present in '
                                                                        'the relevant column, copied exactly, including '
                                                                        'case and spacing.',
@@ -4807,18 +5017,18 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'required': ['entity', 'dimension1', 'dimension2', 'value1', 'value2'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': '[line] Survival curves from a pre-aggregated CUBE, one per value of a third dimension. '
-                              'Needs a QUANTITATIVE elapsed-time dimension, a status dimension saying whether the '
-                              'subject had the event, the stratifying dimension, and the two status values. Each '
-                              'subject is counted once within its own stratum, so the curves PARTITION the cohort and '
-                              "their sizes add back to the marginal's total. Censored time points carry a tick on "
-                              'their own curve. Design: Reads the cube marginal by filtering to rows where the chosen '
-                              'dimension(s) are present and every other dimension is empty; the measure is mapped '
-                              'directly with no re-aggregation. The marginal filter is expanded from the per-request '
-                              "schema's dimension list, so this template works for any cube. The marginal broken out "
-                              'here is time x status x stratifier, so every subject lands in exactly one stratum and '
-                              'one time point. Tasks: Compare event-free survival across groups; see which stratum '
-                              'falls fastest and how many subjects each curve rests on.',
+ {'function': {'description': '[line] Survival curves from a pre-aggregated CUBE, one per value of a third dimension — '
+                              'or, with a `grouping`, one per named group of its values (e.g. one protocol against all '
+                              'the others), or per band of a numeric dimension. Needs a QUANTITATIVE elapsed-time '
+                              'dimension, a status dimension saying whether the subject had the event, the stratifying '
+                              'dimension, and the two status values: value1 the one meaning the event happened, value2 '
+                              'the one meaning censored. Each subject is counted once within its own stratum, so the '
+                              "curves PARTITION the cohort and their sizes add back to the marginal's total. Censored "
+                              'time points carry a tick on their own curve. Design: Reads the cube marginal by '
+                              'filtering to rows where the chosen dimension(s) are present and every other dimension '
+                              'is empty; the measure is mapped directly with no re-aggregation. The marginal filter is '
+                              "expanded from the per-request schema's dimension list, so this template works for any "
+                              'cube.',
                'name': 'vis_064_line_survival_cube_stratified',
                'parameters': {'additionalProperties': False,
                               'properties': {'confidence_band': {'description': 'OPTIONAL — leave it out. The 95% '
@@ -4838,9 +5048,23 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                              'dimension2': {'description': 'cube nominal dimension — the column whose '
                                                                            'values value1, value2 name.',
                                                             'type': 'string'},
-                                             'dimension3': {'description': 'cube nominal dimension, encodes color, '
-                                                                           'text label.',
+                                             'dimension3': {'description': 'cube nominal dimension, encodes color.',
                                                             'type': 'string'},
+                                             'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
+                                                                         'chart title, and must match the events that '
+                                                                         'end the curve (for a cube, what its time and '
+                                                                         'status dimensions describe): '
+                                                                         "'overall_survival' when death alone ends the "
+                                                                         "curve; 'progression_free_survival' for "
+                                                                         "progression or death; 'event_free_survival' "
+                                                                         'for progression, recurrence, relapse, a '
+                                                                         'second malignancy or death. Omit it when the '
+                                                                         'end events are none of these; the title then '
+                                                                         "just says 'Survival'.",
+                                                          'enum': ['overall_survival',
+                                                                   'event_free_survival',
+                                                                   'progression_free_survival'],
+                                                          'type': 'string'},
                                              'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
                                              'estimator': {'description': 'OPTIONAL — leave it out. The curve is '
@@ -4854,22 +5078,111 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                           'data.',
                                                            'enum': ['kaplan_meier', 'basic'],
                                                            'type': 'string'},
-                                             'time_horizon': {'description': 'OPTIONAL. How many years of follow-up '
-                                                                             'the survival curve shows. Omit it for '
-                                                                             'the default of 5 years. Set it only when '
-                                                                             'the request names a different span '
-                                                                             "('10-year survival', 'the first 2 "
-                                                                             "years'), or 'full' when it asks for the "
-                                                                             "whole follow-up ('all follow-up', 'as "
-                                                                             "far as the data goes').",
+                                             'grouping': {'description': "OPTIONAL. Combine the stratifier's values "
+                                                                         'into a few named strata. Omit it entirely '
+                                                                         'for one stratum per distinct value, which is '
+                                                                         'usually what you want. Supply it when the '
+                                                                         'request compares GROUPS of values rather '
+                                                                         "than every value ('white versus all other "
+                                                                         "races'), or splits a number at a threshold "
+                                                                         "('over 65'). At most 10 strata.",
+                                                          'properties': {'cuts': {'description': 'Quantitative only. '
+                                                                                                 'Ascending '
+                                                                                                 'thresholds; N cuts '
+                                                                                                 'make N+1 buckets, '
+                                                                                                 'each half-open on '
+                                                                                                 'the right — a cut at '
+                                                                                                 '65 puts 65 in the '
+                                                                                                 'upper bucket.',
+                                                                                  'items': {'type': 'number'},
+                                                                                  'type': 'array'},
+                                                                         'groups': {'description': 'Nominal only. One '
+                                                                                                   'entry per stratum. '
+                                                                                                   'Values not listed '
+                                                                                                   'in any group fall '
+                                                                                                   "into 'other'.",
+                                                                                    'items': {'properties': {'label': {'description': 'What '
+                                                                                                                                      'this '
+                                                                                                                                      'stratum '
+                                                                                                                                      'is '
+                                                                                                                                      'called '
+                                                                                                                                      'in '
+                                                                                                                                      'the '
+                                                                                                                                      'legend.',
+                                                                                                                       'type': 'string'},
+                                                                                                             'values': {'description': 'Column '
+                                                                                                                                       'values '
+                                                                                                                                       'in '
+                                                                                                                                       'this '
+                                                                                                                                       'stratum, '
+                                                                                                                                       'copied '
+                                                                                                                                       'EXACTLY '
+                                                                                                                                       'as '
+                                                                                                                                       'they '
+                                                                                                                                       'appear '
+                                                                                                                                       'in '
+                                                                                                                                       'the '
+                                                                                                                                       'data, '
+                                                                                                                                       'including '
+                                                                                                                                       'case. '
+                                                                                                                                       'A '
+                                                                                                                                       'value '
+                                                                                                                                       'may '
+                                                                                                                                       'appear '
+                                                                                                                                       'in '
+                                                                                                                                       'only '
+                                                                                                                                       'one '
+                                                                                                                                       'group.',
+                                                                                                                        'items': {'type': 'string'},
+                                                                                                                        'type': 'array'}},
+                                                                                              'required': ['label',
+                                                                                                           'values'],
+                                                                                              'type': 'object'},
+                                                                                    'type': 'array'},
+                                                                         'other': {'description': 'Nominal only. Label '
+                                                                                                  'for values no group '
+                                                                                                  'claims; null to '
+                                                                                                  'leave them out of '
+                                                                                                  'the chart entirely. '
+                                                                                                  'Defaults to '
+                                                                                                  "'Other'.",
+                                                                                   'type': ['string', 'null']},
+                                                                         'type': {'description': "'nominal' to combine "
+                                                                                                 'named values, '
+                                                                                                 "'quantitative' to "
+                                                                                                 'cut a number at '
+                                                                                                 'thresholds. Must '
+                                                                                                 'match the stratifier '
+                                                                                                 "column's type.",
+                                                                                  'enum': ['nominal', 'quantitative'],
+                                                                                  'type': 'string'}},
+                                                          'required': ['type'],
+                                                          'type': 'object'},
+                                             'time_horizon': {'description': 'OPTIONAL — leave it out. How many years '
+                                                                             'of follow-up the survival curve shows; '
+                                                                             'omitted, it is 5 years. Set it ONLY when '
+                                                                             'the request names a different span of '
+                                                                             "TIME ('10-year survival', 'the first 2 "
+                                                                             "years'), or 'full' when it explicitly "
+                                                                             "asks for the whole follow-up TIME ('all "
+                                                                             "follow-up', 'as far as the data goes'). "
+                                                                             "Words about which patients or data ('all "
+                                                                             "data', 'the full data', 'the whole "
+                                                                             "cohort', 'all patients') are not a time "
+                                                                             'span: leave it out for them.',
                                                               'enum': ['1', '2', '3', '5', '10', 'full'],
                                                               'type': 'string'},
-                                             'value1': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
+                                             'value1': {'description': 'The status value meaning the EVENT HAPPENED '
+                                                                       "(e.g. 'event', 'deceased', 'dead') — counted "
+                                                                       'as an event. A literal data VALUE to match '
+                                                                       '(not a column name) — one of the values '
+                                                                       'actually present in the relevant column, '
+                                                                       'copied exactly, including case and spacing.',
                                                         'type': 'string'},
-                                             'value2': {'description': 'A literal data VALUE to match (not a column '
+                                             'value2': {'description': 'The status value meaning the subject was '
+                                                                       'CENSORED: still alive or event-free when last '
+                                                                       "seen (e.g. 'event-free', 'alive', 'censored'). "
+                                                                       'A literal data VALUE to match (not a column '
                                                                        'name) — one of the values actually present in '
                                                                        'the relevant column, copied exactly, including '
                                                                        'case and spacing.',
@@ -5118,7 +5431,7 @@ TOOL_DISPATCH = {'vis_000_barchart_count_vert_grouped': (0, {'entity': 'E', 'fie
  'vis_001_barchart_count_horiz_grouped': (1, {'entity': 'E', 'field': 'F'}),
  'vis_002_barchart_join_count_vert_grouped': (2, {'entity1': 'E1', 'entity2': 'E2', 'entity2_field': 'E2.F'}),
  'vis_003_barchart_join_count_horiz_grouped': (3, {'entity1': 'E1', 'entity2': 'E2', 'entity2_field': 'E2.F'}),
- 'vis_004_barchart_basic': (4, {'dimension': 'D', 'entity': 'E'}),
+ 'vis_004_barchart_horiz': (4, {'dimension': 'D', 'entity': 'E'}),
  'vis_005_barchart_basic': (5, {'dimension': 'D', 'entity': 'E'}),
  'vis_006_stacked_bar_join_count_vert_stacked_grouped': (6,
                                                          {'entity1': 'E1',
@@ -5384,6 +5697,7 @@ TOOL_DISPATCH = {'vis_000_barchart_count_vert_grouped': (0, {'entity': 'E', 'fie
                                 {'confidence_band': 'CI',
                                  'dimension1': 'D1',
                                  'dimension2': 'D2',
+                                 'endpoint': 'ENDPOINT',
                                  'entity': 'E',
                                  'estimator': 'ESTIMATOR',
                                  'time_horizon': 'HORIZON',
@@ -5394,8 +5708,10 @@ TOOL_DISPATCH = {'vis_000_barchart_count_vert_grouped': (0, {'entity': 'E', 'fie
                                             'dimension1': 'D1',
                                             'dimension2': 'D2',
                                             'dimension3': 'D3',
+                                            'endpoint': 'ENDPOINT',
                                             'entity': 'E',
                                             'estimator': 'ESTIMATOR',
+                                            'grouping': 'GROUP',
                                             'time_horizon': 'HORIZON',
                                             'value1': 'V1',
                                             'value2': 'V2'}),
@@ -5423,7 +5739,7 @@ TOOL_TAGS = {'vis_000_barchart_count_vert_grouped': ['line_item', 'barchart'],
  'vis_001_barchart_count_horiz_grouped': ['line_item', 'barchart'],
  'vis_002_barchart_join_count_vert_grouped': ['line_item', 'barchart'],
  'vis_003_barchart_join_count_horiz_grouped': ['line_item', 'barchart'],
- 'vis_004_barchart_basic': ['data_cube', 'barchart'],
+ 'vis_004_barchart_horiz': ['data_cube', 'barchart'],
  'vis_005_barchart_basic': ['data_cube', 'barchart'],
  'vis_006_stacked_bar_join_count_vert_stacked_grouped': ['line_item', 'stacked_bar'],
  'vis_007_stacked_bar_join_count_horiz_stacked_grouped': ['line_item', 'stacked_bar'],
@@ -5505,7 +5821,7 @@ TOOL_SHARED_ENTITIES = {'vis_000_barchart_count_vert_grouped': [],
  'vis_001_barchart_count_horiz_grouped': [],
  'vis_002_barchart_join_count_vert_grouped': [],
  'vis_003_barchart_join_count_horiz_grouped': [],
- 'vis_004_barchart_basic': [],
+ 'vis_004_barchart_horiz': [],
  'vis_005_barchart_basic': [],
  'vis_006_stacked_bar_join_count_vert_stacked_grouped': [],
  'vis_007_stacked_bar_join_count_horiz_stacked_grouped': [],
@@ -5594,9 +5910,8 @@ TOOL_TEXT = {'vis_000_barchart_count_vert_grouped': ('Bar chart of the number of
  'vis_003_barchart_join_count_horiz_grouped': ('Bar chart of the number of {entity1} by {enc:y}',
                                                'Displays the number of {entity1} in each {enc:y} category as '
                                                'horizontal bars.'),
- 'vis_004_barchart_basic': ('Bar chart of {enc:y} by {enc:x}', 'Displays {enc:y} for each {enc:x} category as bars.'),
- 'vis_005_barchart_basic': ('Bar chart of {enc:y} by {enc:x}',
-                            'Displays {enc:y} across the values of {enc:x} as bars.'),
+ 'vis_004_barchart_horiz': ('{enc:x} by {enc:y}', 'Displays {enc:x} for each {enc:y} category as horizontal bars.'),
+ 'vis_005_barchart_basic': ('{enc:y} by {enc:x}', 'Displays {enc:y} across the values of {enc:x} as bars.'),
  'vis_006_stacked_bar_join_count_vert_stacked_grouped': ('Stacked bar chart of the number of {entity1} by {enc:x} and '
                                                          '{enc:color}',
                                                          'Displays the number of {entity1} in each {enc:x} category as '
@@ -5613,7 +5928,7 @@ TOOL_TEXT = {'vis_000_barchart_count_vert_grouped': ('Bar chart of the number of
                                                      '{enc:color}',
                                                      'Displays the number of {entity} in each {enc:y} category as '
                                                      'horizontal bars, split by {enc:color}.'),
- 'vis_010_stacked_bar_vert_stacked': ('Stacked bar chart of {enc:y} by {enc:x} and {enc:color}',
+ 'vis_010_stacked_bar_vert_stacked': ('{enc:y} by {enc:x} and {enc:color}',
                                       'Displays {enc:y} for each {enc:x} category as bars, split by {enc:color}.'),
  'vis_011_stacked_bar_count_vert_grouped': ('Grouped bar chart of the number of {entity} by {enc:x} and {enc:xOffset}',
                                             'Displays the number of {entity} in each {enc:x} category as vertical '
@@ -5621,7 +5936,7 @@ TOOL_TEXT = {'vis_000_barchart_count_vert_grouped': ('Bar chart of the number of
  'vis_012_stacked_bar_count_horiz_grouped': ('Grouped bar chart of the number of {entity} by {enc:y} and {enc:yOffset}',
                                              'Displays the number of {entity} in each {enc:y} category as horizontal '
                                              'bars, placed side by side for each {enc:yOffset}.'),
- 'vis_013_stacked_bar_grouped': ('Grouped bar chart of {enc:y} by {enc:x} and {enc:xOffset}',
+ 'vis_013_stacked_bar_grouped': ('{enc:y} by {enc:x} and {enc:xOffset}',
                                  'Displays {enc:y} for each {enc:x} category as bars, placed side by side for each '
                                  '{enc:xOffset}.'),
  'vis_014_stacked_bar_freq_vert_normalized': ('Normalized bar chart of {enc:color} within {enc:x}',
@@ -5679,10 +5994,10 @@ TOOL_TEXT = {'vis_000_barchart_count_vert_grouped': ('Bar chart of the number of
  'vis_031_circular_proportion_distribution': ('Donut chart of the number of {entity} by {enc:color}',
                                               'Displays the share of {entity} that falls into each {enc:color} '
                                               'category as segments of a ring.'),
- 'vis_032_circular_proportion': ('Pie chart of {enc:theta} by {enc:color}',
+ 'vis_032_circular_proportion': ('{enc:theta} by {enc:color}',
                                  'Displays the share of {enc:theta} that falls into each {enc:color} category as '
                                  'slices of a circle.'),
- 'vis_033_circular_proportion': ('Donut chart of {enc:theta} by {enc:color}',
+ 'vis_033_circular_proportion': ('{enc:theta} by {enc:color}',
                                  'Displays the share of {enc:theta} that falls into each {enc:color} category as '
                                  'segments of a ring.'),
  'vis_034_table_count': ('Table of the number of {entity}',
@@ -5716,16 +6031,15 @@ TOOL_TEXT = {'vis_000_barchart_count_vert_grouped': ('Bar chart of the number of
  'vis_046_table_ranked_mode': ('Table of the number of {entity} by {enc:text}',
                                'Ranks every {enc:text} value by how many {entity} have it, highlighting the most '
                                'frequent.'),
- 'vis_047_table_sum': ('Table of {enc:text}', 'Displays the overall {enc:text} as a single figure.'),
- 'vis_048_table_sorted': ('Table of {enc:x} by {enc:text}',
+ 'vis_047_table_sum': ('{enc:text}', 'Displays the overall {enc:text} as a single figure.'),
+ 'vis_048_table_sorted': ('{enc:x} by {enc:text}',
                           'Lists each {enc:text} category with its {enc:x}, with a bar in each row showing the value.'),
  'vis_049_line_cdf': ('Line chart of the {enc:x} distribution',
                       'Displays what share of {entity} fall at or below each {enc:x} value, as a rising line.'),
  'vis_050_grouped_line_cdf': ('Line chart of the {enc:x} distribution by {enc:color}',
                               'Displays what share of {entity} fall at or below each {enc:x} value, as one line per '
                               '{enc:color} category.'),
- 'vis_051_line_sorted': ('Line chart of {enc:y} over {enc:x}',
-                         'Displays how {enc:y} changes across {enc:x}, as a line.'),
+ 'vis_051_line_sorted': ('{enc:y} over {enc:x}', 'Displays how {enc:y} changes across {enc:x}, as a line.'),
  'vis_052_line_survival': ('{bind:ENDPOINT} curve for {ent:entity2}',
                            'Plots the share of {ent:entity2} still event-free over time, from the start event to the '
                            "end event, reading each subject's events from {entity1}."),
@@ -5767,12 +6081,13 @@ TOOL_TEXT = {'vis_000_barchart_count_vert_grouped': ('Bar chart of the number of
                                         '{ent:entity3}',
                                         'Splits subjects four ways — {ent:entity2} only, {ent:entity3} only, both, '
                                         'neither — by whether each table holds a row for them.'),
- 'vis_063_line_survival_cube': ('Survival curve over {enc:x}',
-                                'Plots the share of subjects still event-free at each {enc:x} value, counted from the '
-                                "cube's measure; censored time points carry a tick."),
- 'vis_064_line_survival_cube_stratified': ('Survival curves over {enc:x} by {enc:color}',
-                                           'Plots one curve per {enc:color} value, showing the share still event-free '
-                                           'at each {enc:x}; each subject is counted once within its own stratum.'),
+ 'vis_063_line_survival_cube': ('{bind:ENDPOINT} curve for {entity}',
+                                'Plots the share of subjects still event-free at each {col:dimension1} value, counted '
+                                "from the cube's measure; censored time points carry a tick."),
+ 'vis_064_line_survival_cube_stratified': ('{bind:ENDPOINT} curves for {entity} by {col:dimension3}',
+                                           'Plots one curve per {col:dimension3} value, showing the share still '
+                                           'event-free at each {col:dimension1}; each subject is counted once within '
+                                           'its own stratum.'),
  'vis_065_heatmap_count': ('Heatmap of the number of {entity} by {enc:y} and {enc:x}',
                            'Displays the number of {entity} for each pairing of {enc:y} and {enc:x}, as a grid of '
                            'shaded, labelled cells.'),
@@ -5783,7 +6098,7 @@ TOOL_TEXT = {'vis_000_barchart_count_vert_grouped': ('Bar chart of the number of
  'vis_067_heatmap_avg': ('Heatmap of {enc:color} by {enc:y} and {enc:x}',
                          'Displays the mean {field:color} for each pairing of {enc:y} and {enc:x}, as a grid of shaded '
                          'cells.'),
- 'vis_068_heatmap_basic': ('Heatmap of {enc:color} by {enc:x} and {enc:y}',
+ 'vis_068_heatmap_basic': ('{enc:color} by {enc:x} and {enc:y}',
                            'Displays {enc:color} for each pairing of {enc:x} and {enc:y}, as a grid of shaded, '
                            'labelled cells.'),
  'vis_069_grouped_scatter_by_color': ('Scatterplot of {enc:x} and {enc:y} by {enc:color}',

@@ -3,6 +3,7 @@ import { UnmatchedFilterNotice } from './UnmatchedFilterNotice';
 import { useDataFilters, useDataPackage } from '@/app/UDIChatContext';
 import { diagnoseFilter, type FilterProbe } from '@/features/data-package';
 import {
+  canonicalColumn,
   columnFilterKey,
   FilterCollapsible,
   FilterControls,
@@ -30,6 +31,7 @@ export function FilterComponent({
   const loadingPhase = useDataPackage((s) => s.loadingPhase);
   const sourceFields = useDataPackage((s) => s.sourceFields);
   const entityNames = useDataPackage((s) => s.entityNames);
+  const dimensionLinks = useDataPackage((s) => s.dimensionLinks);
 
   const operation = useMemo(
     () =>
@@ -43,7 +45,11 @@ export function FilterComponent({
 
   // One filter per column, whichever call set it last — so every widget for a
   // column, an add's or a modify's, controls the same filter.
-  const filterKey = filterArgs ? columnFilterKey(filterArgs.entity, filterArgs.field) : null;
+  // A filter on a linked column is kept on its group's canonical column.
+  const filterColumn = filterArgs
+    ? canonicalColumn(dimensionLinks, filterArgs.entity, filterArgs.field)
+    : null;
+  const filterKey = filterColumn ? columnFilterKey(filterColumn.entity, filterColumn.field) : null;
   const dataSelection = (filterKey && dataSelections[filterKey]) || null;
 
   // Diagnose the STORED selection once one exists, falling back to what the

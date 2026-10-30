@@ -2,6 +2,7 @@ import * as React from 'react';
 import type { UDIGrammar } from '../GrammarTypes';
 import type { UDIPalette } from '../Palette';
 import type { DataSelections } from '../DataSourcesStore';
+import type { RecordUrlFn } from '../recordUrl';
 import { UDIToolkitContext } from './UDIToolkitProvider';
 
 export interface UDIVisProps {
@@ -22,6 +23,12 @@ export interface UDIVisProps {
   palette?: UDIPalette;
   /** Multiplier on chart and table text sizes (1 = stock). Falls back to the provider's. */
   fontScale?: number;
+  /**
+   * Maps a row to the URL of that record's own page: tables gain a leading
+   * link column and point marks open it on a plain click. Falls back to the
+   * provider's.
+   */
+  recordUrl?: RecordUrlFn;
   onSelectionChange?: (selections: DataSelections) => void;
   onDataReady?: (payload: {
     data: object[] | null;
@@ -51,6 +58,7 @@ export function UDIVis({
   fillContainer,
   palette,
   fontScale,
+  recordUrl,
   onSelectionChange,
   onDataReady,
   className,
@@ -66,6 +74,7 @@ export function UDIVis({
   const context = React.useContext(UDIToolkitContext);
   const effectivePalette = palette ?? context.palette;
   const effectiveFontScale = fontScale ?? context.fontScale;
+  const effectiveRecordUrl = recordUrl ?? context.recordUrl;
 
   // Register the custom element on first render
   React.useEffect(() => {
@@ -87,6 +96,13 @@ export function UDIVis({
       (elRef.current as any).fontScale = effectiveFontScale;
     }
   }, [effectiveFontScale]);
+
+  // A function, so a JS property; before spec so the first build has it.
+  React.useLayoutEffect(() => {
+    if (elRef.current) {
+      (elRef.current as any).recordUrl = effectiveRecordUrl;
+    }
+  }, [effectiveRecordUrl]);
 
   // Set complex object props via JS properties (not HTML attributes).
   // useLayoutEffect ensures the property is set synchronously after the DOM

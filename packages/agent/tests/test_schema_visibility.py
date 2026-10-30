@@ -18,7 +18,11 @@ import json
 import pytest
 
 from udiagent.orchestrator import MAX_VALUE_LOOKUPS, Orchestrator
-from udiagent.schema import simplify_data_domains, simplify_data_schema
+from udiagent.schema import (
+    lookup_field_values,
+    simplify_data_domains,
+    simplify_data_schema,
+)
 from udiagent.skills import load_skills, render_template
 from udiagent.tools import INTERNAL_ORCHESTRATOR_TOOLS, ORCHESTRATOR_TOOLS
 
@@ -174,7 +178,41 @@ def test_list_field_values_is_honest_when_it_has_nothing_to_add(orchestrator):
         {"entity": "Patient Agents", "field": "research_id"}, _DOMAINS
     )
     assert "665" in answer
-    assert "too many to list" in answer
+    assert "too many to send" in answer
+    # Omitted for size is not the same as being an identifier.
+    assert "identifier" not in answer
+
+
+def test_list_field_values_searches_a_long_column(orchestrator):
+    answer = orchestrator._lookup_field_values(
+        {"entity": "Patient Agents", "field": "chemotherapy_agent", "contains": "drug9"},
+        _DOMAINS,
+    )
+    # Drug9 and Drug90..Drug96, and nothing else.
+    assert "8 value(s)" in answer
+    assert "Drug96" in answer and "Drug50" not in answer
+
+
+def test_list_field_values_search_matches_words_in_any_order():
+    domains = [
+        {
+            "entity": "Medical Therapy",
+            "field": "protocol_name_and_arm",
+            "type": "point",
+            "domain": {
+                "values": ["ACNS0334: Regimen A", "ACNS0334: Regimen B", "Not Applicable"]
+            },
+        }
+    ]
+    answer = lookup_field_values(
+        domains, "Medical Therapy", "protocol_name_and_arm", contains="regimen b"
+    )
+    assert "ACNS0334: Regimen B" in answer
+    assert "Regimen A" not in answer
+    missing = lookup_field_values(
+        domains, "Medical Therapy", "protocol_name_and_arm", contains="ACNS9999"
+    )
+    assert "No value" in missing and "3 on record" in missing
 
 
 def test_an_unknown_column_names_the_ones_that_exist(orchestrator):

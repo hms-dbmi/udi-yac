@@ -1,0 +1,199 @@
+organization_name,research_id,event_type,age_at_event_days,metastasis,metastasis_location,metastasis_location_other,cns_diagnosis_category,cns_integrated_diagnosis,cns_integrated_diagnosis_source,tumor_locations,tumor_location_other
+Seattle Children's Hospital,C103074,Initial CNS Tumor,8203,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, NOS or NEC",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C104427,Deceased,1519,No,Not Applicable,Not Applicable,Atypical teratoid/rhabdoid tumor,"ATRT, NOS or NEC",CBTN,Brain Stem- Pons; Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C104427,Initial CNS Tumor,394,No,Not Applicable,Not Applicable,Atypical teratoid/rhabdoid tumor,ATRT-TYR,OpenPedCan,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C1056939,Initial CNS Tumor,641,No,Not Applicable,Not Applicable,Atypical teratoid/rhabdoid tumor,"ATRT, NOS or NEC",CBTN,Ventricles,Not Applicable
+Seattle Children's Hospital,C1056939,Recurrence,768,No,Not Applicable,Not Applicable,Atypical teratoid/rhabdoid tumor,"ATRT, NOS or NEC",CBTN,Other locations NOS; Ventricles,Not Applicable
+Seattle Children's Hospital,C1056939,Recurrence,776,No,Not Applicable,Not Applicable,Atypical teratoid/rhabdoid tumor,"ATRT, NOS or NEC",CBTN,Other locations NOS,midline tumor
+Seattle Children's Hospital,C1056939,Second Malignancy,3204,No,Not Applicable,Not Applicable,Other,Meningioma,CBTN,Frontal Lobe,Not Applicable
+Seattle Children's Hospital,C1057185,Deceased,7881,Unavailable,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, NOS or NEC",CBTN,Not Applicable,Not Applicable
+Seattle Children's Hospital,C1057185,Initial CNS Tumor,6136,Yes,CSF;Leptomeningeal;Spine,Not Applicable,Medulloblastoma,"Medulloblastoma, Group 3",OpenPedCan,Cerebellum/Posterior Fossa;Meninges/Dura;Spine NOS,Not Applicable
+Seattle Children's Hospital,C1057185,Progressive,7410,Yes,Brain,Not Applicable,Medulloblastoma,"Medulloblastoma, Group 4",OpenPedCan,Frontal Lobe,Not Applicable
+Seattle Children's Hospital,C1057431,Initial CNS Tumor,2090,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, WNT-activated",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C1070100,Initial CNS Tumor,5024,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, Group 3",OpenPedCan,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C1070100,Progressive,6989,Yes,Spine,Not Applicable,Medulloblastoma,"Medulloblastoma, non-WNT/non-SHH",CBTN,Spinal Cord- Thoracic,Not Applicable
+Seattle Children's Hospital,C1070100,Progressive,7488,Yes,Brain;Spine,Not Applicable,Medulloblastoma,"Medulloblastoma, non-WNT/non-SHH",CBTN,Cerebellum/Posterior Fossa; Spine NOS,Not Applicable
+Seattle Children's Hospital,C1070100,Progressive,7849,Yes,Brain;Spine,Not Applicable,Medulloblastoma,"Medulloblastoma, non-WNT/non-SHH",CBTN,Spinal Cord- Thoracic; Suprasellar/Hypothalamic/Pituitary,Not Applicable
+Seattle Children's Hospital,C1070223,Initial CNS Tumor,6590,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, SHH-activated and TP53-mutant",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C1070346,Deceased,1862,Unavailable,Not Applicable,Not Applicable,Atypical teratoid/rhabdoid tumor,"ATRT, NOS or NEC",CBTN,Temporal Lobe,Not Applicable
+Seattle Children's Hospital,C1070346,Initial CNS Tumor,663,No,Not Applicable,Not Applicable,Atypical teratoid/rhabdoid tumor,ATRT-SHH,OpenPedCan,Parietal Lobe,Not Applicable
+Seattle Children's Hospital,C1070346,Progressive,1798,No,Not Applicable,Not Applicable,Atypical teratoid/rhabdoid tumor,"ATRT, NOS or NEC",CBTN,Temporal Lobe,Not Applicable
+Seattle Children's Hospital,C1070346,Recurrence,1337,Yes,Leptomeningeal,Not Applicable,Atypical teratoid/rhabdoid tumor,"ATRT, NOS or NEC",CBTN,Temporal Lobe,Not Applicable
+Seattle Children's Hospital,C1070838,Deceased,4688,Unavailable,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, non-WNT/non-SHH",CBTN,Cerebellum/Posterior Fossa; Spinal Cord- Thoracic,Not Applicable
+Seattle Children's Hospital,C1070838,Initial CNS Tumor,2106,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, non-WNT/non-SHH",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C1070838,Progressive,3159,Yes,Brain;Leptomeningeal;Spine,Not Applicable,Medulloblastoma,"Medulloblastoma, non-WNT/non-SHH",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C1070838,Progressive,3654,Yes,Brain;Leptomeningeal,Not Applicable,Medulloblastoma,"Medulloblastoma, non-WNT/non-SHH",CBTN,Brain Stem-Medulla; Spinal Cord- Thoracic,Not Applicable
+Seattle Children's Hospital,C1070838,Recurrence,3017,Yes,Brain;Spine,Not Applicable,Medulloblastoma,"Medulloblastoma, non-WNT/non-SHH",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C1154847,Initial CNS Tumor,517,No,Not Applicable,Not Applicable,Atypical teratoid/rhabdoid tumor,ATRT-TYR,OpenPedCan,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C1155462,Deceased,2971,Unavailable,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, NOS or NEC",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C1155462,Initial CNS Tumor,1516,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, NOS or NEC",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C1155462,Progressive,2526,Yes,Brain;Leptomeningeal,Not Applicable,Medulloblastoma,"Medulloblastoma, NOS or NEC",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C1155462,Progressive,2706,Yes,Brain;Leptomeningeal,Not Applicable,Medulloblastoma,"Medulloblastoma, Group 3",OpenPedCan,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C1155462,Recurrence,1979,Yes,Brain;CSF;Leptomeningeal,Not Applicable,Medulloblastoma,"Medulloblastoma, NOS or NEC",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C1155585,Deceased,5072,Unavailable,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, non-WNT/non-SHH",CBTN,Cerebellum/Posterior Fossa; Spinal Cord- Cervical; Spinal Cord- Lumbar/Thecal Sac; Spinal Cord- Thoracic,Not Applicable
+Seattle Children's Hospital,C1155585,Initial CNS Tumor,4322,Yes,Brain;CSF,Not Applicable,Medulloblastoma,"Medulloblastoma, Group 4",OpenPedCan,Cerebellum/Posterior Fossa;Ventricles,Not Applicable
+Seattle Children's Hospital,C1155585,Progressive,4935,Yes,Brain;CSF;Leptomeningeal;Spine,Not Applicable,Medulloblastoma,"Medulloblastoma, non-WNT/non-SHH",CBTN,Spinal Cord- Cervical; Spinal Cord- Lumbar/Thecal Sac; Spinal Cord- Thoracic,Not Applicable
+Seattle Children's Hospital,C1155585,Recurrence,4821,Yes,CSF;Leptomeningeal;Spine,Not Applicable,Medulloblastoma,"Medulloblastoma, non-WNT/non-SHH",CBTN,Spinal Cord- Cervical; Spinal Cord- Lumbar/Thecal Sac; Spinal Cord- Thoracic,Not Applicable
+Seattle Children's Hospital,C1183875,Initial CNS Tumor,6394,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, WNT-activated",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C1253493,Initial CNS Tumor,1997,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, Group 4",OpenPedCan,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C1253862,Deceased,5143,Unavailable,Not Applicable,Not Applicable,Other,Specify,CBTN,Other locations NOS,Stomach
+Seattle Children's Hospital,C1253862,Initial CNS Tumor,3137,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, SHH-activated and TP53-wildtype",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C1253862,Progressive,4622,Yes,Brain;Leptomeningeal;Spine,Not Applicable,Medulloblastoma,"Medulloblastoma, SHH-activated and TP53-wildtype",CBTN,Cerebellum/Posterior Fossa; Frontal Lobe; Spinal Cord- Thoracic,Not Applicable
+Seattle Children's Hospital,C1253862,Progressive,4690,Yes,Brain;Leptomeningeal;Spine,Not Applicable,Medulloblastoma,"Medulloblastoma, SHH-activated and TP53-wildtype",CBTN,Cerebellum/Posterior Fossa; Frontal Lobe,Not Applicable
+Seattle Children's Hospital,C1253862,Recurrence,3217,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, SHH-activated and TP53-wildtype",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C1253862,Recurrence,4425,Yes,Brain,Not Applicable,Medulloblastoma,"Medulloblastoma, SHH-activated and TP53-wildtype",CBTN,Cerebellum/Posterior Fossa; Frontal Lobe,Not Applicable
+Seattle Children's Hospital,C1253862,Second Malignancy,5086,No,Not Applicable,Not Applicable,Other,Not a primary CNS tumor,CBTN,Other locations NOS,Stomach
+Seattle Children's Hospital,C141696,Deceased,5750,Yes,Brain;Spine,Not Applicable,Medulloblastoma,"Medulloblastoma, SHH-activated and TP53-wildtype",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C141696,Initial CNS Tumor,3977,Yes,Brain;CSF;Leptomeningeal;Spine,Not Applicable,Medulloblastoma,"Medulloblastoma, SHH-activated and TP53-wildtype",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C141696,Progressive,5041,Yes,Brain,Not Applicable,Medulloblastoma,"Medulloblastoma, SHH-activated and TP53-wildtype",CBTN,Cerebellum/Posterior Fossa; Frontal Lobe,Not Applicable
+Seattle Children's Hospital,C141696,Progressive,5140,Yes,Brain;Leptomeningeal;Spine,Not Applicable,Medulloblastoma,"Medulloblastoma, SHH-activated and TP53-wildtype",CBTN,Cerebellum/Posterior Fossa; Spine NOS,Not Applicable
+Seattle Children's Hospital,C141696,Progressive,5300,Yes,Brain;Leptomeningeal,Not Applicable,Medulloblastoma,"Medulloblastoma, SHH-activated and TP53-wildtype",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C141696,Progressive,5487,Yes,Brain;Spine,Not Applicable,Medulloblastoma,"Medulloblastoma, SHH-activated and TP53-wildtype",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C141696,Progressive,5710,Yes,Brain;Spine,Not Applicable,Medulloblastoma,"Medulloblastoma, SHH-activated and TP53-wildtype",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C142557,Deceased,1970,Unavailable,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, Group 4",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C142557,Initial CNS Tumor,1032,Yes,Brain,Not Applicable,Medulloblastoma,"Medulloblastoma, Group 4",OpenPedCan,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C142557,Progressive,1502,Yes,Brain;Leptomeningeal,Not Applicable,Medulloblastoma,"Medulloblastoma, non-WNT/non-SHH",CBTN,Cerebellum/Posterior Fossa; Spine NOS,Not Applicable
+Seattle Children's Hospital,C142557,Progressive,1708,Yes,CSF;Spine,Not Applicable,Medulloblastoma,"Medulloblastoma, non-WNT/non-SHH",CBTN,Cerebellum/Posterior Fossa; Spine NOS,Not Applicable
+Seattle Children's Hospital,C142557,Progressive,1823,Yes,CSF,Not Applicable,Medulloblastoma,"Medulloblastoma, Group 4",CBTN,Cerebellum/Posterior Fossa; Spine NOS,Not Applicable
+Seattle Children's Hospital,C143172,Initial CNS Tumor,4044,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, Group 4",OpenPedCan,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C143418,Initial CNS Tumor,1882,Yes,Spine,Not Applicable,Medulloblastoma,"Medulloblastoma, Group 4",OpenPedCan,Cerebellum/Posterior Fossa;Spine NOS,Not Applicable
+Seattle Children's Hospital,C143541,Initial CNS Tumor,292,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, SHH-activated and TP53-wildtype",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C148215,Initial CNS Tumor,202,No,Not Applicable,Not Applicable,Atypical teratoid/rhabdoid tumor,"ATRT, NOS or NEC",CBTN,Frontal Lobe;Parietal Lobe,Not Applicable
+Seattle Children's Hospital,C148215,Second Malignancy,5999,No,Not Applicable,Not Applicable,High-Grade Glioma,"Diffuse pediatric-type high-grade glioma, H3-wildtype and IDH-wildtype",CBTN,Parietal Lobe; Thalamus,Not Applicable
+Seattle Children's Hospital,C154365,Initial CNS Tumor,5709,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, NOS or NEC",CBTN,Ventricles,Not Applicable
+Seattle Children's Hospital,C169248,Initial CNS Tumor,2153,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, NOS or NEC",CBTN,Ventricles,Not Applicable
+Seattle Children's Hospital,C169248,Recurrence,3139,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, NOS or NEC",CBTN,Ventricles,Not Applicable
+Seattle Children's Hospital,C169248,Recurrence,5467,Not Reported,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, NOS or NEC",CBTN,Ventricles,Not Applicable
+Seattle Children's Hospital,C169248,Recurrence,9081,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, non-WNT/non-SHH",CBTN,Temporal Lobe,Not Applicable
+Seattle Children's Hospital,C169371,Initial CNS Tumor,3132,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, NOS or NEC",CBTN,Ventricles,Not Applicable
+Seattle Children's Hospital,C170232,Initial CNS Tumor,3142,Yes,CSF,Not Applicable,Medulloblastoma,"Medulloblastoma, NOS or NEC",CBTN,Ventricles,Not Applicable
+Seattle Children's Hospital,C226074,Initial CNS Tumor,147,No,Not Applicable,Not Applicable,Atypical teratoid/rhabdoid tumor,ATRT-SHH,OpenPedCan,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C2333064,Initial CNS Tumor,545,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, SHH-activated and TP53-wildtype",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C2333310,Deceased,806,Yes,Brain;Leptomeningeal,Not Applicable,Atypical teratoid/rhabdoid tumor,"ATRT, NOS or NEC",CBTN,Brain Stem- Pons; Frontal Lobe; Spinal Cord- Cervical; Temporal Lobe; Ventricles,Not Applicable
+Seattle Children's Hospital,C2333310,Initial CNS Tumor,490,Yes,Brain;Spine,Not Applicable,Atypical teratoid/rhabdoid tumor,"ATRT, NOS or NEC",CBTN,Spinal Cord- Cervical;Temporal Lobe;Ventricles,Not Applicable
+Seattle Children's Hospital,C2333310,Recurrence,771,Yes,Brain;Leptomeningeal,Not Applicable,Atypical teratoid/rhabdoid tumor,"ATRT, NOS or NEC",CBTN,Brain Stem- Pons; Spinal Cord- Cervical; Temporal Lobe; Ventricles,Not Applicable
+Seattle Children's Hospital,C2358156,Initial CNS Tumor,395,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, NOS or NEC",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C2463690,Initial CNS Tumor,1272,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, non-WNT/non-SHH",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C2544870,Initial CNS Tumor,5124,Yes,CSF;Leptomeningeal;Spine,Not Applicable,Medulloblastoma,"Medulloblastoma, Group 4",OpenPedCan,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C2571192,Deceased,1248,Yes,Brain;Spine,Not Applicable,Atypical teratoid/rhabdoid tumor,"ATRT, NOS or NEC",CBTN,Frontal Lobe; Spinal Cord- Cervical; Spinal Cord- Lumbar/Thecal Sac; Spinal Cord- Thoracic,Not Applicable
+Seattle Children's Hospital,C2571192,Initial CNS Tumor,802,No,Not Applicable,Not Applicable,Atypical teratoid/rhabdoid tumor,"ATRT, NOS or NEC",CBTN,Ventricles,Not Applicable
+Seattle Children's Hospital,C2571192,Recurrence,1168,Yes,Brain;CSF;Leptomeningeal;Spine,Not Applicable,Atypical teratoid/rhabdoid tumor,"ATRT, NOS or NEC",CBTN,Frontal Lobe; Spinal Cord- Cervical; Spinal Cord- Lumbar/Thecal Sac; Spinal Cord- Thoracic,Not Applicable
+Seattle Children's Hospital,C2571315,Initial CNS Tumor,1277,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, non-WNT/non-SHH",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C2605755,Initial CNS Tumor,557,Yes,Leptomeningeal;Spine,Not Applicable,Medulloblastoma,"Medulloblastoma, non-WNT/non-SHH",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C2696529,Initial CNS Tumor,912,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, NOS or NEC",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C2698251,Initial CNS Tumor,1431,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, non-WNT/non-SHH",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C2714610,Initial CNS Tumor,836,No,Not Applicable,Not Applicable,Atypical teratoid/rhabdoid tumor,"ATRT, NOS or NEC",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C2784966,Initial CNS Tumor,8530,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, NOS or NEC",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C2784966,Recurrence,10542,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, NOS or NEC",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C2852616,Initial CNS Tumor,5664,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, NOS or NEC",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C2892714,Initial CNS Tumor,1033,Yes,Brain,Not Applicable,Medulloblastoma,"Medulloblastoma, non-WNT/non-SHH",CBTN,Cerebellum/Posterior Fossa;Ventricles,Not Applicable
+Seattle Children's Hospital,C310206,Initial CNS Tumor,2648,Yes,Brain;Leptomeningeal;Spine,Not Applicable,Medulloblastoma,"Medulloblastoma, non-WNT/non-SHH",CBTN,Cerebellum/Posterior Fossa;Spine NOS,Not Applicable
+Seattle Children's Hospital,C310206,Progressive,7912,Yes,Brain,Not Applicable,Other,Meningioma,CBTN,Frontal Lobe; Occipital Lobe; Parietal Lobe,Not Applicable
+Seattle Children's Hospital,C310206,Second Malignancy,5687,No,Not Applicable,Not Applicable,Other,Meningioma,CBTN,Meninges/Dura; Skull,Not Applicable
+Seattle Children's Hospital,C3388527,Initial CNS Tumor,1192,Yes,Spine,Not Applicable,Medulloblastoma,"Medulloblastoma, Group 4",OpenPedCan,Cerebellum/Posterior Fossa;Spinal Cord- Lumbar/Thecal Sac,Not Applicable
+Seattle Children's Hospital,C3544368,Initial CNS Tumor,571,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, SHH-activated and TP53-wildtype",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C3544737,Deceased,4971,Yes,Brain,Not Applicable,Medulloblastoma,"Medulloblastoma, SHH-activated and TP53-mutant",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C3544737,Initial CNS Tumor,4624,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, SHH-activated and TP53-mutant",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C3544737,Progressive,4921,Yes,Brain,Not Applicable,Medulloblastoma,"Medulloblastoma, SHH-activated and TP53-mutant",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C3631329,Initial CNS Tumor,4278,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, Group 4",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C3631698,Initial CNS Tumor,9216,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, SHH-activated and TP53-wildtype",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C3631698,Recurrence,11019,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, SHH-activated and TP53-wildtype",CBTN,Spinal Cord- Lumbar/Thecal Sac,Not Applicable
+Seattle Children's Hospital,C3717306,Initial CNS Tumor,3855,Yes,Brain,Not Applicable,Medulloblastoma,"Medulloblastoma, Group 4",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C3884586,Initial CNS Tumor,3630,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, Group 4",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C4031571,Deceased,2657,No,Not Applicable,Not Applicable,Atypical teratoid/rhabdoid tumor,"ATRT, NOS or NEC",CBTN,Not Applicable,Not Applicable
+Seattle Children's Hospital,C4031571,Initial CNS Tumor,1187,Yes,Spine,Not Applicable,Atypical teratoid/rhabdoid tumor,"ATRT, NOS or NEC",CBTN,Cerebellum/Posterior Fossa;Spinal Cord- Lumbar/Thecal Sac;Spinal Cord- Thoracic,Not Applicable
+Seattle Children's Hospital,C4031694,Initial CNS Tumor,3365,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, Group 4",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C4033539,Deceased,1595,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, NOS or NEC",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C4034523,Deceased,2284,Unavailable,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, Group 3",CBTN,Cerebellum/Posterior Fossa; Spinal Cord- Cervical; Spinal Cord- Lumbar/Thecal Sac,Not Applicable
+Seattle Children's Hospital,C4034523,Initial CNS Tumor,1562,Yes,Leptomeningeal;Spine,Not Applicable,Medulloblastoma,"Medulloblastoma, Group 3",CBTN,Cerebellum/Posterior Fossa;Spinal Cord- Lumbar/Thecal Sac,Not Applicable
+Seattle Children's Hospital,C4034523,Progressive,2214,Yes,CSF;Leptomeningeal;Spine,Not Applicable,Medulloblastoma,"Medulloblastoma, Group 3",CBTN,Cerebellum/Posterior Fossa; Spinal Cord- Cervical; Spinal Cord- Lumbar/Thecal Sac,Not Applicable
+Seattle Children's Hospital,C4034646,Initial CNS Tumor,1785,Yes,Leptomeningeal;Spine,Not Applicable,Atypical teratoid/rhabdoid tumor,"ATRT, NOS or NEC",CBTN,Ventricles;Spinal Cord- Thoracic,Not Applicable
+Seattle Children's Hospital,C4103649,Initial CNS Tumor,2122,Yes,Brain;Other,Not Applicable,Medulloblastoma,"Medulloblastoma, Group 4",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C4104018,Initial CNS Tumor,167,Yes,Brain,Not Applicable,Medulloblastoma,"Medulloblastoma, NOS or NEC",CBTN,Cerebellum/Posterior Fossa;Other locations NOS,Left cerebellar hemisphere
+Seattle Children's Hospital,C4104018,Recurrence,613,Yes,Brain,Not Applicable,Medulloblastoma,"Medulloblastoma, NOS or NEC",CBTN,Cerebellum/Posterior Fossa; Other locations NOS,left superior cerebellar hemisphere 
+Seattle Children's Hospital,C4104018,Recurrence,663,Yes,Brain,Not Applicable,Medulloblastoma,"Medulloblastoma, NOS or NEC",CBTN,Cerebellum/Posterior Fossa; Other locations NOS,left superior cerebellar hemisphere 
+Seattle Children's Hospital,C4344483,Initial CNS Tumor,3009,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, NOS or NEC",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C5254437,Deceased,2176,Yes,Brain;Leptomeningeal;Spine,Not Applicable,Atypical teratoid/rhabdoid tumor,ATRT-MYC,CBTN,Brain Stem- Midbrain/Tectum; Spinal Cord- Cervical; Spinal Cord- Lumbar/Thecal Sac; Spinal Cord- Thoracic; Suprasellar/Hypothalamic/Pituitary,Not Applicable
+Seattle Children's Hospital,C5254437,Initial CNS Tumor,1481,No,Not Applicable,Not Applicable,Atypical teratoid/rhabdoid tumor,ATRT-MYC,CBTN,Spinal Cord- Thoracic,Not Applicable
+Seattle Children's Hospital,C5254437,Progressive,1989,Yes,Brain;Spine,Not Applicable,Atypical teratoid/rhabdoid tumor,ATRT-MYC,CBTN,Spinal Cord- Lumbar/Thecal Sac; Suprasellar/Hypothalamic/Pituitary,Not Applicable
+Seattle Children's Hospital,C5254437,Progressive,2011,No,Not Applicable,Not Applicable,Atypical teratoid/rhabdoid tumor,ATRT-MYC,CBTN,Spinal Cord- Lumbar/Thecal Sac; Suprasellar/Hypothalamic/Pituitary,Not Applicable
+Seattle Children's Hospital,C5254437,Progressive,2133,Yes,Leptomeningeal,Not Applicable,Atypical teratoid/rhabdoid tumor,ATRT-MYC,CBTN,Spinal Cord- Thoracic; Suprasellar/Hypothalamic/Pituitary,Not Applicable
+Seattle Children's Hospital,C5492565,Initial CNS Tumor,4669,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, WNT-activated",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C558912,Deceased,1255,Unavailable,Not Applicable,Not Applicable,Atypical teratoid/rhabdoid tumor,"ATRT, NOS or NEC",CBTN,Other locations NOS,Cervicomedulary junction
+Seattle Children's Hospital,C558912,Initial CNS Tumor,1026,Yes,CSF;Spine,Not Applicable,Atypical teratoid/rhabdoid tumor,"ATRT, NOS or NEC",CBTN,Brain Stem- Pons;Cerebellum/Posterior Fossa;Other locations NOS,Left cerebellopontine angle involving internal auditory canal.
+Seattle Children's Hospital,C558912,Recurrence,1183,No,Not Applicable,Not Applicable,Atypical teratoid/rhabdoid tumor,"ATRT, NOS or NEC",CBTN,Other locations NOS,CERVICOMEDULLARY JUNCTION
+Seattle Children's Hospital,C5623560,Deceased,1879,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, Group 3",CBTN,Not Applicable,Not Applicable
+Seattle Children's Hospital,C5623560,Initial CNS Tumor,1726,Yes,Brain;CSF;Leptomeningeal;Spine,Not Applicable,Medulloblastoma,"Medulloblastoma, Group 3",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C5624052,Initial CNS Tumor,78,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, SHH-activated and TP53-wildtype",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C602700,Initial CNS Tumor,1385,Yes,CSF;Spine,Not Applicable,Medulloblastoma,"Medulloblastoma, Group 3",OpenPedCan,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C602700,Second Malignancy,3963,No,Not Applicable,Not Applicable,Other,Meningioma,CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C603069,Deceased,626,Yes,Spine,Not Applicable,Atypical teratoid/rhabdoid tumor,"ATRT, NOS or NEC",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C603069,Initial CNS Tumor,218,No,Not Applicable,Not Applicable,Atypical teratoid/rhabdoid tumor,ATRT-TYR,OpenPedCan,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C603069,Progressive,479,No,Not Applicable,Not Applicable,Atypical teratoid/rhabdoid tumor,"ATRT, NOS or NEC",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C603069,Progressive,553,Yes,Brain,Not Applicable,Atypical teratoid/rhabdoid tumor,"ATRT, NOS or NEC",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C603069,Progressive,598,Yes,Brain;Leptomeningeal;Spine,Not Applicable,Atypical teratoid/rhabdoid tumor,"ATRT, NOS or NEC",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C603069,Recurrence,438,Yes,Spine,Not Applicable,Atypical teratoid/rhabdoid tumor,"ATRT, NOS or NEC",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C6083703,Initial CNS Tumor,2915,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, WNT-activated",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C622257,Deceased,2031,Unavailable,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, Group 3",CBTN,Cerebellum/Posterior Fossa; Spinal Cord- Cervical; Spinal Cord- Thoracic,Not Applicable
+Seattle Children's Hospital,C622257,Initial CNS Tumor,1750,Yes,CSF;Spine,Not Applicable,Medulloblastoma,"Medulloblastoma, Group 3",CBTN,Cerebellum/Posterior Fossa;Spinal Cord- Cervical;Spinal Cord- Thoracic,Not Applicable
+Seattle Children's Hospital,C622257,Progressive,1998,Yes,Brain;Leptomeningeal;Spine,Not Applicable,Medulloblastoma,"Medulloblastoma, Group 3",CBTN,Cerebellum/Posterior Fossa; Spinal Cord- Cervical; Spinal Cord- Thoracic,Not Applicable
+Seattle Children's Hospital,C647349,Deceased,1575,Yes,Brain;Leptomeningeal;Spine,Not Applicable,Medulloblastoma,"Medulloblastoma, non-WNT/non-SHH",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C647349,Initial CNS Tumor,761,Yes,Brain;Spine,Not Applicable,Medulloblastoma,"Medulloblastoma, Group 3",OpenPedCan,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C647349,Progressive,1376,Yes,Brain;Spine,Not Applicable,Medulloblastoma,"Medulloblastoma, non-WNT/non-SHH",CBTN,Cerebellum/Posterior Fossa; Frontal Lobe; Spinal Cord- Lumbar/Thecal Sac; Spinal Cord- Thoracic; Temporal Lobe,Not Applicable
+Seattle Children's Hospital,C647349,Progressive,1408,Yes,Brain;Leptomeningeal;Spine,Not Applicable,Medulloblastoma,"Medulloblastoma, non-WNT/non-SHH",CBTN,Cerebellum/Posterior Fossa; Frontal Lobe; Spinal Cord- Cervical; Spinal Cord- Thoracic; Temporal Lobe,Not Applicable
+Seattle Children's Hospital,C647349,Recurrence,1272,Yes,Brain;Leptomeningeal;Spine,Not Applicable,Medulloblastoma,"Medulloblastoma, non-WNT/non-SHH",CBTN,Cerebellum/Posterior Fossa; Frontal Lobe; Spine NOS; Temporal Lobe,Not Applicable
+Seattle Children's Hospital,C676746,Initial CNS Tumor,6444,Yes,CSF,Not Applicable,Medulloblastoma,"Medulloblastoma, Group 4",OpenPedCan,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C6958725,Initial CNS Tumor,897,No,Not Applicable,Not Applicable,Atypical teratoid/rhabdoid tumor,"ATRT, NOS or NEC",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C700977,Initial CNS Tumor,7628,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, non-WNT/non-SHH",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C701223,Deceased,3762,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, WNT-activated",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C701223,Initial CNS Tumor,3248,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, WNT-activated",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C701469,Initial CNS Tumor,737,Yes,Brain;Spine,Not Applicable,Medulloblastoma,"Medulloblastoma, Group 3",OpenPedCan,Spinal Cord- Cervical;Spinal Cord- Thoracic;Cerebellum/Posterior Fossa;Spinal Cord- Lumbar/Thecal Sac,Not Applicable
+Seattle Children's Hospital,C7093902,Initial CNS Tumor,916,Yes,Spine,Not Applicable,Medulloblastoma,"Medulloblastoma, Group 3",CBTN,Cerebellum/Posterior Fossa;Spinal Cord- Lumbar/Thecal Sac,Not Applicable
+Seattle Children's Hospital,C724962,Initial CNS Tumor,4428,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, Group 4",OpenPedCan,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C725331,Deceased,5497,Yes,Leptomeningeal,Not Applicable,Medulloblastoma,"Medulloblastoma, NOS or NEC",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C725331,Initial CNS Tumor,4973,Yes,Brain;Leptomeningeal;Spine;Leptomeningeal;Spine,Not Applicable,Medulloblastoma,"Medulloblastoma, NOS or NEC",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C725331,Progressive,5308,Yes,Brain;Leptomeningeal,Not Applicable,Medulloblastoma,"Medulloblastoma, NOS or NEC",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C7302756,Initial CNS Tumor,1698,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, non-WNT/non-SHH",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C7457490,Initial CNS Tumor,1195,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, Group 3",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C758541,Deceased,6634,Unavailable,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, NOS or NEC",CBTN,Frontal Lobe; Parietal Lobe; Spinal Cord- Thoracic; Temporal Lobe,Not Applicable
+Seattle Children's Hospital,C758541,Initial CNS Tumor,2820,Yes,Brain;Spine,Not Applicable,Medulloblastoma,"Medulloblastoma, Group 4",OpenPedCan,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C758541,Progressive,3483,Yes,Brain;Leptomeningeal,Not Applicable,Medulloblastoma,"Medulloblastoma, NOS or NEC",CBTN,Frontal Lobe; Parietal Lobe; Temporal Lobe,Not Applicable
+Seattle Children's Hospital,C758541,Progressive,4209,Yes,Brain;Leptomeningeal;Spine,Not Applicable,Medulloblastoma,"Medulloblastoma, NOS or NEC",CBTN,Frontal Lobe; Parietal Lobe; Spinal Cord- Thoracic; Temporal Lobe,Not Applicable
+Seattle Children's Hospital,C758541,Progressive,4584,Yes,Brain;Leptomeningeal,Not Applicable,Medulloblastoma,"Medulloblastoma, NOS or NEC",CBTN,Frontal Lobe; Parietal Lobe; Temporal Lobe,Not Applicable
+Seattle Children's Hospital,C758541,Progressive,4855,Yes,Brain;Spine,Not Applicable,Medulloblastoma,"Medulloblastoma, NOS or NEC",CBTN,Frontal Lobe; Parietal Lobe; Spinal Cord- Lumbar/Thecal Sac; Temporal Lobe,Not Applicable
+Seattle Children's Hospital,C758541,Progressive,5175,Yes,Brain;Spine,Not Applicable,Medulloblastoma,"Medulloblastoma, NOS or NEC",CBTN,Cerebellum/Posterior Fossa; Spine NOS,Not Applicable
+Seattle Children's Hospital,C758541,Progressive,5344,Yes,Brain;Leptomeningeal;Spine,Not Applicable,Medulloblastoma,"Medulloblastoma, NOS or NEC",CBTN,Cerebellum/Posterior Fossa; Frontal Lobe; Parietal Lobe; Temporal Lobe,Not Applicable
+Seattle Children's Hospital,C758541,Progressive,6039,Yes,Brain;Leptomeningeal,Not Applicable,Medulloblastoma,"Medulloblastoma, NOS or NEC",CBTN,Frontal Lobe; Parietal Lobe; Spine NOS; Temporal Lobe,Not Applicable
+Seattle Children's Hospital,C758541,Progressive,6288,Yes,Brain;Leptomeningeal;Spine,Not Applicable,Medulloblastoma,"Medulloblastoma, NOS or NEC",CBTN,Frontal Lobe; Parietal Lobe; Spinal Cord- Lumbar/Thecal Sac; Temporal Lobe,Not Applicable
+Seattle Children's Hospital,C7611978,Initial CNS Tumor,1447,Yes,Spine,Not Applicable,Atypical teratoid/rhabdoid tumor,ATRT-MYC,CBTN,Frontal Lobe;Temporal Lobe,Not Applicable
+Seattle Children's Hospital,C7617267,Initial CNS Tumor,1182,Yes,Leptomeningeal,Not Applicable,Atypical teratoid/rhabdoid tumor,ATRT-SHH,CBTN,Frontal Lobe;Ventricles,Not Applicable
+Seattle Children's Hospital,C7617267,Progressive,1561,Yes,Leptomeningeal,Not Applicable,Atypical teratoid/rhabdoid tumor,ATRT-SHH,CBTN,Frontal Lobe,Not Applicable
+Seattle Children's Hospital,C7617267,Recurrence,2015,No,Not Applicable,Not Applicable,Atypical teratoid/rhabdoid tumor,ATRT-SHH,CBTN,Parietal Lobe,Not Applicable
+Seattle Children's Hospital,C782649,Initial CNS Tumor,4007,No,Not Applicable,Not Applicable,Atypical teratoid/rhabdoid tumor,"ATRT, NOS or NEC",CBTN,Thalamus;Brain Stem- Midbrain/Tectum,Not Applicable
+Seattle Children's Hospital,C782895,Initial CNS Tumor,2013,Yes,Spine,Not Applicable,Medulloblastoma,"Medulloblastoma, Group 3",OpenPedCan,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C784371,Initial CNS Tumor,8286,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, NOS or NEC",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C797655,Initial CNS Tumor,2186,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, Group 3",OpenPedCan,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C8183559,Initial CNS Tumor,3490,Yes,Brain;CSF;Spine,Not Applicable,Medulloblastoma,"Medulloblastoma, Group 4",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C836769,Deceased,4929,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, non-WNT/non-SHH",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C836769,Initial CNS Tumor,4295,Yes,Brain;Leptomeningeal,Not Applicable,Medulloblastoma,"Medulloblastoma, non-WNT/non-SHH",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C836769,Recurrence,4664,Yes,Brain;Leptomeningeal;Spine,Not Applicable,Medulloblastoma,"Medulloblastoma, non-WNT/non-SHH",CBTN,Cerebellum/Posterior Fossa; Spine NOS,Not Applicable
+Seattle Children's Hospital,C837630,Deceased,2913,Unavailable,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, NOS or NEC",CBTN,Not Applicable,Not Applicable
+Seattle Children's Hospital,C837630,Initial CNS Tumor,77,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, NOS or NEC",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C837630,Progressive,2253,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, NOS or NEC",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C837630,Recurrence,1279,Yes,Brain,Not Applicable,Medulloblastoma,"Medulloblastoma, NOS or NEC",CBTN,Cerebellum/Posterior Fossa; Ventricles,Not Applicable
+Seattle Children's Hospital,C837630,Recurrence,1769,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, NOS or NEC",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C8379990,Initial CNS Tumor,4368,Yes,Brain;Spine,Not Applicable,Medulloblastoma,"Medulloblastoma, Group 4",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C849561,Initial CNS Tumor,733,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, SHH-activated and TP53-wildtype",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C849561,Second Malignancy,3022,No,Not Applicable,Not Applicable,Other,Meningioma,CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C8735460,Initial CNS Tumor,4160,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, WNT-activated",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C912414,Initial CNS Tumor,2888,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, Group 4",OpenPedCan,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C912660,Deceased,3853,Unavailable,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, SHH-activated and TP53-wildtype",CBTN,Cerebellum/Posterior Fossa; Spinal Cord- Cervical; Spinal Cord- Lumbar/Thecal Sac; Spinal Cord- Thoracic,Not Applicable
+Seattle Children's Hospital,C912660,Initial CNS Tumor,1851,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, SHH-activated and TP53-wildtype",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C912660,Progressive,3198,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, SHH-activated and TP53-wildtype",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C912660,Progressive,3348,Yes,Spine,Not Applicable,Medulloblastoma,"Medulloblastoma, SHH-activated and TP53-wildtype",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C912660,Progressive,3779,Yes,Brain;Leptomeningeal;Spine,Not Applicable,Medulloblastoma,"Medulloblastoma, SHH-activated and TP53-wildtype",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C912660,Recurrence,2841,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, SHH-activated and TP53-wildtype",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C912660,Recurrence,3037,Yes,CSF,Not Applicable,Medulloblastoma,"Medulloblastoma, SHH-activated and TP53-wildtype",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C912660,Recurrence,3170,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, SHH-activated and TP53-wildtype",CBTN,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C923607,Initial CNS Tumor,1392,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, Group 3",OpenPedCan,Cerebellum/Posterior Fossa,Not Applicable
+Seattle Children's Hospital,C948330,Initial CNS Tumor,5918,No,Not Applicable,Not Applicable,Medulloblastoma,"Medulloblastoma, Group 4",OpenPedCan,Cerebellum/Posterior Fossa,Not Applicable

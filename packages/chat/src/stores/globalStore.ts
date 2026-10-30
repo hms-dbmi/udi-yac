@@ -1,12 +1,13 @@
 import { createStore } from 'zustand/vanilla';
 
 /**
- * How the chat starts, and whether the user may change it.
+ * The chat's mode, and whether the user may change it. The host may change it
+ * at any time.
  * - `false` (default) — the normal chat + dashboard app.
- * - `true` — starts read-only; the chat is hidden, and an Explore Data button
+ * - `true` — read-only; the chat is hidden, and an Explore Data button
  *   leaves read-only.
- * - `'locked'` — read-only with no way out, for hosts that embed the dashboard
- *   and do not want their users chatting at all.
+ * - `'locked'` — read-only with no way out for the user, for hosts that embed
+ *   the dashboard and do not want their users chatting at all.
  */
 export type ReadOnlyOption = boolean | 'locked';
 
@@ -46,8 +47,10 @@ export interface GlobalState {
    * Cross-filtering and the table toggle stay.
    */
   readOnly: boolean;
-  /** Whether `readOnly` is fixed for the session. See {@link ReadOnlyOption}. */
+  /** Whether the user is denied a way out of `readOnly`. See {@link ReadOnlyOption}. */
   readOnlyLocked: boolean;
+  /** Re-derive the dashboard's column count for its new width when `readOnly` changes. */
+  refitOnReadOnlyChange: boolean;
   /** Multiplier on every text size, charts included (1 = stock). For presenting. */
   fontScale: number;
   /** The host's `fontScale` prop. Overrides `fontScale` and hides its slider. */
@@ -64,8 +67,9 @@ export interface GlobalState {
    * reopens on whatever was last looked at); pass `null` to clear it.
    */
   setOverview: (open: boolean, entity?: string | null) => void;
-  /** No-op while `readOnlyLocked` — guarded here rather than at each call site
-   *  so no caller can escape the lock. */
+  /** The user's way in and out of read-only. No-op while `readOnlyLocked` —
+   *  guarded here rather than at each call site so no in-app caller can escape
+   *  the lock. The host's `readOnly` prop bypasses it (see UDIChatProvider). */
   setReadOnly: (value: boolean) => void;
   setFontScale: (value: number) => void;
   openIssueReport: (draft: string, source: IssueReportSource) => void;
@@ -76,7 +80,11 @@ export interface GlobalState {
 export const selectFontScale = (s: GlobalState): number =>
   s.hostFontScale == null ? s.fontScale : clampFontScale(s.hostFontScale);
 
-export function createGlobalStore(readOnly: ReadOnlyOption = false, hostFontScale?: number) {
+export function createGlobalStore(
+  readOnly: ReadOnlyOption = false,
+  hostFontScale?: number,
+  refitOnReadOnlyChange = true,
+) {
   return createStore<GlobalState>()((set) => ({
     debugMode: false,
     isProduction: false,
@@ -84,6 +92,7 @@ export function createGlobalStore(readOnly: ReadOnlyOption = false, hostFontScal
     overviewEntity: null,
     readOnly: readOnly !== false,
     readOnlyLocked: readOnly === 'locked',
+    refitOnReadOnlyChange,
     fontScale: readFontScale(),
     hostFontScale,
     issueReport: { open: false, draft: '', source: 'menu' },

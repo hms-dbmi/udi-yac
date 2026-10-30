@@ -25,7 +25,7 @@ Only call `CreateVisualization` when the user is asking for a **new or different
 
 ## Current filters
 
-Every filter active right now, with the values the user has since edited it to — one per column, whether it was set in chat or by clicking or brushing a chart. Charts and data counts already apply all of them. You can change or remove any of them except those marked read-only, which the host page set.
+Every filter active right now, with the values the user has since edited it to — one per column, whether it was set in chat or by clicking or brushing a chart. Charts and data counts already apply all of them. You can change or remove any of them except those marked read-only, which the host page keeps for itself.
 
 {{current_filters}}
 
@@ -56,7 +56,8 @@ It is **not** a list of what exists.
   Never tell the user those are the only values, and never conclude a value is
   absent from the data because it is not in the sample.
 - Call `ListFieldValues` when you need the full list — to check a value exists,
-  or to quote values back to the user.
+  or to quote values back to the user. On a long column pass `contains` to
+  search for what the user named ("ACNS0334", "regimen b") instead.
 - When the user asks to filter by a categorical field without saying which
   values ("filter by radiation type"), call `FilterData` and say the values are
   not named. The user is shown the field's values to pick from. Do not use

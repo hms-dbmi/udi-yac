@@ -35,6 +35,9 @@ export type { SourceSpec, LoadDataPackageOptions } from './loadDataPackage';
 export { DEFAULT_PALETTE } from './Palette';
 export type { UDIPalette, ContinuousColor, DiscreteColor } from './Palette';
 
+// Record links: row → the URL of that record's page (UDIVis `recordUrl`)
+export type { RecordUrlFn } from './recordUrl';
+
 // Expression AST compiler (Expr -> Arquero expression string)
 export { exprToArquero, isExpr } from './exprToArquero';
 
@@ -87,6 +90,7 @@ export type {
   DataSelections,
   RangeSelection,
   PointSelection,
+  CubeMetadata,
 } from './DataSourcesStore';
 
 // The shared store factory. Exposed for headless/tooling use — e.g. the

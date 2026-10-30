@@ -84,10 +84,13 @@ HORIZON = Choice(
         "full": ("Full follow-up", _lit(HORIZON_FULL_YEARS)),
     },
     description=(
-        "OPTIONAL. How many years of follow-up the survival curve shows. Omit it for "
-        "the default of 5 years. Set it only when the request names a different span "
-        "('10-year survival', 'the first 2 years'), or 'full' when it asks for the "
-        "whole follow-up ('all follow-up', 'as far as the data goes')."
+        "OPTIONAL — leave it out. How many years of follow-up the survival curve "
+        "shows; omitted, it is 5 years. Set it ONLY when the request names a "
+        "different span of TIME ('10-year survival', 'the first 2 years'), or 'full' "
+        "when it explicitly asks for the whole follow-up TIME ('all follow-up', 'as "
+        "far as the data goes'). Words about which patients or data ('all data', "
+        "'the full data', 'the whole cohort', 'all patients') are not a time span: "
+        "leave it out for them."
     ),
     label="time span",
 )
@@ -144,10 +147,11 @@ class TextLabel:
     description: str
 
 
-#: Which survival endpoint a curve shows. The events that end a curve are the
-#: template's `value2` list — data values, which differ per dataset ("death",
-#: "Deceased"), so the endpoint cannot be read off them reliably. The model picks
-#: both from the same request, so it is asked to name the one it built.
+#: Which survival endpoint a curve shows. The events that end a curve are data
+#: values — an event-log template's `value2` list, a cube's event status
+#: `value1` — which differ per dataset ("death", "Deceased", "event"), so the
+#: endpoint cannot be read off them reliably. The model picks both from the same
+#: request, so it is asked to name the one it built.
 ENDPOINT = TextLabel(
     param="endpoint",
     default="Survival",
@@ -158,7 +162,8 @@ ENDPOINT = TextLabel(
     },
     description=(
         "OPTIONAL. Names the survival endpoint in the chart title, and must match "
-        "the end events in value2: 'overall_survival' when death alone ends the "
+        "the events that end the curve (for a cube, what its time and status "
+        "dimensions describe): 'overall_survival' when death alone ends the "
         "curve; 'progression_free_survival' for progression or death; "
         "'event_free_survival' for progression, recurrence, relapse, a second "
         "malignancy or death. Omit it when the end events are none of these; the "

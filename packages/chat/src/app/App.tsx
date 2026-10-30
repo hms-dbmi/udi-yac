@@ -2,6 +2,20 @@ import { useEffect, useState } from 'react';
 import { UDIChat } from '@/app/UDIChat';
 import { env } from '@/app/env';
 
+// Dev only: HuBMAP records link to their portal pages, to try out `recordUrl`
+// locally. Other packages' entities have no entry, so they don't link.
+const HUBMAP_PAGES = new Map([
+  ['donors', 'donor'],
+  ['samples', 'sample'],
+  ['datasets', 'dataset'],
+]);
+function hubmapRecordUrl(record: Record<string, unknown>, entity: string) {
+  const page = HUBMAP_PAGES.get(entity);
+  return page && typeof record.uuid === 'string'
+    ? `https://portal.hubmapconsortium.org/browse/${page}/${record.uuid}`
+    : undefined;
+}
+
 /**
  * Standalone dev/demo entry. Every knob is described once in `env.ts`, which
  * also generates `.env.example`, the README table, and `env.d.ts`.
@@ -26,6 +40,7 @@ function App() {
         readOnly={env.readOnly}
         initialSession={initialSession}
         issueReporting={env.issueReporting}
+        recordUrl={import.meta.env.DEV ? hubmapRecordUrl : undefined}
         // One saved-sessions list per data package: a session only renders
         // against the package it was built on.
         savedSessionsKey={env.remotePackage ?? env.dataPackagePath}

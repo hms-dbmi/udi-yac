@@ -1,4 +1,5 @@
 import type { ComponentType } from 'react';
+import type { LucideIcon } from 'lucide-react';
 import type { DataPackage, Row } from '@/types/dataPackage';
 import type { DataSelections } from './stores/dataFiltersStore';
 
@@ -46,4 +47,12 @@ export interface DownloadAction {
    * disabled. Defaults to `false`.
    */
   disabled?: boolean | ((ctx: DownloadActionContext) => boolean);
+}
+
+/** One entry of the Session or Download menu, so the folded header menu can list it too. */
+export interface MenuAction {
+  label: string;
+  Icon?: LucideIcon;
+  disabled?: boolean;
+  onSelect: () => void;
 }

@@ -6948,6 +6948,1292 @@
       }
     },
     {
+      "name": "cohort-keys",
+      "spec": {
+        "source": {
+          "name": "donors",
+          "source": "hubmap/donors.tsv"
+        },
+        "transformation": [
+          {
+            "filter": {
+              "name": "sel_sample",
+              "source": "samples",
+              "match": "any",
+              "entityRelationship": {
+                "originKey": "donor.hubmap_id",
+                "targetKey": "hubmap_id"
+              }
+            }
+          },
+          {
+            "filter": {
+              "name": "sel_donor",
+              "source": "donors"
+            }
+          },
+          {
+            "groupby": ["hubmap_id"]
+          },
+          {
+            "rollup": {
+              "n": {
+                "op": "count"
+              }
+            }
+          }
+        ]
+      },
+      "selections": {
+        "sel_sample": {
+          "dataSourceKey": "samples",
+          "selection": {
+            "created_timestamp": [1690000000000, 1800000000000]
+          },
+          "type": "interval"
+        },
+        "sel_donor": {
+          "dataSourceKey": "donors",
+          "selection": {
+            "sex": ["Female"]
+          },
+          "type": "point"
+        }
+      },
+      "displayDataOnly": true,
+      "expect": {
+        "displayData": [
+          {
+            "hubmap_id": "HBM893.MSGD.653",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM438.WFMQ.847",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM263.SKPP.554",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM593.KDDP.232",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM465.HKXW.235",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM554.MDRQ.975",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM542.BVVC.598",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM296.MMXP.952",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM883.LHNK.872",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM279.WPZP.978",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM633.KPHW.963",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM399.FCNS.563",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM937.CMWT.993",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM245.VFCF.396",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM895.SFVK.576",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM537.QQSN.868",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM668.BQBD.596",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM446.CSSP.335",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM783.RJSP.767",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM582.PMVH.879",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM486.BBQB.858",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM479.SJGD.976",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM565.TRST.423",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM497.LHQK.626",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM558.NQFP.597",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM242.BPXR.698",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM287.NHFQ.865",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM642.BTDB.897",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM869.DHJR.258",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM948.LPFP.523",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM647.PDCD.269",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM842.KLPP.244",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM524.HJWQ.546",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM632.VMPZ.223",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM693.LKTD.978",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM478.HDLP.354",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM624.KWHJ.622",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM938.LVRS.434",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM647.BJWM.855",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM473.KRCC.582",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM443.VFRD.453",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM869.XWHX.552",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM864.XRGJ.897",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM747.VVGD.326",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM737.MBKD.598",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM643.KCCK.866",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM456.FDTP.455",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM989.SWJP.679",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM846.PQMJ.635",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM487.DNHS.269",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM723.QZBS.682",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM398.ZQSQ.566",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM425.SQGM.878",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM246.BZJP.256",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM879.VGBG.979",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM288.VLPD.668",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM852.MVNB.965",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM658.GTGV.567",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM259.FGLV.394",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM829.VSBM.592",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM375.JDJL.695",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM993.RDQV.873",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM559.QXLQ.523",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM368.DJRH.865",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM772.BXVK.762",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM326.ZRRN.387",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM398.QCMJ.558",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM635.WSMC.463",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM339.VKBL.235",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM834.QHSW.448",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM934.BJHM.547",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM688.SRNB.764",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM999.THVL.594",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM924.VSFL.467",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM775.JDDD.365",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM723.QFWZ.837",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM673.XCMV.342",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM839.HVVG.487",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM929.FPWD.848",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM883.ZTKR.774",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM647.SFSM.954",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM496.BGDC.329",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM828.XLCB.267",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM423.QXZJ.226",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM455.HLHM.985",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM489.VGLK.265",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM394.ZWGG.823",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM777.VWTW.993",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM287.TFTF.639",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM278.PFLB.646",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM977.BPQW.336",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM487.PCNK.738",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM777.CPLG.637",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM486.QQFH.565",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM559.FGQF.668",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM634.GXMD.995",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM758.JRSC.348",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM987.VCFN.282",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM848.BMDK.429",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM666.PJNX.843",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM666.XRTH.688",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM228.QKJR.399",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM854.QXTP.375",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM496.BKTT.757",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM727.LTFN.536",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM966.SPSL.946",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM352.MHHS.224",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM994.NXZC.854",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM769.HVDR.369",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM674.FJGN.569",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM865.JQXX.939",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM472.MPMH.535",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM853.HXBK.427",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM375.HTWR.458",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM659.DMLP.268",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM872.VXSV.245",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM534.PKFT.943",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM644.NRTT.882",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM666.TKFP.872",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM547.NCQL.874",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM642.WRSN.866",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM889.KSKV.978",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM588.GVLV.225",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM829.PQPP.485",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM566.XMPT.923",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM638.DPWD.582",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM473.ZLHS.776",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM852.FHGX.643",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM345.HZXF.845",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM844.QQZH.667",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM639.MJWP.689",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM947.XSWN.869",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM934.WDHB.379",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM845.CGVD.694",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM452.KSNV.453",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM389.GLKP.829",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM696.LWCK.694",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM956.ZXCW.333",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM823.WVQN.738",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM356.QRRS.465",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM882.QZZZ.478",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM274.TWRJ.896",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM456.PHGL.722",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM942.GGWJ.769",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM843.DMQP.477",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM448.VMXG.726",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM463.QMHS.574",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM594.QHXH.558",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM278.DTSZ.652",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM438.GQNG.748",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM245.KGQK.444",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM253.KBSM.226",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM923.WRHD.444",
+            "n": 1
+          }
+        ],
+        "allData": [
+          {
+            "hubmap_id": "HBM893.MSGD.653",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM438.WFMQ.847",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM263.SKPP.554",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM593.KDDP.232",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM465.HKXW.235",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM554.MDRQ.975",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM542.BVVC.598",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM296.MMXP.952",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM883.LHNK.872",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM279.WPZP.978",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM633.KPHW.963",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM399.FCNS.563",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM937.CMWT.993",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM245.VFCF.396",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM895.SFVK.576",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM537.QQSN.868",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM668.BQBD.596",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM446.CSSP.335",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM783.RJSP.767",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM582.PMVH.879",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM486.BBQB.858",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM479.SJGD.976",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM565.TRST.423",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM497.LHQK.626",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM558.NQFP.597",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM242.BPXR.698",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM287.NHFQ.865",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM642.BTDB.897",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM869.DHJR.258",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM948.LPFP.523",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM647.PDCD.269",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM842.KLPP.244",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM524.HJWQ.546",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM632.VMPZ.223",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM693.LKTD.978",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM478.HDLP.354",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM624.KWHJ.622",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM938.LVRS.434",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM647.BJWM.855",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM473.KRCC.582",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM443.VFRD.453",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM869.XWHX.552",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM864.XRGJ.897",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM747.VVGD.326",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM737.MBKD.598",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM643.KCCK.866",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM456.FDTP.455",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM989.SWJP.679",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM846.PQMJ.635",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM487.DNHS.269",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM723.QZBS.682",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM398.ZQSQ.566",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM425.SQGM.878",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM246.BZJP.256",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM879.VGBG.979",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM288.VLPD.668",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM852.MVNB.965",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM658.GTGV.567",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM259.FGLV.394",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM829.VSBM.592",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM375.JDJL.695",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM993.RDQV.873",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM559.QXLQ.523",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM368.DJRH.865",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM772.BXVK.762",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM326.ZRRN.387",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM398.QCMJ.558",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM635.WSMC.463",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM339.VKBL.235",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM834.QHSW.448",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM934.BJHM.547",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM688.SRNB.764",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM999.THVL.594",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM924.VSFL.467",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM775.JDDD.365",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM723.QFWZ.837",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM673.XCMV.342",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM839.HVVG.487",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM929.FPWD.848",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM883.ZTKR.774",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM647.SFSM.954",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM496.BGDC.329",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM828.XLCB.267",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM423.QXZJ.226",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM455.HLHM.985",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM489.VGLK.265",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM394.ZWGG.823",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM777.VWTW.993",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM287.TFTF.639",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM278.PFLB.646",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM977.BPQW.336",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM487.PCNK.738",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM777.CPLG.637",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM486.QQFH.565",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM559.FGQF.668",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM634.GXMD.995",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM758.JRSC.348",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM987.VCFN.282",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM848.BMDK.429",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM666.PJNX.843",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM666.XRTH.688",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM228.QKJR.399",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM854.QXTP.375",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM496.BKTT.757",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM727.LTFN.536",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM966.SPSL.946",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM352.MHHS.224",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM994.NXZC.854",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM769.HVDR.369",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM674.FJGN.569",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM865.JQXX.939",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM472.MPMH.535",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM853.HXBK.427",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM375.HTWR.458",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM659.DMLP.268",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM872.VXSV.245",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM534.PKFT.943",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM644.NRTT.882",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM666.TKFP.872",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM547.NCQL.874",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM642.WRSN.866",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM889.KSKV.978",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM588.GVLV.225",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM829.PQPP.485",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM566.XMPT.923",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM638.DPWD.582",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM473.ZLHS.776",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM852.FHGX.643",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM345.HZXF.845",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM844.QQZH.667",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM639.MJWP.689",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM947.XSWN.869",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM934.WDHB.379",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM845.CGVD.694",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM452.KSNV.453",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM389.GLKP.829",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM696.LWCK.694",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM956.ZXCW.333",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM823.WVQN.738",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM356.QRRS.465",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM882.QZZZ.478",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM274.TWRJ.896",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM456.PHGL.722",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM942.GGWJ.769",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM843.DMQP.477",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM448.VMXG.726",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM463.QMHS.574",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM594.QHXH.558",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM278.DTSZ.652",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM438.GQNG.748",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM245.KGQK.444",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM253.KBSM.226",
+            "n": 1
+          },
+          {
+            "hubmap_id": "HBM923.WRHD.444",
+            "n": 1
+          }
+        ],
+        "isSubset": true
+      }
+    },
+    {
       "name": "named-filter-skipped-missing-field",
       "spec": {
         "source": {
@@ -9711,6 +10997,95 @@
           {
             "island": "other",
             "n": 192
+          }
+        ],
+        "isSubset": false
+      }
+    },
+    {
+      "name": "stratum-cut-with-nulls",
+      "spec": {
+        "source": {
+          "name": "penguins",
+          "source": "penguins.csv"
+        },
+        "transformation": [
+          {
+            "derive": {
+              "stratum": {
+                "if": {
+                  "op": "==",
+                  "left": {
+                    "field": "body_mass_g"
+                  },
+                  "right": {
+                    "literal": null
+                  }
+                },
+                "then": {
+                  "literal": null
+                },
+                "else": {
+                  "if": {
+                    "op": "<",
+                    "left": {
+                      "field": "body_mass_g"
+                    },
+                    "right": {
+                      "literal": 4000
+                    }
+                  },
+                  "then": {
+                    "literal": "< 4000"
+                  },
+                  "else": {
+                    "literal": "≥ 4000"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "groupby": "stratum"
+          },
+          {
+            "rollup": {
+              "n": {
+                "op": "count"
+              }
+            }
+          }
+        ]
+      },
+      "selections": null,
+      "displayDataOnly": null,
+      "expect": {
+        "displayData": [
+          {
+            "stratum": "< 4000",
+            "n": 165
+          },
+          {
+            "stratum": null,
+            "n": 2
+          },
+          {
+            "stratum": "≥ 4000",
+            "n": 177
+          }
+        ],
+        "allData": [
+          {
+            "stratum": "< 4000",
+            "n": 165
+          },
+          {
+            "stratum": null,
+            "n": 2
+          },
+          {
+            "stratum": "≥ 4000",
+            "n": 177
           }
         ],
         "isSubset": false

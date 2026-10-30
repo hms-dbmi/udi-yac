@@ -5,8 +5,7 @@ version: 2
 updates:
   # Root covers the whole pnpm workspace (pnpm-workspace.yaml). Dependabot does
   # not edit `overrides` there: when vite moves, bump the scoped
-  # `udi-toolkit>vite` / `@quasar/app-vite>vite` pins to match, or the toolkit
-  # and the Quasar app resolve a second vite.
+  # `udi-toolkit>vite` pin to match, or the toolkit resolves a second vite.
   - package-ecosystem: npm
     directory: /
     schedule:

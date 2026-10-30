@@ -32,6 +32,7 @@ import type {
   VisualizationLayer,
 } from './GrammarTypes';
 import type { UDIPalette } from './Palette';
+import { RECORD_URL_FIELD, recordLink, type RecordUrlFn } from './recordUrl';
 import type { DataSelections, RangeSelection } from './DataSourcesStore';
 import { useDataSourcesStore } from './DataSourcesStore';
 import { getQueryBackend } from './queryBackend';
@@ -89,6 +90,13 @@ export interface ParserProps {
    * stock sizes; raise it for a projector.
    */
   fontScale?: number | undefined;
+  /**
+   * Maps a row to the URL of that record's own page. Tables gain a leading
+   * link column and point marks open the link on a plain click (a modifier
+   * click still picks). Rows it returns nothing for — aggregates — get no
+   * link. A separate prop, like `palette`, because the spec is JSON-cloned.
+   */
+  recordUrl?: RecordUrlFn | undefined;
 }
 
 // Expose data selections to parent component
@@ -798,6 +806,18 @@ function convertToVegaSpec(spec: ParsedUDIGrammar): string {
   vegaSpec.data!.values = (transformedData.value ?? []).map((row) => ({
     ...row,
   }));
+  // Each row carries its record's link, for VegaLite's click handler.
+  let hasRecordLinks = false;
+  if (props.recordUrl) {
+    const source = spec.source[0]?.name ?? '';
+    for (const row of vegaSpec.data.values) {
+      const url = recordLink(props.recordUrl, row, source);
+      if (url) {
+        row[RECORD_URL_FIELD] = url;
+        hasRecordLinks = true;
+      }
+    }
+  }
 
   debugVegaData.value = vegaSpec.data.values;
 
@@ -1063,6 +1083,8 @@ function convertToVegaSpec(spec: ParsedUDIGrammar): string {
       markConfig.cursor = 'crosshair';
       vegaSpec.view = { ...vegaSpec.view, cursor: 'crosshair' };
     }
+    // A point opens its record (VegaLite's click handler); say so on hover.
+    if (hasRecordLinks && layer.mark === 'point') markConfig.cursor = 'pointer';
     // Dashed strokes distinguish annotation layers (reference lines) from data.
     if (Array.isArray(layer.strokeDash) && layer.strokeDash.length > 0) {
       markConfig.strokeDash = layer.strokeDash;
@@ -1302,6 +1324,7 @@ const debugVegaData = ref();
         :palette="effectivePalette"
         :fill-container="props.fillContainer"
         :font-scale="props.fontScale"
+        :record-url="props.recordUrl"
       />
     </template>
   </template>

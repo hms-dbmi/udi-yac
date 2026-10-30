@@ -729,6 +729,47 @@ const CASES = [
     ],
   ]),
   [
+    // The chat's cohort report (`onCohortChange`): every filter in place
+    // reaching the subject — here a per-donor sample filter and a filter on
+    // donors itself, chained — then the subject's keys, grouped so a remote
+    // package returns all of them rather than its row cap.
+    'cohort-keys',
+    {
+      source: src('donors'),
+      transformation: [
+        {
+          filter: {
+            name: 'sel_sample',
+            source: 'samples',
+            match: 'any',
+            entityRelationship: {
+              originKey: 'donor.hubmap_id',
+              targetKey: 'hubmap_id',
+            },
+          },
+        },
+        { filter: { name: 'sel_donor', source: 'donors' } },
+        { groupby: ['hubmap_id'] },
+        { rollup: { n: { op: 'count' } } },
+      ],
+    },
+    {
+      sel_sample: {
+        dataSourceKey: 'samples',
+        selection: {
+          created_timestamp: [1_690_000_000_000, 1_800_000_000_000],
+        },
+        type: 'interval',
+      },
+      sel_donor: {
+        dataSourceKey: 'donors',
+        selection: { sex: ['Female'] },
+        type: 'point',
+      },
+    },
+    true, // displayDataOnly, as the chat asks for it
+  ],
+  [
     // A brush whose fields don't exist in the target table (e.g. landed on
     // an aggregated output column): the filter is SKIPPED, not an error —
     // GetMappedArqueroFilter's missing-column guard, mirrored server-side.
@@ -1007,6 +1048,41 @@ const CASES = [
           },
         },
         { groupby: 'island' },
+        { rollup: { n: { op: 'count' } } },
+      ],
+    },
+  ],
+  [
+    // A quantitative stratifier cut at 4000 g, as udiagent.stratify.grouping_expr
+    // writes it (test_query_parity checks the two stay identical). Two penguins
+    // have no body mass: both executors must give them a null stratum, not the
+    // bucket each one's `null < 4000` happens to pick.
+    'stratum-cut-with-nulls',
+    {
+      source: src('penguins'),
+      transformation: [
+        {
+          derive: {
+            stratum: {
+              if: {
+                op: '==',
+                left: { field: 'body_mass_g' },
+                right: { literal: null },
+              },
+              then: { literal: null },
+              else: {
+                if: {
+                  op: '<',
+                  left: { field: 'body_mass_g' },
+                  right: { literal: 4000 },
+                },
+                then: { literal: '< 4000' },
+                else: { literal: '≥ 4000' },
+              },
+            },
+          },
+        },
+        { groupby: 'stratum' },
         { rollup: { n: { op: 'count' } } },
       ],
     },

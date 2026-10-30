@@ -31,6 +31,7 @@ export {
   HOST_FILTER_PREFIX,
   columnFilterKey,
   type DataFiltersState,
+  type FilterMode,
   type FilterOrigin,
   type UDIFilter,
   type DataSelection,
@@ -38,6 +39,17 @@ export {
 } from './stores/dataFiltersStore';
 
 export { createMemoryBankStore, type MemoryBankState } from './stores/memoryBankStore';
+
+export {
+  buildCubeTransformation,
+  buildCubeCountTransformation,
+  getRepresentedFields,
+  collectFieldReferences,
+  marginalDimensions,
+  type ActiveFilter as CubeActiveFilter,
+  type SkippedFilter,
+  type SkipReason,
+} from './utils/cubeFilters';
 
 export {
   applyFieldLabels,
@@ -50,6 +62,14 @@ export {
 } from './utils/vizTitle';
 
 export { useVizTitleLabels } from './hooks/useVizTitleLabels';
+export { useToolkitSelections } from './hooks/useToolkitSelections';
+export {
+  linkedSelections,
+  withLinkedSelections,
+  isLinkedSelectionKey,
+  canonicalColumn,
+  canonicalFilter,
+} from './utils/linkedSelections';
 
 export {
   useBrushFilters,

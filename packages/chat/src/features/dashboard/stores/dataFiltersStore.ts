@@ -1,9 +1,10 @@
 import { createStore } from 'zustand/vanilla';
 import type { DataSelection, DataSelections } from 'udi-toolkit/react';
 import type { Message, ToolCall } from '@/types/messages';
-import type { ValidStatus } from '@/types/dataPackage';
+import type { LinkGroup, ValidStatus } from '@/types/dataPackage';
 import type { FilterDataArgs, FilterOperationArgs, FilterScope } from '@/features/tool-calls';
 import { normalizePointValues } from '@/features/data-package';
+import { canonicalFilter } from '../utils/linkedSelections';
 
 export type { DataSelection, DataSelections };
 
@@ -38,6 +39,15 @@ function isAdmissible(status: ValidStatus): boolean {
 /** Where a filter came from: a FilterData tool call, a chart brush/click, or
  *  the embedding page's `filters` prop. */
 export type FilterOrigin = 'chat' | 'chart' | 'host';
+
+/**
+ * How the `filters` prop meets the column filters. `separate` (the default)
+ * keeps each host filter apart, read-only to the agent and ANDed with any chat
+ * or chart filter on the same column. `shared` makes a host filter on one
+ * field that column's filter: one chip, which the host, the agent or a chart
+ * click may change, the last edit winning.
+ */
+export type FilterMode = 'separate' | 'shared';
 
 /**
  * A filter as the embedding page sees it (`filters` / `onFiltersChange`). An
@@ -124,9 +134,10 @@ export interface DataFiltersState {
   /** Every filter: one per column (`col:{entity}.{field}`, a single field
    *  each), set from chat or a chart, plus the host's (`host-filter-{id}`). */
   dataSelections: DataSelections;
-  /** Who last set each column filter: the agent (`chat`) or a chart click or
-   *  brush (`chart`). Absent for host filters. */
-  filterOrigins: Record<string, 'chat' | 'chart'>;
+  /** Who last set each column filter: the agent (`chat`), a chart click or
+   *  brush (`chart`) or, in the `shared` filter mode, the host (`host`).
+   *  Absent for separate host filters. */
+  filterOrigins: Record<string, FilterOrigin>;
   /**
    * The scope of each chat or host filter that has one, keyed like
    * `dataSelections`. A filter with no entry is row-level. Kept beside the
@@ -164,7 +175,12 @@ export interface DataFiltersState {
   /** Apply every FilterData call not yet applied, in order: an add sets its
    *  column's filter (replacing any), a modify redefines its target, a remove
    *  deletes it and a clear deletes every column filter. */
-  syncFiltersFromMessages: (messages: Message[], validate: ValidateFilterFn) => void;
+  syncFiltersFromMessages: (
+    messages: Message[],
+    validate: ValidateFilterFn,
+    /** As for `applyChartSelection`. */
+    links?: LinkGroup[],
+  ) => void;
   /** Set or (with `null`) drop a filter's scope. */
   setFilterScope: (id: string, scope: FilterScope | null) => void;
   exportFilterState: () => ExportedFilterState;
@@ -183,6 +199,9 @@ export interface DataFiltersState {
     fields: string[],
     selection: DataSelection | null,
     messageCount?: number,
+    /** The package's link groups: a field in one is kept on its group's
+     *  canonical column, translated (see `canonicalFilter`). */
+    links?: LinkGroup[],
   ) => void;
   /** Make a filter all-inclusive while keeping it in place. */
   clearFilter: (id: string) => void;
@@ -194,8 +213,8 @@ export interface DataFiltersState {
   /** Write an edit to a filter by id. */
   setFilter: (id: string, selection: DataSelection) => void;
   /** Sync the `filters` prop in: upsert what changed since the last call,
-   *  delete what the host dropped. */
-  applyExternalFilters: (filters: UDIFilter[]) => void;
+   *  delete what the host dropped. See {@link FilterMode}. */
+  applyExternalFilters: (filters: UDIFilter[], mode?: FilterMode) => void;
   resetFilters: () => void;
   setDataSelection: (key: string, selection: DataSelection) => void;
   setHoveredFilter: (hovered: HoveredFilter | null) => void;
@@ -308,6 +327,22 @@ function normalizeFilterArgs(args: Record<string, unknown>): FilterOperationArgs
  * The selection a FilterData definition asks for, or null when the data
  * package rules its field out.
  */
+/** A FilterData call's filter, moved to its column's canonical column. */
+function canonicalArgs(args: FilterDataArgs, links: LinkGroup[]): FilterDataArgs {
+  const { filterType, pointValues } = args.filter;
+  const canon = canonicalFilter(links, args.entity, args.field, filterType, pointValues ?? []);
+  if (canon.entity === args.entity && canon.field === args.field) return args;
+  return {
+    ...args,
+    entity: canon.entity,
+    field: canon.field,
+    filter:
+      filterType === 'point'
+        ? { ...args.filter, pointValues: canon.values as string[] }
+        : args.filter,
+  };
+}
+
 function selectionFromArgs(args: FilterDataArgs, validate: ValidateFilterFn): DataSelection | null {
   if (args.filter.filterType === 'interval') {
     if (!isAdmissible(validate.isValidIntervalFilter(args.entity, args.field))) return null;
@@ -405,8 +440,9 @@ function draftFilters(s: DataFiltersState) {
 
 export function createDataFiltersStore() {
   // Last-applied JSON per host filter key, so a re-render passing the same
-  // `filters` prop never clobbers the user's edits to those filters.
-  const appliedHostFilters = new Map<string, string>();
+  // `filters` prop never clobbers the user's edits to those filters, and the
+  // column filter it was written to in the `shared` mode.
+  const appliedHostFilters = new Map<string, { json: string; column?: string }>();
 
   return createStore<DataFiltersState>()((set, get) => ({
     dataSelections: {},
@@ -427,7 +463,7 @@ export function createDataFiltersStore() {
       return valid;
     },
 
-    syncFiltersFromMessages: (messages: Message[], validate: ValidateFilterFn) => {
+    syncFiltersFromMessages: (messages: Message[], validate: ValidateFilterFn, links = []) => {
       const state = get();
       const { next, origins, scopes, removed, anchors, drop, commit } = draftFilters(state);
       const applied = { ...state.appliedFilterOps };
@@ -453,7 +489,13 @@ export function createDataFiltersStore() {
       for (let i = 0; i < messages.length; i++) {
         const message = messages[i];
         if (!message || !containsFilterCall(message)) continue;
-        for (const { args, toolCallIndex } of extractFilterOperationsFromMessage(message)) {
+        for (const op of extractFilterOperationsFromMessage(message)) {
+          const { toolCallIndex } = op;
+          // A filter on a linked column is kept on its group's canonical one.
+          const args =
+            isFilterDefinition(op.args) && op.args.entity && op.args.field
+              ? canonicalArgs(op.args, links)
+              : op.args;
           const opKey = messageFilterKeyWithToolCall(i, toolCallIndex, message);
           if (isFilterDefinition(args) && args.op !== 'modify' && args.entity && args.field) {
             aliases[opKey] = columnFilterKey(args.entity, args.field);
@@ -494,12 +536,17 @@ export function createDataFiltersStore() {
 
     exportFilterState: () => {
       const { dataSelections, filterOrigins, filterScopes, removedFilters } = get();
-      const isColumn = ([k]: [string, unknown]) => isColumnFilterKey(k);
+      // A shared host filter stays with the host page, like a separate one.
+      const ownColumn = (k: string) => isColumnFilterKey(k) && filterOrigins[k] !== 'host';
+      const isColumn = ([k]: [string, unknown]) => ownColumn(k);
       return {
         selections: Object.fromEntries(Object.entries(dataSelections).filter(isColumn)),
         scopes: Object.fromEntries(Object.entries(filterScopes).filter(isColumn)),
-        removed: Object.keys(removedFilters).filter(isColumnFilterKey),
-        origins: Object.fromEntries(Object.entries(filterOrigins).filter(isColumn)),
+        removed: Object.keys(removedFilters).filter(ownColumn),
+        origins: Object.fromEntries(Object.entries(filterOrigins).filter(isColumn)) as Record<
+          string,
+          'chat' | 'chart'
+        >,
         anchors: Object.fromEntries(Object.entries(get().brushAnchors).filter(isColumn)),
       };
     },
@@ -544,19 +591,27 @@ export function createDataFiltersStore() {
         return { filterScopes };
       }),
 
-    applyChartSelection: (entity, fields, selection, messageCount) => {
+    applyChartSelection: (entity, fields, selection, messageCount, links = []) => {
       const state = get();
       const { next, origins, removed, anchors, drop, commit } = draftFilters(state);
       let changed = false;
       const values = (selection?.selection ?? {}) as Record<string, unknown>;
 
       for (const field of fields) {
-        const id = columnFilterKey(entity, field);
-        const current = next[id];
         const value = values[field];
         const hasValue = Array.isArray(value) && value.length > 0;
+        // A linked column's filter is kept on its group's canonical column.
+        const canon = canonicalFilter(
+          links,
+          entity,
+          field,
+          selection?.type ?? 'point',
+          hasValue ? (value as unknown[]) : [],
+        );
+        const id = columnFilterKey(canon.entity, canon.field);
+        const current = next[id];
         if (hasValue && selection) {
-          const written = columnSelection(entity, selection.type, field, value);
+          const written = columnSelection(canon.entity, selection.type, canon.field, canon.values);
           if (JSON.stringify(current) === JSON.stringify(written)) continue;
           next[id] = written;
           origins[id] = 'chart';
@@ -606,13 +661,23 @@ export function createDataFiltersStore() {
 
     setFilter: (id: string, selection: DataSelection) => get().setDataSelection(id, selection),
 
-    applyExternalFilters: (filters: UDIFilter[]) => {
-      const { dataSelections, filterScopes, removedFilters } = get();
-      const next = { ...dataSelections };
-      const scopes = { ...filterScopes };
-      const removed = { ...removedFilters };
+    applyExternalFilters: (filters: UDIFilter[], mode: FilterMode = 'separate') => {
+      const draft = draftFilters(get());
+      const { next, origins, scopes, removed, anchors, drop } = draft;
       const seen = new Set<string>();
       let changed = false;
+      // What a host entry wrote before: its own key, or in the shared mode a
+      // column, which goes only while the host still owns it — a chat or chart
+      // edit since made it theirs.
+      const undo = (key: string, column: string | undefined) => {
+        if (!column) {
+          delete next[key];
+          delete scopes[key];
+          delete removed[key];
+        } else if (origins[column] === 'host') {
+          drop(column);
+        }
+      };
       for (const f of filters) {
         // A host echoing `onFiltersChange` straight back would otherwise copy
         // every chat and chart filter in as a host filter.
@@ -624,39 +689,59 @@ export function createDataFiltersStore() {
           type: f.type,
           selection: f.selection,
         };
-        const scope = f.scope ? { entity: f.scope.entity, match: f.scope.match } : null;
+        // A scope on the filtered table itself reaches no table, so it would
+        // silently drop the filter everywhere; it means row-level.
+        const scope =
+          f.scope && f.scope.entity !== f.dataSourceKey
+            ? { entity: f.scope.entity, match: f.scope.match }
+            : null;
         const json = JSON.stringify([selection, scope]);
-        if (appliedHostFilters.get(key) === json) continue;
-        appliedHostFilters.set(key, json);
-        next[key] = selection;
-        if (scope) scopes[key] = scope;
-        else delete scopes[key];
-        delete removed[key];
+        const before = appliedHostFilters.get(key);
+        if (before?.json === json) continue;
+        const fields = Object.keys(f.selection ?? {});
+        const column =
+          mode === 'shared' && fields.length === 1
+            ? columnFilterKey(f.dataSourceKey, fields[0])
+            : undefined;
+        if (before && before.column !== column) undo(key, before.column);
+        appliedHostFilters.set(key, { json, column });
+        const target = column ?? key;
+        // An echo of what the column already holds keeps whoever set it.
+        if (column && JSON.stringify([next[column], scopes[column] ?? null]) === json) continue;
+        next[target] = selection;
+        if (scope) scopes[target] = scope;
+        else delete scopes[target];
+        delete removed[target];
+        if (column) {
+          origins[column] = 'host';
+          delete anchors[column];
+        }
         changed = true;
       }
-      for (const key of [...appliedHostFilters.keys()]) {
+      for (const [key, { column }] of [...appliedHostFilters]) {
         if (seen.has(key)) continue;
         appliedHostFilters.delete(key);
-        delete next[key];
-        delete scopes[key];
-        delete removed[key];
+        undo(key, column);
         changed = true;
       }
-      if (changed) set({ dataSelections: next, filterScopes: scopes, removedFilters: removed });
+      if (changed) set(draft.commit());
     },
 
     // Host filters belong to the embedding page, not the conversation, so a
-    // reset or conversation switch keeps them.
+    // reset or conversation switch keeps them, shared ones included.
     resetFilters: () => {
-      const isHost = ([k]: [string, unknown]) => k.startsWith(HOST_FILTER_PREFIX);
-      set((s) => ({
-        dataSelections: Object.fromEntries(Object.entries(s.dataSelections).filter(isHost)),
-        filterScopes: Object.fromEntries(Object.entries(s.filterScopes).filter(isHost)),
-        filterOrigins: {},
-        appliedFilterOps: {},
-        removedFilters: {},
-        brushAnchors: {},
-      }));
+      set((s) => {
+        const isHost = ([k]: [string, unknown]) =>
+          k.startsWith(HOST_FILTER_PREFIX) || s.filterOrigins[k] === 'host';
+        return {
+          dataSelections: Object.fromEntries(Object.entries(s.dataSelections).filter(isHost)),
+          filterScopes: Object.fromEntries(Object.entries(s.filterScopes).filter(isHost)),
+          filterOrigins: Object.fromEntries(Object.entries(s.filterOrigins).filter(isHost)),
+          appliedFilterOps: {},
+          removedFilters: {},
+          brushAnchors: {},
+        };
+      });
     },
 
     setHoveredFilter: (hoveredFilter) => set({ hoveredFilter }),

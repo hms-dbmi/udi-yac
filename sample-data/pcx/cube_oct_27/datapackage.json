@@ -1,0 +1,224 @@
+{
+  "name": "pcx-cube-oct-27",
+  "resources": [
+    {
+      "name": "Efs",
+      "title": "Patients",
+      "type": "table",
+      "path": "pcx30_efs_all_dx_v6_months_2026-10-21r_cube.csv",
+      "scheme": "file",
+      "format": "csv",
+      "mediatype": "text/csv",
+      "encoding": "utf-8",
+      "udi:row_count": 24056,
+      "udi:column_count": 7,
+      "schema": {
+        "fields": [
+          {
+            "name": "cnt",
+            "title": "Patient count",
+            "type": "number",
+            "description": "Count of distinct patients in the cell (COUNT(DISTINCT research_id)). Within any grouping set the counts sum to the cohort (970); do not sum overlapping cube cells.",
+            "udi:cardinality": 109,
+            "udi:unique": false,
+            "udi:data_type": "quantitative",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "event_free_survival_months",
+            "type": "number",
+            "description": "Time from initial diagnosis to the first progression, recurrence, second malignancy or death; if none, to the most recent vital status, in whole months: floor(days / 30.4375), where 30.4375 = 365.25 / 12. 0 means under one month of follow-up, not missing. 120 means 120 months (10 years) or more. -1 means the duration is unknown (no initial diagnosis date, no vital-status date, or an end date before diagnosis); exclude it from survival curves. Read with efs_status. Null when the row aggregates over (rolls up) this dimension.",
+            "udi:cardinality": 108,
+            "udi:unique": false,
+            "udi:data_type": "quantitative",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "efs_status",
+            "type": "string",
+            "description": "Whether the EFS clock stopped on an event. 'event' = first progression, recurrence, second malignancy or death observed; 'event-free' = none of these, censored at most recent vital status. Conventional EFS: death without a prior event counts as an event (unlike CBTN's workbook definition, which censors those deaths). Null when the row aggregates over (rolls up) this dimension.",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "diagnosis",
+            "type": "string",
+            "description": "Patient's diagnosis cohort: CBTN demographics.diagnosis_type_cohort as delivered; if absent, the CNS diagnosis category of the patient's Initial CNS Tumor event (else earliest event). Levels: ATRT, Medulloblastoma. Filter to one value for a single-diagnosis view. Null when the row aggregates over (rolls up) this dimension.",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "protocol_name_and_arm",
+            "type": "string",
+            "description": "protocol_name_and_arm of the patient's first medical-therapy regimen, ordered by regimen start (ties and undated regimens fall back to the order in CBTN's table). Taken from any point after diagnosis, not limited to the initial treatment window. CBTN labels as delivered; a protocol without an arm suffix (e.g. 'ACNS0331') means the arm was not recorded. 'Not Applicable' = no medical-therapy record; 'Not Reported' = regimen recorded, protocol not recorded; 'Other' = CBTN's label for a protocol outside its list. Because this is the first regimen at any time, a regimen started only after relapse can appear for a patient with no initial chemotherapy. Null when the row aggregates over (rolls up) this dimension.",
+            "udi:cardinality": 57,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "subtype",
+            "type": "string",
+            "description": "Molecular subtype at initial diagnosis, from cns_integrated_diagnosis. Every value carries its diagnosis as a prefix ('MB-' or 'ATRT-'), so subtypes never pool across diagnoses when diagnosis is rolled up. Medulloblastoma: refined with OpenPedCan molecular subtype where CBTN supplied it; SHH TP53-wildtype and SHH TP53-mutant are pooled as 'MB-SHH'. ATRT: CBTN label as delivered, no refinement. Levels: MB-Group 3, MB-Group 4, MB-non-WNT/non-SHH, MB-NOS/NEC, MB-SHH, MB-WNT, ATRT-MYC, ATRT-NOS/NEC, ATRT-SHH, ATRT-TYR. 'MB-NOS/NEC' and 'ATRT-NOS/NEC' = no molecular subtype recorded; 'MB-non-WNT/non-SHH' = Group 3 or 4 not resolved further. Null when the row aggregates over (rolls up) this dimension.",
+            "udi:cardinality": 10,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "site",
+            "type": "string",
+            "description": "CBTN organization_name as delivered (the treating organization on the patient's event records). Not grouped by consent or RADIANT status. 'CBTN Non-Consortium Member' is a CBTN-supplied label for patients from organizations outside the consortium. Null when the row aggregates over (rolls up) this dimension.",
+            "udi:cardinality": 30,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          }
+        ],
+        "foreignKeys": []
+      },
+      "udi:cube": true,
+      "udi:measures": [
+        "cnt"
+      ],
+      "udi:dimensions": [
+        "event_free_survival_months",
+        "efs_status",
+        "diagnosis",
+        "protocol_name_and_arm",
+        "subtype",
+        "site"
+      ],
+      "description": "Event-free survival cube, full cohort: ATRT and Medulloblastoma (CBTN PCX 30 V6, 2026-10-21 revised delivery), durations in months. Pre-aggregated marginal cube (Presto GROUP BY CUBE, 64 grouping sets, 24,056 rows): each row counts patients over its non-null dimensions; null means the dimension is rolled up, never missing data. Missing data is a literal 'Not Reported' / 'Not Applicable' string, or -1 for durations. 970 patients, 397 events. Every patient in the PCX 30 patient table; none excluded. Use event_free_survival_months with efs_status for survival curves. No small-cell suppression (17,619 rows have cnt = 1)."
+    },
+    {
+      "name": "Os",
+      "title": "Patients (OS)",
+      "type": "table",
+      "path": "pcx30_os_all_dx_v6_months_2026-10-21r_cube.csv",
+      "scheme": "file",
+      "format": "csv",
+      "mediatype": "text/csv",
+      "encoding": "utf-8",
+      "udi:row_count": 24352,
+      "udi:column_count": 7,
+      "schema": {
+        "fields": [
+          {
+            "name": "cnt",
+            "title": "Patient count",
+            "type": "number",
+            "description": "Count of distinct patients in the cell (COUNT(DISTINCT research_id)). Within any grouping set the counts sum to the cohort (970); do not sum overlapping cube cells.",
+            "udi:cardinality": 106,
+            "udi:unique": false,
+            "udi:data_type": "quantitative",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "overall_survival_months",
+            "type": "number",
+            "description": "Time from initial diagnosis to the most recent vital status, in whole months: floor(days / 30.4375), where 30.4375 = 365.25 / 12. 0 means under one month of follow-up, not missing. 120 means 120 months (10 years) or more. -1 means the duration is unknown (no initial diagnosis date, no vital-status date, or an end date before diagnosis); exclude it from survival curves. Read with vital_status. Null when the row aggregates over (rolls up) this dimension.",
+            "udi:cardinality": 112,
+            "udi:unique": false,
+            "udi:data_type": "quantitative",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "vital_status",
+            "type": "string",
+            "description": "CBTN vital_status at the most recent vital-status record. 'deceased' = death observed; 'alive' = censored at most recent vital status. Null when the row aggregates over (rolls up) this dimension.",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "diagnosis",
+            "type": "string",
+            "description": "Patient's diagnosis cohort: CBTN demographics.diagnosis_type_cohort as delivered; if absent, the CNS diagnosis category of the patient's Initial CNS Tumor event (else earliest event). Levels: ATRT, Medulloblastoma. Filter to one value for a single-diagnosis view. Null when the row aggregates over (rolls up) this dimension.",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "protocol_name_and_arm",
+            "type": "string",
+            "description": "protocol_name_and_arm of the patient's first medical-therapy regimen, ordered by regimen start (ties and undated regimens fall back to the order in CBTN's table). Taken from any point after diagnosis, not limited to the initial treatment window. CBTN labels as delivered; a protocol without an arm suffix (e.g. 'ACNS0331') means the arm was not recorded. 'Not Applicable' = no medical-therapy record; 'Not Reported' = regimen recorded, protocol not recorded; 'Other' = CBTN's label for a protocol outside its list. Because this is the first regimen at any time, a regimen started only after relapse can appear for a patient with no initial chemotherapy. Null when the row aggregates over (rolls up) this dimension.",
+            "udi:cardinality": 57,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "subtype",
+            "type": "string",
+            "description": "Molecular subtype at initial diagnosis, from cns_integrated_diagnosis. Every value carries its diagnosis as a prefix ('MB-' or 'ATRT-'), so subtypes never pool across diagnoses when diagnosis is rolled up. Medulloblastoma: refined with OpenPedCan molecular subtype where CBTN supplied it; SHH TP53-wildtype and SHH TP53-mutant are pooled as 'MB-SHH'. ATRT: CBTN label as delivered, no refinement. Levels: MB-Group 3, MB-Group 4, MB-non-WNT/non-SHH, MB-NOS/NEC, MB-SHH, MB-WNT, ATRT-MYC, ATRT-NOS/NEC, ATRT-SHH, ATRT-TYR. 'MB-NOS/NEC' and 'ATRT-NOS/NEC' = no molecular subtype recorded; 'MB-non-WNT/non-SHH' = Group 3 or 4 not resolved further. Null when the row aggregates over (rolls up) this dimension.",
+            "udi:cardinality": 10,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "site",
+            "type": "string",
+            "description": "CBTN organization_name as delivered (the treating organization on the patient's event records). Not grouped by consent or RADIANT status. 'CBTN Non-Consortium Member' is a CBTN-supplied label for patients from organizations outside the consortium. Null when the row aggregates over (rolls up) this dimension.",
+            "udi:cardinality": 30,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          }
+        ],
+        "foreignKeys": []
+      },
+      "udi:cube": true,
+      "udi:measures": [
+        "cnt"
+      ],
+      "udi:dimensions": [
+        "overall_survival_months",
+        "vital_status",
+        "diagnosis",
+        "protocol_name_and_arm",
+        "subtype",
+        "site"
+      ],
+      "description": "Overall survival cube, full cohort: ATRT and Medulloblastoma (CBTN PCX 30 V6, 2026-10-21 revised delivery), durations in months. Pre-aggregated marginal cube (Presto GROUP BY CUBE, 64 grouping sets, 24,352 rows): each row counts patients over its non-null dimensions; null means the dimension is rolled up, never missing data. Missing data is a literal 'Not Reported' / 'Not Applicable' string, or -1 for durations. 970 patients, 267 deaths. Every patient in the PCX 30 patient table; none excluded. Use overall_survival_months with vital_status for survival curves. No small-cell suppression (18,134 rows have cnt = 1).",
+      "udi:linked_dimensions": {
+        "diagnosis": {
+          "entity": "Efs",
+          "field": "diagnosis"
+        },
+        "protocol_name_and_arm": {
+          "entity": "Efs",
+          "field": "protocol_name_and_arm"
+        },
+        "subtype": {
+          "entity": "Efs",
+          "field": "subtype"
+        },
+        "site": {
+          "entity": "Efs",
+          "field": "site"
+        }
+      },
+      "udi:hide_count": true
+    }
+  ],
+  "udi:name": "pcx-cube-oct-27",
+  "udi:path": "./data/pcx/cube_oct_27/",
+  "udi:example_prompts": [
+    "Show event-free survival curves by diagnosis.",
+    "Compare overall survival for SJMB12 patients against all other protocols.",
+    "How many patients are there by diagnosis?",
+    "Which molecular subtypes are most common?",
+    "Which treatment protocols are most common?",
+    "Show patient counts by subtype and site as a heatmap.",
+    "Filter to medulloblastoma patients.",
+    "What does this dataset contain?"
+  ]
+}

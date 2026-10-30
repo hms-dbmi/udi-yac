@@ -2,7 +2,11 @@ import { createStore } from 'zustand/vanilla';
 import type {
   DataFieldDomain,
   DataPackage,
+  DataPackageResource,
   CategoricalDomain,
+  CubeInfo,
+  LinkedColumn,
+  LinkGroup,
   IntervalDomain,
   ValidStatus,
   EntityRelationship,
@@ -25,6 +29,32 @@ import {
 
 export type LoadingPhase = 'idle' | 'fetching' | 'domains' | 'ready' | 'error';
 
+/** Rollup ops under which contracting a cube marginal is exact. */
+export type ContractOp = 'sum' | 'min' | 'max';
+
+/**
+ * Aggregations that survive being re-applied to already-aggregated cells.
+ * Summing sums (and counts of counts) is exact, as is min-of-mins and
+ * max-of-maxes. Everything else — means, medians, distinct counts — is not
+ * recoverable from the cells alone, so a marginal holding such a measure
+ * cannot be contracted.
+ */
+const CONTRACTIBLE_AGGREGATIONS: Record<string, ContractOp> = {
+  count: 'sum',
+  sum: 'sum',
+  min: 'min',
+  max: 'max',
+};
+
+/**
+ * Last-resort additivity check for cubes that don't declare
+ * `udi:measure_aggregations`. Matching names are treated as non-additive:
+ * a wrong refusal costs an unfiltered chart, a wrong acceptance renders a
+ * plausible but incorrect number, which is the worse failure.
+ */
+const NON_ADDITIVE_NAME =
+  /(^|_)(avg|mean|median|pct|percent|rate|ratio|distinct|unique|nunique|stddev|stdev|variance)(_|$)/i;
+
 export interface DataPackageState {
   dataPackage: DataPackage | null;
   dataFieldDomains: DataFieldDomain[];
@@ -34,6 +64,13 @@ export interface DataPackageState {
   sourceFields: Record<string, string[]> | null;
   quantitativeSourceFields: Record<string, string[]> | null;
   categoricalSourceFields: Record<string, string[]> | null;
+  /** Entity → pre-aggregated measure columns, for cube resources only. A
+   *  measure is a computed value, so it must not become a brush target. */
+  cubeMeasureFields: Record<string, string[]>;
+  /** Groups of columns that are one column across tables: a cube dimension
+   *  and the line-level column it was aggregated from (`udi:linked_dimensions`).
+   *  A filter on any member applies to the others. */
+  dimensionLinks: LinkGroup[];
   entityNames: string[];
   dataPackageString: string;
   dataDomainsString: string;
@@ -89,6 +126,14 @@ export interface DataPackageState {
   isValidIntervalFilter: (entity: string, field: string) => ValidStatus;
   isValidPointFilter: (entity: string, field: string, values: unknown[]) => ValidStatus;
   getEntityRelationship: (originSource: string, targetSource: string) => EntityRelationship | null;
+  /** True when the entity is a pre-aggregated powerset cube, which must be
+   *  read by marginal selection rather than filtered row-wise. */
+  isCube: (entity: string) => boolean;
+  /** The entity's cube dimension/measure columns, or null if not a cube. */
+  getCubeInfo: (entity: string) => CubeInfo | null;
+  /** The rollup op that correctly re-aggregates `measure` when a marginal is
+   *  contracted, or null when the measure cannot be contracted at all. */
+  getCubeMeasureOp: (entity: string, measure: string) => ContractOp | null;
   /**
    * The relationship a filter on `originSource`, scoped to `subject`, filters
    * `targetSource` through: both keys name the subject's id, as `origin`
@@ -158,14 +203,20 @@ function removeVestigialInfo(data: DataPackage | null): DataPackage | null {
 }
 
 /**
- * Values we are willing to put on the wire for one column.
+ * How much of one column's value list we are willing to put on the wire,
+ * measured as JSON characters rather than counted.
  *
- * Above this a column is an identifier or a date — research_id, surgery_date —
- * and enumerating it helps nobody, so we send the count alone. Below it we send
- * every value, because these are the columns a user names ("which chemo
- * agents?") and the agent has no other way to reach them.
+ * A count cannot tell a long vocabulary from an identifier. 284 protocol arms
+ * ("ACNS0334: Regimen B", …) are 7.5 KB and are exactly what a user names; 7,000
+ * research ids are 80 KB and enumerating them helps nobody. Sized, the first
+ * travels and the second is sent as a count — and a column of short ids that
+ * does fit travels too, which costs little and lets the agent check them.
  */
-const DOMAIN_VALUE_CAP = 250;
+const DOMAIN_COLUMN_BUDGET = 16_384;
+
+/** And for the whole payload, which goes out with every chat request. Columns
+ *  over it are omitted largest first, so the many small vocabularies survive. */
+const DOMAIN_TOTAL_BUDGET = 262_144;
 
 /**
  * Cap each column's value list. Never drop a column.
@@ -179,14 +230,46 @@ const DOMAIN_VALUE_CAP = 250;
  * `ListFieldValues` tool fetches the rest.
  */
 function capLongDomains(data: DataFieldDomain[]): SentFieldDomain[] {
-  return data.map((d) => {
+  const sizes = data.map((d) =>
+    d.type === 'interval' ? 0 : JSON.stringify((d.domain as CategoricalDomain).values).length,
+  );
+  // Smallest first: spending the total budget on the small columns keeps the
+  // most of them, and a column that does not fit on its own is out regardless.
+  const kept = new Set<number>();
+  let total = 0;
+  for (const i of sizes.map((_, i) => i).sort((a, b) => sizes[a] - sizes[b])) {
+    if (data[i].type === 'interval' || sizes[i] > DOMAIN_COLUMN_BUDGET) continue;
+    if (total + sizes[i] > DOMAIN_TOTAL_BUDGET) break;
+    total += sizes[i];
+    kept.add(i);
+  }
+  return data.map((d, i) => {
     if (d.type === 'interval') return d as SentFieldDomain;
     const values = (d.domain as CategoricalDomain).values;
-    if (values.length <= DOMAIN_VALUE_CAP) {
+    if (kept.has(i)) {
       return { ...d, domain: { values, distinct: values.length } };
     }
     return { ...d, domain: { values: [], distinct: values.length, omitted: true } };
   });
+}
+
+function findResource(dp: DataPackage | null, entity: string): DataPackageResource | undefined {
+  return dp?.resources?.find((r) => r.name === entity);
+}
+
+/**
+ * Cube roles for a resource, or null if it isn't a cube. Mirrors the agent's
+ * schema.py rule: an explicit `udi:cube` flag OR both role lists present.
+ * Dimensions are required either way — marginal selection has nothing to null
+ * out without them.
+ */
+function resourceCubeInfo(resource: DataPackageResource | undefined): CubeInfo | null {
+  if (!resource) return null;
+  const dimensions = resource['udi:dimensions'] ?? [];
+  const measures = resource['udi:measures'] ?? [];
+  const isCube = Boolean(resource['udi:cube']) || (dimensions.length > 0 && measures.length > 0);
+  if (!isCube || dimensions.length === 0) return null;
+  return { dimensions: [...dimensions], measures: [...measures] };
 }
 
 function computeSourceFields(dp: DataPackage | null): Record<string, string[]> | null {
@@ -235,6 +318,50 @@ function computeCategoricalSourceFields(dp: DataPackage | null): Record<string, 
   return fieldsMap;
 }
 
+function computeCubeMeasureFields(dp: DataPackage | null): Record<string, string[]> {
+  const fieldsMap: Record<string, string[]> = {};
+  for (const resource of dp?.resources ?? []) {
+    const cube = resourceCubeInfo(resource);
+    if (cube && resource.name) fieldsMap[resource.name] = cube.measures;
+  }
+  return fieldsMap;
+}
+
+/**
+ * Link groups from every cube's `udi:linked_dimensions`, one per line-level
+ * column linked to (the hub). Two cubes linked to the same column land in one
+ * group, so a filter on either cube reaches the other as well. A link naming a
+ * column the package doesn't have is dropped with a warning: it would mirror
+ * a filter onto nothing.
+ */
+export function computeDimensionLinks(dp: DataPackage | null): LinkGroup[] {
+  const resources = dp?.resources ?? [];
+  const hasColumn = ({ entity, field }: LinkedColumn) =>
+    resources.some((r) => r.name === entity && r.schema?.fields?.some((f) => f.name === field));
+  const groups = new Map<string, LinkGroup>();
+  for (const resource of resources) {
+    const cube = resourceCubeInfo(resource);
+    for (const [dimension, link] of Object.entries(resource['udi:linked_dimensions'] ?? {})) {
+      const hub = { entity: link.entity, field: link.field };
+      if (!cube?.dimensions.includes(dimension) || !hasColumn(hub)) {
+        console.warn(
+          `[udi] ${resource.name}: linked dimension ${dimension} -> ` +
+            `${hub.entity}.${hub.field} skipped (not a cube dimension, or no such column)`,
+        );
+        continue;
+      }
+      const key = `${hub.entity}.${hub.field}`;
+      const group = groups.get(key) ?? { hub, members: [hub], canonical: hub };
+      const member = { entity: resource.name, field: dimension, toHub: link.values ?? {} };
+      group.members.push(member);
+      // The first link asking for its own side wins; the hub otherwise.
+      if (link.canonical === 'dimension' && group.canonical === hub) group.canonical = member;
+      groups.set(key, group);
+    }
+  }
+  return [...groups.values()];
+}
+
 function computeEntityNames(dp: DataPackage | null): string[] {
   if (!dp?.resources) return [];
   return dp.resources.map((r) => r.name);
@@ -271,6 +398,8 @@ export function createDataPackageStore() {
     sourceFields: null,
     quantitativeSourceFields: null,
     categoricalSourceFields: null,
+    cubeMeasureFields: {},
+    dimensionLinks: [],
     entityNames: [],
     dataPackageString: '',
     dataDomainsString: '',
@@ -365,6 +494,19 @@ export function createDataPackageStore() {
         searchOneDirection(targetSource, originSource, true) ??
         searchSharedParent(originSource, targetSource)
       );
+    },
+
+    isCube: (entity: string): boolean => get().getCubeInfo(entity) !== null,
+
+    getCubeInfo: (entity: string): CubeInfo | null =>
+      resourceCubeInfo(findResource(get().dataPackage, entity)),
+
+    getCubeMeasureOp: (entity: string, measure: string): ContractOp | null => {
+      const resource = findResource(get().dataPackage, entity);
+      if (!resource) return null;
+      const declared = resource['udi:measure_aggregations']?.[measure];
+      if (declared) return CONTRACTIBLE_AGGREGATIONS[declared] ?? null;
+      return NON_ADDITIVE_NAME.test(measure) ? null : 'sum';
     },
 
     getSubjectRelationship: (
@@ -573,11 +715,24 @@ export function createDataPackageStore() {
 /** Set derived state from a parsed data package (shared by fetch and set paths).
  *  Does NOT set loading — the caller manages the loading lifecycle. */
 function applyDataPackage(set: (partial: Partial<DataPackageState>) => void, json: DataPackage) {
+  // Every resource URL is built by resolving `path` against `udi:path`. A
+  // package missing it used to half-load and then throw from inside a render
+  // ("Cannot read properties of undefined (reading 'endsWith')"), which says
+  // nothing about the actual problem. Note remote packages legitimately carry
+  // an EMPTY udi:path, so this checks the type, not truthiness.
+  if (typeof json['udi:path'] !== 'string') {
+    throw new Error(
+      "data package is missing 'udi:path' — resource paths are resolved " +
+        'against it, so no data can be loaded',
+    );
+  }
   set({
     dataPackage: json,
     sourceFields: computeSourceFields(json),
     quantitativeSourceFields: computeQuantitativeSourceFields(json),
     categoricalSourceFields: computeCategoricalSourceFields(json),
+    cubeMeasureFields: computeCubeMeasureFields(json),
+    dimensionLinks: computeDimensionLinks(json),
     entityNames: computeEntityNames(json),
     dataPackageString: computeDataPackageString(json),
     sourceResolver: computeSourceResolver(json),
@@ -617,10 +772,15 @@ async function loadDomainsFromCSVs(set: SetFn, dp: DataPackage, fetchOptions?: R
     for (const f of resource.schema?.fields ?? []) {
       fieldDescriptions[f.name] = f.description ?? '';
     }
+    // Cube metadata is registered with the toolkit's shared store so the
+    // `only` transformation can resolve a marginal's null complement without
+    // the spec enumerating it.
+    const cube = resourceCubeInfo(resource);
     return {
       name: resource.name,
       url: joinDataPath(folderPath, resource.path),
       fieldDescriptions,
+      ...(cube ? { cube } : {}),
     };
   });
 

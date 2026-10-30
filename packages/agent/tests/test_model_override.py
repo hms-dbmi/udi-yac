@@ -33,6 +33,7 @@ def client_and_calls():
         mock_agent = UDIAgent.__new__(UDIAgent)
         mock_agent.gpt_model = MagicMock()
         mock_agent.gpt_model_name = "server-default-model"
+        mock_agent.use_bedrock = False
         server_app.agent = mock_agent
         server_app.orchestrator.agent = mock_agent
 

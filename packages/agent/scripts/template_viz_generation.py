@@ -98,6 +98,10 @@ class StratumReading(Enum):
 # Shared design note for data-cube templates: a cube is read by marginal
 # filtering, and the marginal filter (<MARGINAL:...>) is expanded at runtime
 # from the per-request schema's dimension list, so one template serves any cube.
+# Plain cube charts are titled by what they count ("<M> by <D:n>" → "Patient
+# count by Diagnosis"), without the chart type the chart itself already shows;
+# the measure reads well when the package gives it a `title`. Charts whose type
+# changes how they read (normalized bars, survival curves) keep it.
 # Event values used only to *preview* the survival templates in the studio. The
 # templates themselves take <V1>/<V2> literal-value placeholders, which the model
 # fills from the request's column domains, so they work with any event vocabulary.
@@ -162,6 +166,7 @@ def add_row(
     shared_entities: list[str] | None = None,
     title_template: str = "",
     summary_template: str = "",
+    value_descriptions: dict | None = None,
 ):
     """Append one template row.
 
@@ -236,6 +241,11 @@ def add_row(
         # the frontend can keep both live as fields are swapped.
         "title_template": title_template,
         "summary_template": summary_template,
+        # What each `<V*>` value MEANS in this template, prepended to the generic
+        # value-parameter description. Without it every value parameter reads
+        # the same, and a template taking two values of one column (an event and
+        # a censoring status) leaves the model to guess which goes where.
+        "value_descriptions": value_descriptions or {},
     }
     return df
 
@@ -444,6 +454,28 @@ _END_EVENTS = "<V2:list>"
 #: A value rather than a column, because which string means that is a property of
 #: the dataset, not of the schema.
 _CENSOR_VALUE = "<V3>"
+
+#: What each literal value of an event-log survival curve is for, told to the
+#: model with the value parameters. Without them it saw only "a literal value"
+#: three times and guessed: the start event as an end event (every subject ends
+#: at time 0, so the curve collapses to a vertical line) or the death status as
+#: the censored one (the dead counted as alive, a plausible-looking wrong curve).
+_LINE_SURVIVAL_VALUES = {
+    "V1": (
+        "The event type that STARTS the clock (e.g. 'Initial CNS Tumor', "
+        "'diagnosis'), from the event-type column."
+    ),
+    "V2": (
+        "The event types that END the clock, from the event-type column: the death "
+        "value alone for overall survival; progression, recurrence, second "
+        "malignancy and death for event-free survival. Never the start event."
+    ),
+    "V3": (
+        "The status value meaning the subject had NO end event when last seen, so "
+        "is censored (e.g. 'alive', 'event-free'), from the status column. Never "
+        "the death value."
+    ),
+}
 
 #: Per-subject censoring time, carried through every rollup so the tick layer can
 #: place a mark at it.
@@ -886,6 +918,8 @@ def _survival_subject_rows(
 _CUBE_EVENTS = "events"
 _CUBE_CENSORED = "censored"
 _CUBE_CENSOR_TIME = "censor time"
+#: The time dimension in years, the unit every survival curve is plotted in.
+_CUBE_YEARS = "survival years"
 
 
 def _cube_survival_chart(stratified: bool = False):
@@ -912,7 +946,9 @@ def _cube_survival_chart(stratified: bool = False):
     keeps the curve internally consistent with the cells it is drawn from.
     """
     dims = "D1,D2,D3" if stratified else "D1,D2"
-    stratum = "<D3>" if stratified else None
+    # The column the curves split by: the stratifier as cut by the optional
+    # grouping (see `_apply_grouping`), its raw values without one.
+    stratum = _STRATUM_COL if stratified else None
 
     chart = (
         Chart()
@@ -921,9 +957,21 @@ def _cube_survival_chart(stratified: bool = False):
         # every other dimension aggregated away. Selecting it is what makes the
         # counts below add up to each patient exactly once.
         .filter(f"<MARGINAL:{dims}>")
+        # A negative time is a cube's code for "follow-up unknown" (pcx writes
+        # -1), which no time axis can place. Dropped as the line-level curves
+        # drop a negative span, so the subject leaves the cohort rather than
+        # drawing a step before time zero.
+        .filter(Expr.binop(">=", Expr.field("<D1>"), Expr.lit(0)))
+    )
+    if stratified:
+        # A cube dimension already holds one value per subject, so the grouping
+        # can cut it straight away: each cell moves into its group whole, and
+        # summing a group's cells below counts each of its subjects once.
+        chart = _apply_grouping(chart, "<D3>")
+    chart = (
         # The status dimension carries two different quantities in one column, so
         # split it into two before anything is summed.
-        .derive(
+        chart.derive(
             {
                 _CUBE_EVENTS: Expr.cond(
                     Expr.binop("==", Expr.field("<D2:n>"), Expr.lit("<V1>")),
@@ -953,9 +1001,14 @@ def _cube_survival_chart(stratified: bool = False):
             )
         }
     )
+    # Plot years, as the line-level curves do. The time dimension is read as
+    # MONTHS — what the cubes this targets bin follow-up in.
+    chart = chart.derive(
+        {_CUBE_YEARS: Expr.binop("/", Expr.field("<D1>"), Expr.lit(12))}
+    )
     # Global while the table is still ungrouped: whether the horizon cut the
     # chart is a question about the whole cohort, not about one curve.
-    chart = chart.derive({"cohort end": Expr.agg("max", "<D1>")})
+    chart = chart.derive({"cohort end": Expr.agg("max", _CUBE_YEARS)})
 
     if stratified:
         chart = chart.groupby(stratum)
@@ -965,7 +1018,7 @@ def _cube_survival_chart(stratified: bool = False):
             "deaths": Expr.agg("sum", _CUBE_EVENTS),
         }
     )
-    chart = chart.orderby("<D1>")
+    chart = chart.orderby(_CUBE_YEARS)
     # The Kaplan-Meier estimate over the ordered time points — the same estimator
     # as the line-level curve, stepping a time point at a time instead of a
     # subject at a time. Each point removes everyone it observed (events and
@@ -973,12 +1026,10 @@ def _cube_survival_chart(stratified: bool = False):
     # against it: the at-risk count includes this point's censored subjects,
     # which is the Kaplan-Meier tie rule.
     chart = _kaplan_meier(chart, events=_CUBE_EVENTS, leaving="observed")
-    # The time dimension is read as MONTHS — what the cubes this targets bin
-    # follow-up in — so the horizon's years are scaled to it.
-    chart = _cut_at_horizon(chart, "<D1>", _CUBE_EVENTS, units_per_year=12)
+    chart = _cut_at_horizon(chart, _CUBE_YEARS, _CUBE_EVENTS, units_per_year=1)
     chart = chart.derive({"final percentage": Expr.agg("min", "survival percentage")})
     chart = chart.derive({"full survival": Expr.lit(100)})
-    chart = chart.derive({"first time": Expr.agg("min", "<D1>")})
+    chart = chart.derive({"first time": Expr.agg("min", _CUBE_YEARS)})
     chart = chart.derive({"first percentage": Expr.agg("max", "survival percentage")})
     # The flat opening segment and the drop into the first time point, drawn
     # explicitly: a cube's earliest cell can already carry events, so without
@@ -1028,7 +1079,7 @@ def _cube_survival_chart(stratified: bool = False):
         {
             _CUBE_CENSOR_TIME: Expr.cond(
                 Expr.binop(">", Expr.field(_CUBE_CENSORED), Expr.lit(0)),
-                Expr.field("<D1>"),
+                Expr.field(_CUBE_YEARS),
                 Expr.lit(None),
             )
         }
@@ -1069,7 +1120,7 @@ def _cube_survival_chart(stratified: bool = False):
     def colour(c):
         return c.color(field=stratum, type="nominal", omitLegend=True) if stratified else c
 
-    time_axis = dict(type="quantitative", title="time", domain={"min": 0})
+    time_axis = dict(type="quantitative", title="survival years", domain={"min": 0})
     pct_axis = dict(type="quantitative", domain={"min": 0, "max": 100})
 
     chart = colour(
@@ -1078,11 +1129,11 @@ def _cube_survival_chart(stratified: bool = False):
     chart = colour(
         chart.mark("line").x(field="drop time", **time_axis).y(field="drop percentage", **pct_axis)
     )
-    chart = _band_layer(chart, "<D1>", time_axis, colour, y_title="event-free (%)")
+    chart = _band_layer(chart, _CUBE_YEARS, time_axis, colour, y_title="event-free (%)")
     chart = colour(
         chart.mark("line")
         .interpolate("step-after")
-        .x(field="<D1>", **time_axis)
+        .x(field=_CUBE_YEARS, **time_axis)
         .y(field="survival percentage", title="event-free (%)", **pct_axis)
     )
     chart = colour(
@@ -1094,7 +1145,8 @@ def _cube_survival_chart(stratified: bool = False):
     )
     chart = _end_labels(chart, "label time", time_axis, pct_axis, colour)
     if stratified:
-        chart = chart.title(stratum, align="right")
+        # Names the field, not the derived stratum column, which no reader knows.
+        chart = chart.title("<D3>", align="right")
     return chart
 
 
@@ -1330,8 +1382,9 @@ def _cut_at_horizon(chart, time_field, events, units_per_year):
       `events in window` — per curve, the events the label should count.
 
     `cohort end` must already be the cohort-wide maximum (taken while the table
-    was ungrouped), so every curve is cut against the same edge. A cube's time
-    dimension is in months, hence `units_per_year`.
+    was ungrouped), so every curve is cut against the same edge.
+    `units_per_year` scales the horizon to `time_field`'s unit. Both callers now
+    plot years (the cube curve converts its months first), so both pass 1.
     """
     # The choice resolves to an expression, so it fills a derive on its own and
     # is read back as a column, like `<ESTIMATOR>`.
@@ -1855,6 +1908,7 @@ def generate():
             "shared_entities",
             "title_template",
             "summary_template",
+            "value_descriptions",
         ]
     )
 
@@ -1994,15 +2048,19 @@ def generate():
             .source("<E>", "<E.url>")
             .filter("<MARGINAL:D>")
             .mark("bar")
-            .x(field="<D:n>", type="nominal")
-            .y(field="<M>", type="quantitative")
+            .x(field="<M>", type="quantitative")
+            .y(field="<D:n>", type="nominal")
         ),
         chart_type=ChartType.BARCHART,
         task_types=[TaskType.COMPUTE_DERIVED_VALUE, TaskType.DETERMINE_RANGE],
-        description="Shows the pre-aggregated cube measure for each category of a nominal dimension as a bar chart.",
-        title_template="Bar chart of <M> by <D:n>",
-        summary_template="Displays <M> for each <D:n> category as bars.",
-        design_considerations=_CUBE_MARGINAL_NOTE,
+        description="Shows the pre-aggregated cube measure for each category of a nominal dimension as a horizontal bar chart.",
+        title_template="<M> by <D:n>",
+        summary_template="Displays <M> for each <D:n> category as horizontal bars.",
+        design_considerations=(
+            _CUBE_MARGINAL_NOTE + " Horizontal, whatever the category count: cube dimensions "
+            "carry long labels (protocol arms, site names) that a vertical axis would rotate "
+            "or truncate."
+        ),
         tasks="Compare the measure across categories; identify the most or least common category.",
         shape="data_cube",
     )
@@ -2022,7 +2080,7 @@ def generate():
         chart_type=ChartType.BARCHART,
         task_types=[TaskType.CHARACTERIZE_DISTRIBUTION, TaskType.DETERMINE_RANGE],
         description="Shows the pre-aggregated cube measure across the values of a quantitative dimension as a bar chart.",
-        title_template="Bar chart of <M> by <D:q>",
+        title_template="<M> by <D:q>",
         summary_template="Displays <M> across the values of <D:q> as bars.",
         design_considerations=_CUBE_MARGINAL_NOTE,
         tasks="Assess how the measure is distributed across a numeric dimension.",
@@ -2173,7 +2231,7 @@ def generate():
         chart_type=ChartType.STACKED_BAR,
         task_types=[TaskType.COMPUTE_DERIVED_VALUE],
         description="Shows the pre-aggregated cube measure by two nominal dimensions as a vertical stacked bar chart.",
-        title_template="Stacked bar chart of <M> by <D1:n> and <D2:n>",
+        title_template="<M> by <D1:n> and <D2:n>",
         summary_template="Displays <M> for each <D1:n> category as bars, split by <D2:n>.",
         design_considerations=(
             _CUBE_MARGINAL_NOTE + " Color encodes the sub-group; prefer the dimension with "
@@ -2260,7 +2318,7 @@ def generate():
         chart_type=ChartType.GROUPED_BAR,
         task_types=[TaskType.COMPUTE_DERIVED_VALUE],
         description="Shows the pre-aggregated cube measure by two nominal dimensions as a grouped (side-by-side) bar chart.",
-        title_template="Grouped bar chart of <M> by <D1:n> and <D2:n>",
+        title_template="<M> by <D1:n> and <D2:n>",
         summary_template="Displays <M> for each <D1:n> category as bars, placed side by side for each <D2:n>.",
         design_considerations=(
             _CUBE_MARGINAL_NOTE + " xOffset gives side-by-side grouping for direct comparison "
@@ -2639,7 +2697,7 @@ def generate():
         chart_type=ChartType.CIRCULAR,
         task_types=[TaskType.COMPUTE_DERIVED_VALUE, TaskType.DETERMINE_RANGE],
         description="Shows the proportional cube measure for each category of a nominal dimension as a pie chart.",
-        title_template="Pie chart of <M> by <D:n>",
+        title_template="<M> by <D:n>",
         summary_template="Displays the share of <M> that falls into each <D:n> category as slices of a circle.",
         design_considerations=(
             _CUBE_MARGINAL_NOTE + " The measure maps to angle and the renderer normalizes each "
@@ -2666,7 +2724,7 @@ def generate():
         chart_type=ChartType.CIRCULAR,
         task_types=[TaskType.COMPUTE_DERIVED_VALUE, TaskType.DETERMINE_RANGE],
         description="Shows the proportional cube measure for each category of a nominal dimension as a donut chart.",
-        title_template="Donut chart of <M> by <D:n>",
+        title_template="<M> by <D:n>",
         summary_template="Displays the share of <M> that falls into each <D:n> category as segments of a ring.",
         design_considerations=(
             _CUBE_MARGINAL_NOTE + " The measure maps to angle and the renderer normalizes each "
@@ -3202,7 +3260,7 @@ def generate():
         chart_type=ChartType.TABLE,
         task_types=[TaskType.RETRIEVE_VALUE, TaskType.COMPUTE_DERIVED_VALUE],
         description="Shows the grand-total cube measure as a single-row table.",
-        title_template="Table of <M>",
+        title_template="<M>",
         summary_template="Displays the overall <M> as a single figure.",
         design_considerations=(
             "Reads the grand-total row directly by filtering to the marginal where every "
@@ -3241,7 +3299,7 @@ def generate():
         chart_type=ChartType.TABLE,
         task_types=[TaskType.DETERMINE_RANGE, TaskType.SORT, TaskType.RETRIEVE_VALUE],
         description="Lists each category of a nominal dimension with its pre-aggregated measure as a sorted table with in-cell bars.",
-        title_template="Table of <M> by <D:n>",
+        title_template="<M> by <D:n>",
         summary_template="Lists each <D:n> category with its <M>, with a bar in each row showing the value.",
         design_considerations=(
             _CUBE_MARGINAL_NOTE + " Ordered by the measure descending, with the measure drawn "
@@ -3357,7 +3415,7 @@ def generate():
         chart_type=ChartType.LINE,
         task_types=[TaskType.CHARACTERIZE_DISTRIBUTION, TaskType.DETERMINE_RANGE],
         description="Shows the pre-aggregated cube measure over an ordered dimension (e.g. time) as a line chart.",
-        title_template="Line chart of <M> over <D:o>",
+        title_template="<M> over <D:o>",
         summary_template="Displays how <M> changes across <D:o>, as a line.",
         design_considerations=(
             _CUBE_MARGINAL_NOTE + " The axis is ordered ascending; a temporal dimension is "
@@ -3428,6 +3486,7 @@ def generate():
         # The studio cannot infer which column is the subject id, which is the
         # event type, or which holds the day offset — a type-directed search would
         # pick three plausible-looking columns and draw an empty curve. Name them.
+        value_descriptions=_LINE_SURVIVAL_VALUES,
         preview_bindings={
             "E1": "Event",
             "E1.F1": "research_id",
@@ -3510,6 +3569,7 @@ def generate():
             "steps coarsely; that is correct, not a denominator bug. "
             "There is no significance test, so do not read group differences as real."
         ),
+        value_descriptions=_LINE_SURVIVAL_VALUES,
         preview_bindings={
             "E1": "Event",
             "E1.F1": "research_id",
@@ -3588,6 +3648,7 @@ def generate():
             "'Brain') and not combined strings like 'Leptomeningeal;Spine'; if they show "
             "combinations, unnest did not run."
         ),
+        value_descriptions=_LINE_SURVIVAL_VALUES,
         preview_bindings={
             "E1": "Event",
             "E1.F1": "research_id",
@@ -3669,6 +3730,7 @@ def generate():
             "on whether a reader could mistake the curves for a partition; if so, the baseline "
             "variant is strictly better and this one should be rejected."
         ),
+        value_descriptions=_LINE_SURVIVAL_VALUES,
         preview_bindings={
             "E1": "Event",
             "E1.F1": "research_id",
@@ -3743,6 +3805,7 @@ def generate():
             "single-valued 'ever' variant, judge whether a reader could mistake these "
             "overlapping curves for a partition."
         ),
+        value_descriptions=_LINE_SURVIVAL_VALUES,
         preview_bindings={
             "E1": "Event",
             "E1.F1": "research_id",
@@ -3835,6 +3898,7 @@ def generate():
             "judge whether a reader could mistake these curves for a partition. Previews with "
             "the therapy table's protocol, where most subjects have several records."
         ),
+        value_descriptions=_LINE_SURVIVAL_VALUES,
         preview_bindings={
             "E1": "Event",
             "E2": "Medical Therapy",
@@ -3921,6 +3985,7 @@ def generate():
             "curves move with it rather than staying put, which would mean the grouping is not "
             "reaching the pipeline. Previews by cutting birth_date, which stands in for age."
         ),
+        value_descriptions=_LINE_SURVIVAL_VALUES,
         preview_bindings={
             "E1": "Event",
             "E2": "Demographics",
@@ -4046,6 +4111,7 @@ def generate():
             "a category: pcx has a 'Not Reported' agent, which the null filter cannot catch "
             "because it is a value, not a null."
         ),
+        value_descriptions=_LINE_SURVIVAL_VALUES,
         preview_bindings={
             "E1": "Event",
             "E2": "Medical Therapy",
@@ -4141,6 +4207,7 @@ def generate():
             "case, 'ever received methotrexate', needs a value LIST rather than one value: "
             "that drug is recorded under three spellings."
         ),
+        value_descriptions=_LINE_SURVIVAL_VALUES,
         preview_bindings={
             "E1": "Event",
             "E2": "Medical Therapy",
@@ -4227,6 +4294,7 @@ def generate():
             "the immortal-time caveat in the description is visible enough to a reader who sees "
             "only the chart."
         ),
+        value_descriptions=_LINE_SURVIVAL_VALUES,
         preview_bindings={
             "E1": "Event",
             "E2": "Radiation",
@@ -4312,6 +4380,7 @@ def generate():
             "curves plus their end labels are still legible at review-card size, and whether the "
             "smallest cell is large enough to be worth drawing."
         ),
+        value_descriptions=_LINE_SURVIVAL_VALUES,
         preview_bindings={
             "E1": "Event",
             "E2": "Radiation",
@@ -4336,6 +4405,20 @@ def generate():
     # Survival from a pre-aggregated cube
     # ---------------------------------------------------------------
 
+    # Two values of the one status column, with opposite meanings. Swapped,
+    # the curve counts the censored subjects as events and still looks like a
+    # survival curve, so the parameters say which is which.
+    cube_status_values = {
+        "V1": (
+            "The status value meaning the EVENT HAPPENED (e.g. 'event', "
+            "'deceased', 'dead') — counted as an event."
+        ),
+        "V2": (
+            "The status value meaning the subject was CENSORED: still alive or "
+            "event-free when last seen (e.g. 'event-free', 'alive', 'censored')."
+        ),
+    }
+
     # Unstratified: the whole cohort, accumulated out of (time, status) cells.
     df = add_row(
         df,
@@ -4348,7 +4431,8 @@ def generate():
         spec=_cube_survival_chart(),
         chart_type=ChartType.LINE,
         name_hint="survival_cube",
-        title_template="Survival curve over <D1>",
+        value_descriptions=cube_status_values,
+        title_template="<ENDPOINT> curve for <E>",
         summary_template=(
             "Plots the share of subjects still event-free at each <D1> value, counted from the cube's measure; censored time points carry a tick."
         ),
@@ -4361,7 +4445,8 @@ def generate():
             "Survival curve from a pre-aggregated CUBE: one step per time point, falling as "
             "events accumulate. Needs two dimensions — a QUANTITATIVE elapsed-time dimension "
             "and a status dimension whose values say whether the subject had the event or was "
-            "still event-free when last seen — plus the two status values themselves. Counts "
+            "still event-free when last seen — plus the two status values themselves: value1 "
+            "the one meaning the event happened, value2 the one meaning censored. Counts "
             "the cube's measure rather than reconstructing subjects, so it needs no event log. "
             "Censored time points carry a tick on the curve."
         ),
@@ -4414,15 +4499,17 @@ def generate():
     df = add_row(
         df,
         query_templates=[
-            "Show survival curves split by <D3:n>.",
-            "Kaplan-Meier plot stratified by <D3:n>.",
-            "Does event-free survival differ by <D3:n>?",
-            "Compare survival across <D3:n>.",
+            "Show survival curves split by <D3>.",
+            "Kaplan-Meier plot stratified by <D3>.",
+            "Does event-free survival differ by <D3>?",
+            "Compare survival across <D3>.",
+            "Compare survival for one <D3> against all the others.",
         ],
         spec=_cube_survival_chart(stratified=True),
         chart_type=ChartType.LINE,
         name_hint="survival_cube_stratified",
-        title_template="Survival curves over <D1> by <D3>",
+        value_descriptions=cube_status_values,
+        title_template="<ENDPOINT> curves for <E> by <D3>",
         summary_template=(
             "Plots one curve per <D3> value, showing the share still event-free at each <D1>; each subject is counted once within its own stratum."
         ),
@@ -4432,9 +4519,12 @@ def generate():
             TaskType.CORRELATE,
         ],
         description=(
-            "Survival curves from a pre-aggregated CUBE, one per value of a third dimension. "
+            "Survival curves from a pre-aggregated CUBE, one per value of a third dimension — "
+            "or, with a `grouping`, one per named group of its values (e.g. one protocol "
+            "against all the others), or per band of a numeric dimension. "
             "Needs a QUANTITATIVE elapsed-time dimension, a status dimension saying whether "
-            "the subject had the event, the stratifying dimension, and the two status values. "
+            "the subject had the event, the stratifying dimension, and the two status values: "
+            "value1 the one meaning the event happened, value2 the one meaning censored. "
             "Each subject is counted once within its own stratum, so the curves PARTITION the "
             "cohort and their sizes add back to the marginal's total. Censored time points "
             "carry a tick on their own curve."
@@ -4674,7 +4764,7 @@ def generate():
         chart_type=ChartType.HEATMAP,
         task_types=[TaskType.CLUSTER, TaskType.COMPUTE_DERIVED_VALUE, TaskType.CORRELATE],
         description="Shows the pre-aggregated cube measure for each combination of two nominal dimensions as a labeled heatmap.",
-        title_template="Heatmap of <M> by <D1:n> and <D2:n>",
+        title_template="<M> by <D1:n> and <D2:n>",
         summary_template="Displays <M> for each pairing of <D1:n> and <D2:n>, as a grid of shaded, labelled cells.",
         design_considerations=(
             _CUBE_MARGINAL_NOTE + " The measure maps to cell color with overlaid contrast-aware "

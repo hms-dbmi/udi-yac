@@ -12,7 +12,10 @@ import {
   useEntityIcons,
   useGlobalStore,
 } from '@/app/UDIChatContext';
+import { buildCubeCountTransformation } from '../utils/cubeFilters';
+import { useToolkitSelections } from '../hooks/useToolkitSelections';
 import { joinDataPath } from '@/features/data-package';
+import { cn } from '@/lib/utils';
 import { DEFAULT_ENTITY_ICONS, FALLBACK_ENTITY_ICON } from '@/utils/entityIcons';
 import type { EntityIconMap } from '../types';
 
@@ -20,15 +23,21 @@ interface EntityChip {
   id: string;
   label: string;
   totalCount: number;
+  /** `udi:hide_count`: no chip drawn, but its specs still run — the filtered
+   *  download reads the export spec. */
+  hidden: boolean;
   Icon: React.ComponentType<{ className?: string }>;
 }
 
-export function DataCounts() {
+/** @param compact One line per chip ("501 donors") instead of the count over
+ *  its label, for a header too narrow for the full chips. */
+export function DataCounts({ compact = false }: { compact?: boolean }) {
   const dataPackage = useDataPackage((s) => s.dataPackage);
   const entityNames = useDataPackage((s) => s.entityNames);
   const loadingPhase = useDataPackage((s) => s.loadingPhase);
   const loadError = useDataPackage((s) => s.error);
   const dataSelections = useDataFilters((s) => s.dataSelections);
+  const toolkitSelections = useToolkitSelections();
   const filterScopes = useDataFilters((s) => s.filterScopes);
   const activeVisualizations = useDashboard((s) => s.activeVisualizations);
   const dashboardStore = useDashboardStore();
@@ -37,6 +46,9 @@ export function DataCounts() {
   const globalStore = useGlobalStore();
 
   const [filteredCounts, setFilteredCounts] = useState<Record<string, number>>({});
+  // Cube entities have no meaningful row count — their total is the measure
+  // on the grand-total marginal, which has to be queried for.
+  const [cubeTotals, setCubeTotals] = useState<Record<string, number>>({});
 
   const consumerIcons = useEntityIcons();
   const mergedIcons = useMemo<EntityIconMap>(
@@ -46,20 +58,29 @@ export function DataCounts() {
 
   const chips = useMemo<EntityChip[]>(() => {
     if (!dataPackage?.resources) return [];
+    const dpState = dataPackageStore.getState();
     return entityNames
       .map((name) => {
         const resource = dataPackage.resources.find((r) => r.name === name);
-        const totalCount = resource?.['udi:row_count'] ?? 0;
-        if (totalCount <= 1) return null;
+        // A cube's row count is the number of pre-aggregated cells, not a
+        // count of anything a user asked about — the real total is the
+        // grand-total marginal's measure, which `cubeTotals` queries for.
+        const isCube = dpState.isCube(name);
+        const totalCount = isCube ? (cubeTotals[name] ?? 0) : (resource?.['udi:row_count'] ?? 0);
+        if (!isCube && totalCount <= 1) return null;
+        if (isCube && !resource) return null;
         return {
           id: name,
-          label: name,
+          // The package's `title` for the table, so a cube named `Efs` can
+          // read "Patients".
+          label: dpState.getEntityLabel(name),
           totalCount,
+          hidden: resource?.['udi:hide_count'] === true,
           Icon: mergedIcons[name] ?? FALLBACK_ENTITY_ICON,
         };
       })
       .filter((c): c is NonNullable<typeof c> => c !== null);
-  }, [dataPackage, entityNames, mergedIcons]);
+  }, [dataPackage, entityNames, mergedIcons, dataPackageStore, cubeTotals]);
 
   // `dataSelections` is a change trigger: the filters are read out of the
   // store via getState(), which the linter cannot see.
@@ -72,10 +93,32 @@ export function DataCounts() {
   // Build a count spec per entity (with named filters + rollup)
   const countSpecs = useMemo(() => {
     if (!dataPackage) return {};
+    const dpState = dataPackageStore.getState();
+    const activeFilters = dashboardStore
+      .getState()
+      .getActiveFilters(filterIds, dataFiltersStore, dataPackageStore);
     const specs: Record<string, QueryDataSpec> = {};
     for (const chip of chips) {
       const resource = dataPackage.resources.find((r) => r.name === chip.id);
       if (!resource) continue;
+      const source = {
+        name: chip.id,
+        source: joinDataPath(dataPackage['udi:path'], resource.path),
+      };
+      const cube = dpState.getCubeInfo(chip.id);
+      if (cube) {
+        // Same expand -> filter -> contract pipeline the charts use, with no
+        // visualization dimensions, so it contracts to a single total.
+        const { transformation } = buildCubeCountTransformation({
+          cube,
+          sourceName: chip.id,
+          filters: activeFilters,
+          measureOp: (measure) => dpState.getCubeMeasureOp(chip.id, measure),
+          as: 'count',
+        });
+        specs[chip.id] = { source, transformation };
+        continue;
+      }
       // The dashboard's own builder, so a count filters exactly as a chart
       // of the same table does — subject scopes included.
       const namedFilters = dashboardStore
@@ -87,10 +130,7 @@ export function DataCounts() {
           dataPackageStore,
         ) as DataTransformation[];
       specs[chip.id] = {
-        source: {
-          name: chip.id,
-          source: joinDataPath(dataPackage['udi:path'], resource.path),
-        },
+        source,
         transformation: [...namedFilters, { rollup: { count: { op: 'count' } } }],
       };
     }
@@ -108,6 +148,32 @@ export function DataCounts() {
     dataFiltersStore,
     dataPackageStore,
   ]);
+
+  // Unfiltered grand total per cube entity — the denominator in the chip's
+  // "filtered / total". Row-level entities read it from udi:row_count.
+  const cubeTotalSpecs = useMemo(() => {
+    if (!dataPackage) return {};
+    const dpState = dataPackageStore.getState();
+    const specs: Record<string, QueryDataSpec> = {};
+    for (const name of entityNames) {
+      const cube = dpState.getCubeInfo(name);
+      if (!cube) continue;
+      const resource = dataPackage.resources.find((r) => r.name === name);
+      if (!resource) continue;
+      const { transformation } = buildCubeCountTransformation({
+        cube,
+        sourceName: name,
+        filters: [],
+        measureOp: (measure) => dpState.getCubeMeasureOp(name, measure),
+        as: 'count',
+      });
+      specs[name] = {
+        source: { name, source: joinDataPath(dataPackage['udi:path'], resource.path) },
+        transformation,
+      };
+    }
+    return specs;
+  }, [dataPackage, entityNames, dataPackageStore]);
 
   // Build a filtered-data spec per entity (same filters, no rollup) for download export
   const exportSpecs = useMemo(() => {
@@ -139,7 +205,7 @@ export function DataCounts() {
   // across the spec map. Supplying `onResult` routes per-entity results
   // straight into the dashboard's stores without re-rendering DataCounts.
   useQueryData(countSpecs, {
-    selections: dataSelections,
+    selections: toolkitSelections,
     enabled: domainsReady,
     // displayDataOnly auto-defaults to true (count specs end with rollup).
     onResult: (entityName, result) => {
@@ -158,8 +224,19 @@ export function DataCounts() {
     },
   });
 
+  useQueryData(cubeTotalSpecs, {
+    enabled: domainsReady,
+    onResult: (entityName, result) => {
+      const total = (result?.displayData?.[0] as Record<string, unknown> | undefined)?.count;
+      if (typeof total !== 'number') return;
+      setCubeTotals((prev) =>
+        prev[entityName] === total ? prev : { ...prev, [entityName]: total },
+      );
+    },
+  });
+
   useQueryData(exportSpecs, {
-    selections: dataSelections,
+    selections: toolkitSelections,
     enabled: domainsReady,
     // Export specs have no rollup, so opt in explicitly — we only read
     // displayData; the unfiltered allData pass would be wasted work.
@@ -194,26 +271,34 @@ export function DataCounts() {
         {[1, 2, 3].map((i) => (
           <div
             key={i}
-            className="udi:inline-flex udi:items-center udi:gap-1.5 udi:rounded-md udi:border udi:bg-muted udi:px-2.5 udi:py-1.5 udi:animate-pulse"
+            className={cn(
+              'udi:inline-flex udi:items-center udi:gap-1.5 udi:rounded-md udi:border udi:bg-muted udi:animate-pulse',
+              compact ? 'udi:px-3 udi:py-2' : 'udi:px-2.5 udi:py-1.5',
+            )}
           >
             <div className="udi:h-5 udi:w-5 udi:rounded udi:bg-muted-foreground/20" />
-            <div className="udi:flex udi:flex-col udi:items-center udi:gap-1">
-              <div className="udi:h-4 udi:w-8 udi:rounded udi:bg-muted-foreground/20" />
-              <div className="udi:h-3 udi:w-12 udi:rounded udi:bg-muted-foreground/20" />
-            </div>
+            {compact ? (
+              <div className="udi:h-4 udi:w-24 udi:rounded udi:bg-muted-foreground/20" />
+            ) : (
+              <div className="udi:flex udi:flex-col udi:items-center udi:gap-1">
+                <div className="udi:h-4 udi:w-8 udi:rounded udi:bg-muted-foreground/20" />
+                <div className="udi:h-3 udi:w-12 udi:rounded udi:bg-muted-foreground/20" />
+              </div>
+            )}
           </div>
         ))}
       </div>
     );
   }
 
-  if (chips.length === 0) return null;
+  const shownChips = chips.filter((chip) => !chip.hidden);
+  if (shownChips.length === 0) return null;
 
   const hasFilters = filterIds.length > 0;
 
   return (
     <div className="udi:flex udi:items-center udi:gap-2 udi:flex-wrap">
-      {chips.map((chip) => {
+      {shownChips.map((chip) => {
         const filtered = filteredCounts[chip.id];
         const isFiltered =
           domainsReady && hasFilters && filtered != null && filtered !== chip.totalCount;
@@ -224,25 +309,53 @@ export function DataCounts() {
             onClick={() => globalStore.getState().setOverview(true, chip.id)}
             title={`${chip.label} — open data overview`}
             aria-label={`${chip.label}: ${chip.totalCount.toLocaleString()} rows. Open data overview.`}
-            className="udi:inline-flex udi:cursor-pointer udi:items-center udi:gap-1.5 udi:rounded-md udi:border udi:bg-background udi:px-2.5 udi:py-1.5 udi:hover:bg-accent udi:focus-visible:ring-3 udi:focus-visible:ring-ring/50 udi:focus-visible:outline-none"
+            className={cn(
+              'udi:inline-flex udi:cursor-pointer udi:items-center udi:rounded-md udi:border udi:bg-background udi:hover:bg-accent udi:focus-visible:ring-3 udi:focus-visible:ring-ring/50 udi:focus-visible:outline-none',
+              compact
+                ? 'udi:gap-1 udi:whitespace-nowrap udi:px-3 udi:py-2 udi:text-sm udi:font-medium'
+                : 'udi:gap-1.5 udi:px-2.5 udi:py-1.5',
+            )}
           >
-            <chip.Icon className="udi:h-5 udi:w-5 udi:text-muted-foreground udi:shrink-0" />
-            <div className="udi:flex udi:flex-col udi:items-center udi:text-center udi:leading-tight">
-              <div className="udi:text-base udi:font-bold">
-                {isFiltered ? (
-                  <>
-                    {filtered.toLocaleString()}
-                    <span className="udi:text-xs udi:font-normal udi:text-muted-foreground">
-                      {' '}
-                      / {chip.totalCount.toLocaleString()}
-                    </span>
-                  </>
-                ) : (
-                  chip.totalCount.toLocaleString()
-                )}
+            <chip.Icon
+              className={cn(
+                'udi:h-5 udi:w-5 udi:text-muted-foreground udi:shrink-0',
+                compact && 'udi:mr-0.5',
+              )}
+            />
+            {compact ? (
+              <>
+                <span className="udi:tabular-nums">
+                  {isFiltered ? (
+                    <>
+                      {filtered.toLocaleString()}
+                      <span className="udi:text-muted-foreground">
+                        /{chip.totalCount.toLocaleString()}
+                      </span>
+                    </>
+                  ) : (
+                    chip.totalCount.toLocaleString()
+                  )}
+                </span>
+                {chip.label}
+              </>
+            ) : (
+              <div className="udi:flex udi:flex-col udi:items-center udi:text-center udi:leading-tight">
+                <div className="udi:text-base udi:font-bold">
+                  {isFiltered ? (
+                    <>
+                      {filtered.toLocaleString()}
+                      <span className="udi:text-xs udi:font-normal udi:text-muted-foreground">
+                        {' '}
+                        / {chip.totalCount.toLocaleString()}
+                      </span>
+                    </>
+                  ) : (
+                    chip.totalCount.toLocaleString()
+                  )}
+                </div>
+                <span className="udi:text-xs udi:text-muted-foreground">{chip.label}</span>
               </div>
-              <span className="udi:text-xs udi:text-muted-foreground">{chip.label}</span>
-            </div>
+            )}
           </button>
         );
       })}

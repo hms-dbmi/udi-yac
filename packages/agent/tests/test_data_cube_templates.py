@@ -318,6 +318,7 @@ def test_execute_generate_end_to_end_cube(monkeypatch):
         openai_api_key=None,
         req_id="-",
         model=None,
+        data_domains=None,
     ):
         calls["selected_tool_names"] = {t["function"]["name"] for t in tools}
         return tool_name, tool_args
@@ -349,3 +350,230 @@ def test_execute_generate_end_to_end_cube(monkeypatch):
     assert ops["class_display"] == "!="
     assert ops["gender"] == "=="
     assert spec["source"]["source"].endswith("core__count_encounter_month.csv")
+
+
+# ---------------------------------------------------------------------------
+# Mixed packages: line-level tables and cubes side by side
+# ---------------------------------------------------------------------------
+
+# SALES_CUBE plus a line-level table of the individual sales.
+MIXED = {
+    "udi:path": "https://example.org/sales/",
+    "resources": [
+        *SALES_CUBE["resources"],
+        {
+            "name": "orders",
+            "path": "orders.csv",
+            "udi:row_count": 5000,
+            "schema": {
+                "fields": [
+                    {"name": "order_id", "udi:data_type": "nominal", "udi:cardinality": 5000},
+                    {"name": "region", "udi:data_type": "nominal", "udi:cardinality": 4},
+                ]
+            },
+        },
+    ],
+}
+
+
+def _line_tools_by_param(param_map):
+    _defs, tool_dispatch, templates, tool_tags = _load_generated_tools()
+    return [
+        templates[idx]
+        for name, (idx, pm) in tool_dispatch.items()
+        if "line_item" in tool_tags.get(name, []) and pm == param_map
+    ]
+
+
+def _mixed_templates():
+    mixed = _parse_request_schema(MIXED)
+    cube_t = next(
+        t
+        for t in _cube_tools_by_param({"entity": "E", "dimension": "D"})
+        if validate_bindings(t, {"E": "sales_cube", "D": "region"}, mixed) == []
+    )
+    line_t = next(
+        t
+        for t in _line_tools_by_param({"entity": "E", "field": "F"})
+        if validate_bindings(t, {"E": "orders", "F": "region"}, mixed) == []
+    )
+    return mixed, cube_t, line_t
+
+
+def test_mixed_package_offers_both_template_kinds():
+    mixed = _parse_request_schema(MIXED)
+    assert _active_template_tags(mixed) == {"data_cube", "line_item"}
+
+    tool_defs, _dispatch, _templates, tool_tags = _load_generated_tools()
+    names = {d["function"]["name"] for d in _select_tools(tool_defs, tool_tags, {"data_cube", "line_item"}, mixed)}
+    assert any("data_cube" in tool_tags[n] for n in names)
+    assert any("line_item" in tool_tags[n] for n in names)
+
+
+def test_empty_schema_still_gets_line_item_templates():
+    assert _active_template_tags({"entities": {}}) == {"line_item"}
+
+
+def test_cube_template_rejects_line_level_table():
+    mixed, cube_t, _line_t = _mixed_templates()
+    errors = validate_bindings(cube_t, {"E": "orders", "D": "region"}, mixed)
+    assert errors == [
+        "'orders' is a line-level table, but this tool reads a pre-aggregated "
+        "data cube. Use a line-level tool for it, or a data cube: sales_cube."
+    ]
+
+
+def test_line_template_rejects_cube_table():
+    mixed, _cube_t, line_t = _mixed_templates()
+    errors = validate_bindings(line_t, {"E": "sales_cube", "F": "region"}, mixed)
+    assert errors == [
+        "'sales_cube' is a pre-aggregated data cube, but this tool reads "
+        "line-level rows. Use a data-cube tool for it, or a line-level table: orders."
+    ]
+
+
+def test_mixed_package_instantiates_each_kind_on_its_own_table():
+    mixed, cube_t, line_t = _mixed_templates()
+    cube_spec = instantiate_template(cube_t, {"E": "sales_cube", "D": "region"}, mixed)
+    assert cube_spec["source"]["source"] == "https://example.org/sales/sales.csv"
+    line_spec = instantiate_template(line_t, {"E": "orders", "F": "region"}, mixed)
+    assert line_spec["source"]["source"] == "https://example.org/sales/orders.csv"
+
+
+# ---------------------------------------------------------------------------
+# udi:prefer — which kind of table a mixed package answers from by default
+# ---------------------------------------------------------------------------
+
+
+def test_prefer_is_parsed_and_unknown_values_ignored(caplog):
+    assert _parse_request_schema({**MIXED, "udi:prefer": "line_level"})["prefer"] == "line_level"
+    assert "prefer" not in _parse_request_schema(MIXED)
+    with caplog.at_level("WARNING"):
+        parsed = _parse_request_schema({**MIXED, "udi:prefer": "rows"})
+    assert "prefer" not in parsed
+    assert "udi:prefer" in caplog.text
+
+
+class _Offered(Exception):
+    """Raised by the stubbed model once it has seen what it was offered."""
+
+
+def _generate_capturing(monkeypatch, package):
+    """Run the real _execute_generate on `package` up to the model's tool
+    choice, and return what the model was offered."""
+    import pytest
+
+    import udiagent.vis_generate as vg
+
+    seen = {}
+
+    def fake_call(agent, messages, tools, config, **_kwargs):
+        seen["tools"] = [t["function"]["name"] for t in tools]
+        seen["system"] = messages[0]["content"]
+        raise _Offered
+
+    monkeypatch.setattr(vg, "_call_llm_with_tools", fake_call)
+    context = {
+        "agent": object(),
+        "grammar": {},
+        "config": {},
+        "data_schema": json.dumps(package),
+        "messages": [{"role": "user", "content": "orders by region"}],
+        "openai_api_key": None,
+        "usage": None,
+    }
+    with pytest.raises(_Offered):
+        vg._execute_generate(skill=None, context=context)
+    return seen
+
+
+def test_prefer_line_level_lists_line_tools_first_and_says_so(monkeypatch):
+    _defs, _dispatch, _templates, tool_tags = _load_generated_tools()
+    seen = _generate_capturing(monkeypatch, {**MIXED, "udi:prefer": "line_level"})
+
+    kinds = ["line_item" in tool_tags[n] for n in seen["tools"]]
+    first_cube = kinds.index(False)
+    assert all(kinds[:first_cube]) and not any(kinds[first_cube:])
+    assert "use the line-level tables: this dataset prefers them" in seen["system"]
+
+
+def test_prefer_data_cube_lists_cube_tools_first(monkeypatch):
+    _defs, _dispatch, _templates, tool_tags = _load_generated_tools()
+    seen = _generate_capturing(monkeypatch, {**MIXED, "udi:prefer": "data_cube"})
+    assert "data_cube" in tool_tags[seen["tools"][0]]
+    assert "use the data cubes: this dataset prefers them" in seen["system"]
+
+
+def test_prefer_is_moot_without_both_kinds_of_table(monkeypatch):
+    seen = _generate_capturing(monkeypatch, {**SALES_CUBE, "udi:prefer": "line_level"})
+    assert "prefers them" not in seen["system"]
+
+
+# ---------------------------------------------------------------------------
+# Cube survival: which status value is which, and grouping the stratifier
+# ---------------------------------------------------------------------------
+
+
+def _survival_cube_tool(stratified):
+    defs, dispatch, templates, _tags = _load_generated_tools()
+    name = "vis_064_line_survival_cube_stratified" if stratified else "vis_063_line_survival_cube"
+    tool = next(d for d in defs if d["function"]["name"] == name)
+    return tool, templates[dispatch[name][0]]
+
+
+def test_cube_survival_values_say_which_is_the_event():
+    """Swapped, the curve counts censored subjects as events and still looks
+    like a survival curve, so the two parameters must not read alike."""
+    for stratified in (False, True):
+        props = _survival_cube_tool(stratified)[0]["function"]["parameters"]["properties"]
+        assert props["value1"]["description"].startswith("The status value meaning the EVENT")
+        assert "CENSORED" in props["value2"]["description"]
+
+
+def test_stratified_cube_survival_groups_its_stratifier():
+    tool, template = _survival_cube_tool(stratified=True)
+    assert "grouping" in tool["function"]["parameters"]["properties"]
+    sales = _parse_request_schema(
+        {
+            "udi:path": "./",
+            "resources": [
+                {
+                    "name": "efs",
+                    "path": "efs.csv",
+                    "udi:cube": True,
+                    "udi:measures": ["cnt"],
+                    "udi:dimensions": ["months", "status", "protocol"],
+                    "schema": {
+                        "fields": [
+                            {"name": "cnt", "udi:data_type": "quantitative"},
+                            {"name": "months", "udi:data_type": "quantitative"},
+                            {"name": "status", "udi:data_type": "nominal"},
+                            {"name": "protocol", "udi:data_type": "nominal"},
+                        ]
+                    },
+                }
+            ],
+        }
+    )
+    bindings = {
+        "E": "efs",
+        "D1": "months",
+        "D2": "status",
+        "D3": "protocol",
+        "V1": "event",
+        "V2": "event-free",
+        "GROUP": json.dumps(
+            {
+                "type": "nominal",
+                "groups": [{"label": "Methotrexate", "values": ["ACNS0334: Regimen B"]}],
+                "other": "No methotrexate",
+            }
+        ),
+    }
+    assert validate_bindings(template, bindings, sales) == []
+    spec = instantiate_template(template, bindings, sales)
+    # Cut right after the marginal and the unknown-time filter, before anything
+    # is summed, so each cell moves into its group whole.
+    stratum = spec["transformation"][2]["derive"]["stratum"]
+    assert stratum["then"] == {"literal": "Methotrexate"}
+    assert stratum["else"] == {"literal": "No methotrexate"}

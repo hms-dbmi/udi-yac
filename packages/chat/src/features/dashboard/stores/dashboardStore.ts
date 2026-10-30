@@ -7,7 +7,7 @@ import type {
   TemplateParamDescriptor,
   ToolCallMeta,
 } from '@/types/messages';
-import type { DataFiltersState } from './dataFiltersStore';
+import type { DataFiltersState, DataSelections } from './dataFiltersStore';
 import type { DataPackageState } from '@/features/data-package';
 import type { MemoryBankState } from './memoryBankStore';
 import type { EntityRelationship } from '@/types/dataPackage';
@@ -31,6 +31,16 @@ import {
   widenTallItems,
 } from '../utils/gridPacking';
 import { computeInitialCardHeight } from '../utils/initialCardSize';
+import {
+  isSubjectScoped,
+  linkedEntitiesByColumn,
+  linkedSelections,
+} from '../utils/linkedSelections';
+import {
+  buildCubeTransformation,
+  type ActiveFilter,
+  type SkippedFilter,
+} from '../utils/cubeFilters';
 
 export interface ActiveVisualization {
   index: number;
@@ -48,6 +58,10 @@ export interface ActiveVisualization {
   titleTemplate?: string;
   summaryTemplate?: string;
   uuid: string;
+  /** Filters that could not be applied to this visualization — only ever
+   *  non-empty for cube sources, which cannot serve every filter shape. See
+   *  `buildCubeTransformation`. */
+  skippedFilters?: SkippedFilter[];
   /** Present when the agent built this spec from a template (see below). */
   template?: TemplateProvenance;
 }
@@ -154,6 +168,7 @@ export interface DashboardState {
     title?: string,
     text?: { titleTemplate?: string; summaryTemplate?: string },
     template?: TemplateProvenance,
+    cubeMeasureFields?: Record<string, string[]> | null,
   ) => void;
   addActiveVisualizationBatch: (
     items: Array<{
@@ -201,10 +216,19 @@ export interface DashboardState {
     dataFiltersStore: StoreApi<DataFiltersState>,
     dataPackageStore: StoreApi<DataPackageState>,
   ) => string[];
+  /** Each active selection reduced to `{ id, sourceName, fields }`. Cube
+   *  filtering needs to know WHICH fields a selection constrains — that
+   *  decides the marginal a visualization must expand to. */
+  getActiveFilters: (
+    filterIdList: string[],
+    dataFiltersStore: StoreApi<DataFiltersState>,
+    dataPackageStore: StoreApi<DataPackageState>,
+  ) => ActiveFilter[];
   updateActiveVisualizationSpec: (
     key: string,
     newSpec: UDIGrammar,
     sourceFields: Record<string, string[]> | null,
+    cubeMeasureFields?: Record<string, string[]> | null,
   ) => void;
   applyTemplateRebind: (
     key: string,
@@ -212,6 +236,7 @@ export interface DashboardState {
     toolArgs: Record<string, TemplateArgValue>,
     params: TemplateParamDescriptor[] | undefined,
     sourceFields: Record<string, string[]> | null,
+    cubeMeasureFields?: Record<string, string[]> | null,
   ) => void;
   clearTemplateProvenance: (key: string) => void;
   /** Rename a card. An empty/whitespace title clears the rename, handing the
@@ -229,6 +254,7 @@ export interface DashboardState {
   importDashboard: (
     payload: DashboardExport,
     sourceFields: Record<string, string[]> | null,
+    cubeMeasureFields?: Record<string, string[]> | null,
   ) => void;
 }
 
@@ -324,6 +350,8 @@ export function injectInteractivity(
   spec: UDIGrammar,
   id: string,
   sourceFields: Record<string, string[]> | null,
+  /** Entity → pre-aggregated measure columns, for cube sources. */
+  cubeMeasureFields?: Record<string, string[]> | null,
 ): InteractiveSpec {
   const sourceData = Array.isArray(spec.source)
     ? (spec.source as SpecSourceLike[])
@@ -345,7 +373,20 @@ export function injectInteractivity(
       ? [rawMapping]
       : [];
 
+  // A pre-aggregated measure is a computed value, not something a user can
+  // select on — brushing "count between 40 and 60" filters nothing meaningful,
+  // and the cube pipeline would skip it as a non-dimension anyway.
+  //
+  // Row-level charts never hit this because their count column is created by
+  // the rollup and so isn't in `sourceFields` — resolveField already returns
+  // null for it, which is why a row-level bar chart falls through to
+  // click-to-filter. A cube's measure IS a real source column, so without
+  // this it would resolve, claim the y encoding as an interval brush, and
+  // leave the chart with nothing to click.
+  const measures = cubeMeasureFields?.[sourceName] ?? [];
+
   const resolveField = (mapping: SpecMappingLike): string | null => {
+    if (measures.includes(mapping.field)) return null;
     const fields = sourceFields?.[sourceName];
     if (!fields) return mapping.field;
     if (fields.includes(mapping.field)) return mapping.field;
@@ -391,7 +432,6 @@ export function injectInteractivity(
     };
   }
 
-  console.log({ interactiveSpec });
   interactiveSpec.config = { hideActions: true };
   return interactiveSpec;
 }
@@ -454,6 +494,28 @@ function withGridCols(
   return { gridCols: safe, layout: { items: repacked } };
 }
 
+/**
+ * Every selection that is a filter: the column and host filters the package
+ * admits, plus the selections links mirror them onto (`linkedSelections`).
+ * Mirrors with nothing to carry are left out — the charts are still sent them
+ * as null, but a null filter has no place in a pipeline.
+ */
+function filterSelections(
+  dataFiltersStore: StoreApi<DataFiltersState>,
+  dataPackageStore: StoreApi<DataPackageState>,
+): DataSelections {
+  const dpState = dataPackageStore.getState();
+  const dfState = dataFiltersStore.getState();
+  const valid = dfState.getValidDataSelections({
+    isValidIntervalFilter: dpState.isValidIntervalFilter,
+    isValidPointFilter: dpState.isValidPointFilter,
+  });
+  const mirrors = Object.entries(
+    linkedSelections(valid, dpState.dimensionLinks, dfState.filterScopes),
+  ).filter(([, s]) => s.selection != null);
+  return { ...valid, ...Object.fromEntries(mirrors) };
+}
+
 export function createDashboardStore() {
   return createStore<DashboardState>()((set, get) => ({
     activeVisualizations: new Map(),
@@ -480,9 +542,10 @@ export function createDashboardStore() {
       title,
       text,
       template,
+      cubeMeasureFields,
     ) => {
       const uuid = generateId();
-      const interactiveSpec = injectInteractivity(spec, uuid, sourceFields);
+      const interactiveSpec = injectInteractivity(spec, uuid, sourceFields, cubeMeasureFields);
       const key = get().vizKey(index, toolCallIndex);
       set((state) => {
         const next = new Map(state.activeVisualizations);
@@ -516,6 +579,7 @@ export function createDashboardStore() {
         // "donors by race" chart lands tall enough to show every category
         // instead of cramped at the default height.
         const dp = dataPackageStore?.getState();
+        const cubeMeasureFields = dp?.cubeMeasureFields;
         for (const {
           index,
           toolCallIndex,
@@ -528,7 +592,7 @@ export function createDashboardStore() {
           summaryTemplate,
         } of items) {
           const uuid = generateId();
-          const interactiveSpec = injectInteractivity(spec, uuid, sourceFields);
+          const interactiveSpec = injectInteractivity(spec, uuid, sourceFields, cubeMeasureFields);
           const key = `${index}-${toolCallIndex}`;
           if (state.activeVisualizations.has(key)) continue;
           next.set(key, {
@@ -645,12 +709,41 @@ export function createDashboardStore() {
     // is not a filter: its click or brush is written into the column filters
     // on its fields.
     getFilterIds: (dataFiltersStore, dataPackageStore) => {
-      const dpState = dataPackageStore.getState();
-      const validSelections = dataFiltersStore.getState().getValidDataSelections({
-        isValidIntervalFilter: dpState.isValidIntervalFilter,
-        isValidPointFilter: dpState.isValidPointFilter,
-      });
-      return Object.keys(validSelections).sort();
+      return Object.keys(filterSelections(dataFiltersStore, dataPackageStore)).sort();
+    },
+
+    getActiveFilters: (filterIdList, dataFiltersStore, dataPackageStore) => {
+      // Every filter — chat, host, or a chart's click or brush — lives in
+      // `dataSelections` and names the entity it constrains.
+      const validSelections = filterSelections(dataFiltersStore, dataPackageStore);
+      const linked = linkedEntitiesByColumn(dataPackageStore.getState().dimensionLinks);
+      const scopes = dataFiltersStore.getState().filterScopes;
+      const result: ActiveFilter[] = [];
+      for (const id of filterIdList) {
+        const selection = validSelections[id];
+        if (!selection?.selection) continue;
+        // A point selection with every value unchecked constrains nothing —
+        // it must not widen the marginal a visualization reads.
+        const fields = Object.entries(selection.selection)
+          .filter(([, value]) => !(Array.isArray(value) && value.length === 0))
+          .map(([field]) => field);
+        if (fields.length === 0) continue;
+        const sourceName = selection.dataSourceKey;
+        if (!sourceName) continue;
+        const linkedTo = Object.fromEntries(
+          fields.flatMap((f) => {
+            const entities = linked.get(`${sourceName}.${f}`);
+            return entities ? [[f, entities]] : [];
+          }),
+        );
+        // A subject-scoped filter is not mirrored, so no cube receives it.
+        result.push(
+          isSubjectScoped(scopes, id)
+            ? { id, sourceName, fields, subjectScoped: true }
+            : { id, sourceName, fields, linkedTo },
+        );
+      }
+      return result;
     },
 
     getNamedFilters: (
@@ -662,10 +755,7 @@ export function createDashboardStore() {
     ) => {
       const dpState = dataPackageStore.getState();
       const dfState = dataFiltersStore.getState();
-      const validSelections = dfState.getValidDataSelections({
-        isValidIntervalFilter: dpState.isValidIntervalFilter,
-        isValidPointFilter: dpState.isValidPointFilter,
-      });
+      const validSelections = filterSelections(dataFiltersStore, dataPackageStore);
 
       const getSourceName = (id: string) => validSelections[id]?.dataSourceKey ?? null;
 
@@ -742,52 +832,89 @@ export function createDashboardStore() {
     updateSpecFilters: (dataFiltersStore, dataPackageStore) => {
       const state = get();
       const filterIdList = state.getFilterIds(dataFiltersStore, dataPackageStore);
+      const dpState = dataPackageStore.getState();
+      const activeFilters = state.getActiveFilters(
+        filterIdList,
+        dataFiltersStore,
+        dataPackageStore,
+      );
 
       let changed = false;
       const next = new Map(state.activeVisualizations);
 
       for (const [key, viz] of next) {
         const currentSourceName = getSpecSourceName(viz.interactiveSpec);
-
-        // Every filter applies to every chart, including the one whose click
-        // or brush set it, so the source chart also filters its own data.
-        // Re-render side effects of that are handled upstream:
-        //   - deep-clone of props.spec in UDIVis.vue render() prevents spec
-        //     mutations from leaking back to React's specKey (no remount)
-        //   - save/restore of per-channel signals in VegaLite.vue
-        //     updateVegaChart preserves the brush across data updates
-        //   - re-clone of parsedSpec at the start of buildVisualization
-        //     prevents stale domain mutations from persisting across builds
-        const newFilters = state.getNamedFilters(
-          filterIdList,
-          currentSourceName ?? 'unknown_source',
-          dataFiltersStore,
-          dataPackageStore,
-          getSpecSourceNames(viz.interactiveSpec),
-        );
-        const baseTrans = structuredClone(viz.spec.transformation ?? []) as object[];
+        const baseSpec = structuredClone(viz.spec) as UDIGrammar;
         // Structured expression AST, not the legacy raw string form — the
         // remote query backend rejects raw Arquero strings by design.
         const nullFilters = state.filterAllNullValues
-          ? getFieldsInEveryLayer(viz.spec).map((field) => ({
+          ? (getFieldsInEveryLayer(viz.spec).map((field) => ({
               filter: { op: '!=', left: { field }, right: { literal: null } },
-            }))
+            })) as DataTransformation[])
           : [];
 
-        const newTransformation = [
-          ...newFilters,
-          ...baseTrans,
-          ...nullFilters,
-        ] as DataTransformation[];
+        const cube = currentSourceName ? dpState.getCubeInfo(currentSourceName) : null;
+
+        let newTransformation: DataTransformation[];
+        let skippedFilters: SkippedFilter[] = [];
+        if (cube && currentSourceName) {
+          // A cube is read by marginal selection, so a prepended predicate
+          // contradicts the marginal the spec already selects. Rewrite the
+          // pipeline as expand -> filter -> contract instead.
+          const result = buildCubeTransformation({
+            spec: baseSpec,
+            cube,
+            sourceName: currentSourceName,
+            filters: activeFilters,
+            measureOp: (measure) => dpState.getCubeMeasureOp(currentSourceName, measure),
+            nullFilters,
+          });
+          newTransformation = result.transformation;
+          skippedFilters = result.skipped;
+        } else {
+          // Every filter applies to every chart, including the one whose click
+          // or brush set it, so the source chart also filters its own data.
+          // Re-render side effects of that are handled upstream:
+          //   - deep-clone of props.spec in UDIVis.vue render() prevents spec
+          //     mutations from leaking back to React's specKey (no remount)
+          //   - save/restore of per-channel signals in VegaLite.vue
+          //     updateVegaChart preserves the brush across data updates
+          //   - re-clone of parsedSpec at the start of buildVisualization
+          //     prevents stale domain mutations from persisting across builds
+          const newFilters = state.getNamedFilters(
+            filterIdList,
+            currentSourceName ?? 'unknown_source',
+            dataFiltersStore,
+            dataPackageStore,
+            getSpecSourceNames(viz.interactiveSpec),
+          );
+          newTransformation = [
+            ...newFilters,
+            ...(baseSpec.transformation ?? []),
+            ...nullFilters,
+          ] as DataTransformation[];
+        }
+
+        const skippedChanged =
+          JSON.stringify(viz.skippedFilters ?? []) !== JSON.stringify(skippedFilters);
+        if (skippedChanged && skippedFilters.length > 0) {
+          for (const skip of skippedFilters) {
+            console.warn(
+              `[udi] filter ${skip.id} (${skip.fields.join(', ')}) not applied to ` +
+                `"${viz.title ?? key}": ${skip.reason}`,
+            );
+          }
+        }
 
         if (
+          skippedChanged ||
           JSON.stringify(viz.interactiveSpec.transformation) !== JSON.stringify(newTransformation)
         ) {
           const updatedSpec = structuredClone(viz.interactiveSpec) as UDIGrammar & {
             transformation?: object[];
           };
           updatedSpec.transformation = newTransformation;
-          next.set(key, { ...viz, interactiveSpec: updatedSpec });
+          next.set(key, { ...viz, interactiveSpec: updatedSpec, skippedFilters });
           changed = true;
         }
       }
@@ -795,10 +922,15 @@ export function createDashboardStore() {
       if (changed) set({ activeVisualizations: next });
     },
 
-    updateActiveVisualizationSpec: (key, newSpec, sourceFields) => {
+    updateActiveVisualizationSpec: (key, newSpec, sourceFields, cubeMeasureFields) => {
       const viz = get().activeVisualizations.get(key);
       if (!viz) return;
-      const interactiveSpec = injectInteractivity(newSpec, viz.uuid, sourceFields);
+      const interactiveSpec = injectInteractivity(
+        newSpec,
+        viz.uuid,
+        sourceFields,
+        cubeMeasureFields,
+      );
       set((state) => {
         const next = new Map(state.activeVisualizations);
         next.set(key, { ...viz, spec: newSpec, interactiveSpec });
@@ -815,10 +947,15 @@ export function createDashboardStore() {
      * descriptors, which is what makes a template whose parameter set has changed
      * self-correct on first use.
      */
-    applyTemplateRebind: (key, newSpec, toolArgs, params, sourceFields) => {
+    applyTemplateRebind: (key, newSpec, toolArgs, params, sourceFields, cubeMeasureFields) => {
       const viz = get().activeVisualizations.get(key);
       if (!viz || !viz.template) return;
-      const interactiveSpec = injectInteractivity(newSpec, viz.uuid, sourceFields);
+      const interactiveSpec = injectInteractivity(
+        newSpec,
+        viz.uuid,
+        sourceFields,
+        cubeMeasureFields,
+      );
       set((state) => {
         const next = new Map(state.activeVisualizations);
         next.set(key, {
@@ -994,11 +1131,11 @@ export function createDashboardStore() {
       };
     },
 
-    importDashboard: (payload, sourceFields) => {
+    importDashboard: (payload, sourceFields, cubeMeasureFields) => {
       const next = new Map<string, ActiveVisualization>();
       for (const v of payload.visualizations) {
         const uuid = v.uuid || generateId();
-        const interactiveSpec = injectInteractivity(v.spec, uuid, sourceFields);
+        const interactiveSpec = injectInteractivity(v.spec, uuid, sourceFields, cubeMeasureFields);
         next.set(v.key, {
           index: v.index,
           toolCallIndex: v.toolCallIndex,

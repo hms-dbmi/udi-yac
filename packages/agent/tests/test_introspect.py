@@ -61,6 +61,66 @@ def test_introspect_domains(engine):
     assert ("donors", "hubmap_id") not in by_key
 
 
+def test_introspect_lists_every_column_in_one_query_per_table():
+    """On secured StarRocks views each query costs ~60 ms whatever it reads, so
+    the values of all of a table's categoricals come from one query: DESCRIBE,
+    COUNT(*), the stats pass and that one, however many columns there are."""
+    connector = DuckDBConnector(views={"donors": str(_SAMPLE / "hubmap" / "donors.tsv")})
+    queries = []
+    execute = connector.execute
+
+    def counted(sql, *args, **kwargs):
+        queries.append(sql)
+        return execute(sql, *args, **kwargs)
+
+    connector.execute = counted
+    meta = introspect(QueryEngine(connector, table_map={"donors": "donors"}), "p")
+    listed = [d for d in meta["dataDomains"] if d["type"] == "point"]
+
+    assert len(listed) > 1
+    assert len(queries) == 4
+    for domain in listed:
+        values = domain["domain"]["values"]
+        # A column's own NULLs are left out; GROUPING() keeps the other
+        # columns' sets from leaking theirs in.
+        assert None not in values
+        assert values == sorted(values)
+        assert len(values) == len(set(values))
+
+
+def test_introspect_runs_tables_in_parallel_as_the_request():
+    """Tables run on worker threads; each must still query as the request's
+    user, or a passthrough backend would refuse it (no token) — the token is a
+    contextvar, which threads do not inherit on their own."""
+    import threading
+
+    from udiagent.query import use_db_token
+    from udiagent.query.connectors import _db_token
+
+    connector = DuckDBConnector(
+        views={
+            "penguins": str(_SAMPLE / "penguins.csv"),
+            "donors": str(_SAMPLE / "hubmap" / "donors.tsv"),
+        }
+    )
+    seen = []
+    execute = connector.execute
+
+    def recorded(sql, *args, **kwargs):
+        seen.append((_db_token.get(), threading.get_ident()))
+        return execute(sql, *args, **kwargs)
+
+    connector.execute = recorded
+    engine = QueryEngine(connector, table_map={"penguins": "penguins", "donors": "donors"})
+    with use_db_token("the-request-token"):
+        meta = introspect(engine, "p")
+
+    assert {token for token, _ in seen} == {"the-request-token"}
+    assert threading.get_ident() not in {thread for _, thread in seen}
+    # Resources keep the table map's order, whichever table finished first.
+    assert [r["name"] for r in meta["dataSchema"]["resources"]] == ["penguins", "donors"]
+
+
 def test_distinct_cap_covers_every_drawable_category():
     """A chart can draw up to MAX_DRAWN_CATEGORIES categories; below that,
     the domain must be collected, or the chart's filter can list only the
@@ -105,8 +165,13 @@ def test_entity_schema_descriptions_overlay_introspected_fields():
         entity_schemas={
             "penguins": {
                 "description": "One row per penguin.",
+                "title": "Penguins",
                 "fields": [
-                    {"name": "body_mass_g", "description": "Body mass, in grams."},
+                    {
+                        "name": "body_mass_g",
+                        "description": "Body mass, in grams.",
+                        "title": "Body mass",
+                    },
                     {"name": "wingspan", "description": "Not a column."},
                 ],
             }
@@ -115,11 +180,17 @@ def test_entity_schema_descriptions_overlay_introspected_fields():
     meta = introspect(engine, "p")
     resource = meta["dataSchema"]["resources"][0]
     assert resource["description"] == "One row per penguin."
+    # Titles are what the chat labels tables and columns with: the resource's
+    # and each field's, never the schema's.
+    assert resource["title"] == "Penguins"
     assert "description" not in resource["schema"] and "fields" in resource["schema"]
+    assert "title" not in resource["schema"]
     by_name = {f["name"]: f for f in resource["schema"]["fields"]}
     assert len(by_name) == 7 and "wingspan" not in by_name
     assert by_name["body_mass_g"]["description"] == "Body mass, in grams."
+    assert by_name["body_mass_g"]["title"] == "Body mass"
     assert by_name["species"]["description"] == ""
+    assert "title" not in by_name["species"]
     domains = {d["field"]: d for d in meta["dataDomains"]}
     assert domains["body_mass_g"]["fieldDescription"] == "Body mass, in grams."
     assert domains["species"]["fieldDescription"] == ""
@@ -171,3 +242,17 @@ def test_metadata_endpoint():
 
         server_app.app.state.query_engines = {}
         server_app.app.state.metadata_caches = {}
+
+
+def test_package_extras_merged_but_cannot_replace_introspected_keys(caplog):
+    connector = DuckDBConnector(views={"penguins": str(_SAMPLE / "penguins.csv")})
+    engine = QueryEngine(
+        connector,
+        table_map={"penguins": "penguins"},
+        package_extras={"udi:prefer": "data_cube", "udi:path": "./elsewhere/"},
+    )
+    with caplog.at_level("WARNING"):
+        schema = introspect(engine, "p")["dataSchema"]
+    assert schema["udi:prefer"] == "data_cube"
+    assert schema["udi:path"] == ""
+    assert "udi:path" in caplog.text

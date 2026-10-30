@@ -55,18 +55,23 @@ export function DashboardGrid({ selections }: DashboardGridProps) {
 
   // Leaving read-only brings the chat pane back and narrows the grid, so a count
   // chosen for the full-width view — an embedded session asks for one — would
-  // squeeze its cards unreadably narrow. Re-derive it for the width the grid has
-  // now. A layout effect: the chat pane is already in the DOM, so offsetWidth
-  // reads the narrower width, and the repack is painted in the same frame
-  // instead of after a squeezed one.
+  // squeeze its cards unreadably narrow; going back widens it again. Re-derive
+  // the count for the width the grid has now, unless the host asked to keep it.
+  // A layout effect: the chat pane is already shown or hidden, so offsetWidth
+  // reads the new width, and the repack is painted in the same frame instead of
+  // after a squeezed one.
+  // ponytail: measures in the commit the mode flips; a host that moves us in a
+  // later effect gets the old width. Restyle in the same render, or refit on
+  // the next measured width if a host ever can't.
+  const refitOnReadOnlyChange = useGlobal((s) => s.refitOnReadOnlyChange);
   const wasReadOnly = useRef(readOnly);
   useLayoutEffect(() => {
-    const leftReadOnly = wasReadOnly.current && !readOnly;
+    if (wasReadOnly.current === readOnly) return;
     wasReadOnly.current = readOnly;
-    if (!leftReadOnly) return;
+    if (!refitOnReadOnlyChange) return;
     const w = containerRef.current?.offsetWidth ?? 0;
     if (w > 0) dashboardStore.getState().setGridCols(gridColsForWidth(w));
-  }, [readOnly, containerRef, dashboardStore]);
+  }, [readOnly, refitOnReadOnlyChange, containerRef, dashboardStore]);
 
   // Keep the measured width in the store so the "Reset layout" action (in the
   // gear popover, which can't measure the grid itself) can re-derive the column

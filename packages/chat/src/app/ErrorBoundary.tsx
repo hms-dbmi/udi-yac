@@ -1,5 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
+import { saveBlob } from '@/lib/utils';
 import { Bug, Copy, Download, RotateCcw } from 'lucide-react';
 import { IssueReportForm } from '@/features/dashboard';
 import { captureCurrentSession, currentConversationId } from './snapshotRegistry';
@@ -18,18 +19,6 @@ interface State {
   error: Error | null;
   errorInfo: ErrorInfo | null;
   reporting: boolean;
-}
-
-function saveBlob(content: string, name: string) {
-  const blob = new Blob([content], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = name;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
 }
 
 function timestampForFilename(): string {

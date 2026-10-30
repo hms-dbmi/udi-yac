@@ -2,7 +2,7 @@ name: CI (chat)
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
     paths:
       - "packages/chat/**"
       - "packages/grammar/**"
@@ -19,6 +19,9 @@ on:
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
       - ".github/workflows/ci-chat.yml"
+
+permissions:
+  contents: read
 
 jobs:
   ci:

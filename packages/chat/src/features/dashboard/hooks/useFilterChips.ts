@@ -92,7 +92,7 @@ type Validate = Parameters<typeof isValidSelection>[1];
  */
 export function selectFilters(
   dataSelections: DataSelections,
-  filterOrigins: Record<string, 'chat' | 'chart'>,
+  filterOrigins: Record<string, FilterOrigin>,
   removedFilters: Record<string, true>,
   validate: Validate,
 ): ActiveFilter[] {

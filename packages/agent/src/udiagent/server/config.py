@@ -308,6 +308,16 @@ class ServerConfig(BaseSettings):
         ),
     )
 
+    # --- Build ---
+    udi_git_sha: str | None = Field(
+        default=None,
+        json_schema_extra={"group": "Build"},
+        description=(
+            "Commit the server was built from, reported by `GET /`. The Docker "
+            "image build sets it; leave unset."
+        ),
+    )
+
     @property
     def cors_origins(self) -> list[str]:
         """`UDI_CORS_ORIGINS` as the list Starlette's CORSMiddleware wants."""
@@ -316,11 +326,6 @@ class ServerConfig(BaseSettings):
             for origin in self.udi_cors_origins.split(",")
             if origin.strip()
         ]
-
-    @property
-    def has_server_credentials(self) -> bool:
-        """Whether the server can serve a request with no ``X-OpenAI-Key``."""
-        return bool(self.openai_api_key or self.openai_base_url or self.udi_bedrock)
 
     @field_validator("jwt_algorithm", mode="after")
     @classmethod

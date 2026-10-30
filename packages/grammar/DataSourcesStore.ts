@@ -38,6 +38,23 @@ export interface DataSourcesState {
   [key: string]: DataInterface;
 }
 
+/**
+ * Pre-aggregated "powerset cube" metadata for a source, mirroring the
+ * resource-level `udi:dimensions` / `udi:measures` keys a UDI datapackage
+ * declares alongside `udi:cube`.
+ *
+ * A cube stores one row per dimension-subset combination: the dimensions
+ * participating in that row are populated, every other dimension is null,
+ * and the measure holds the value pre-aggregated over the matching
+ * line-level rows. Reading a cube therefore means *marginal selection* —
+ * picking the rows whose populated-dimension set is exactly the one you
+ * want — which is what the `only` transformation expresses.
+ */
+export interface CubeMetadata {
+  dimensions: string[];
+  measures: string[];
+}
+
 export interface ActiveDataSelection {
   dataSourceKey: string;
   selection: null | RangeSelection | PointSelection;
@@ -61,6 +78,43 @@ export interface PointSelection {
 export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
   const dataSources = ref<DataSourcesState>({});
   const dataSelections = ref<DataSelections>({});
+  // Kept beside `dataSources` rather than on the DataSource itself: a spec's
+  // `source` entries never carry cube metadata, and initDataSource compares
+  // the incoming DataSource against the cached one to decide whether to
+  // re-fetch — folding metadata in there would invalidate that cache on
+  // every render.
+  const cubeMetadata = ref<Record<string, CubeMetadata>>({});
+
+  /** Register (or clear, with null) a source's cube metadata. */
+  function setCubeMetadata(name: string, metadata: CubeMetadata | null): void {
+    if (metadata === null) {
+      delete cubeMetadata.value[name];
+      return;
+    }
+    cubeMetadata.value[name] = {
+      dimensions: [...metadata.dimensions],
+      measures: [...metadata.measures],
+    };
+  }
+
+  function getCubeMetadata(name: string): CubeMetadata | null {
+    return cubeMetadata.value[name] ?? null;
+  }
+
+  function isCubeSource(name: string): boolean {
+    return name in cubeMetadata.value;
+  }
+
+  // Serialize only the selection payloads (not the full ActiveDataSelection
+  // objects which may reference reactive proxies) to avoid cyclic-object
+  // errors and to keep the hash lightweight.
+  function rehashSelections(): void {
+    const hashObj: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(dataSelections.value)) {
+      hashObj[k] = v?.selection ?? null;
+    }
+    selectionHash.value = JSON.stringify(hashObj);
+  }
 
   function bindExternalDataSelections(
     externalSelections: DataSelections,
@@ -79,14 +133,7 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
       changed = true;
     }
     if (changed) {
-      // Serialize only the selection payloads (not the full ActiveDataSelection
-      // objects which may reference reactive proxies) to avoid cyclic-object
-      // errors and to keep the hash lightweight.
-      const hashObj: Record<string, unknown> = {};
-      for (const [k, v] of Object.entries(dataSelections.value)) {
-        hashObj[k] = v?.selection ?? null;
-      }
-      selectionHash.value = JSON.stringify(hashObj);
+      rehashSelections();
     }
   }
 
@@ -95,14 +142,19 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
     selectionName: string,
     type: 'point' | 'interval',
   ): { alreadyExists: boolean } {
-    if (selectionName in dataSelections.value) {
+    const existing = dataSelections.value[selectionName];
+    if (existing?.type === type) {
       return { alreadyExists: true };
     }
+    // A tweak that rebinds x from a number to a category keeps the chart's id,
+    // so its name can come back with the other type. Keeping the old entry would
+    // store the next click as a range over category values.
     dataSelections.value[selectionName] = {
       dataSourceKey,
       selection: null,
       type,
     };
+    if (existing?.selection != null) rehashSelections();
     return { alreadyExists: false };
   }
 
@@ -133,11 +185,7 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
     const current = dataSelections.value[selectionName].selection;
     if (isEqual(current, selection)) return; // no change — skip reactive churn
     dataSelections.value[selectionName].selection = selection;
-    const hashObj: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(dataSelections.value)) {
-      hashObj[k] = v?.selection ?? null;
-    }
-    selectionHash.value = JSON.stringify(hashObj);
+    rehashSelections();
   }
 
   function clearDataSelection(selectionName: string): void {
@@ -165,39 +213,35 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
     return dataSelections.value[selectionName].selection;
   }
 
-  function RangeSelectionToArqueroFilter(
-    selection: RangeSelection | null,
-  ): string | null {
+  type RowTest = (d: Record<string, unknown>) => boolean;
+  const allOf = (tests: RowTest[]) =>
+    tests.length
+      ? escape((d: Record<string, unknown>) => tests.every((t) => t(d)))
+      : null;
+
+  // Both build escaped functions rather than expression text, so a field name
+  // with a quote in it (`donor's age`) cannot break the filter.
+  function RangeSelectionToArqueroFilter(selection: RangeSelection | null) {
     if (selection === null) return null;
-    const filters: string[] = [];
-    for (const [field, range] of Object.entries(selection)) {
-      // console.log('range:', range);
-      const [min, max] = range;
-      if (min != null && max != null) {
-        filters.push(`d['${field}'] >= ${min} && d['${field}'] <= ${max}`);
-      } else if (min != null) {
-        filters.push(`d['${field}'] >= ${min}`);
-      } else if (max != null) {
-        filters.push(`d['${field}'] <= ${max}`);
-      }
+    const tests: RowTest[] = [];
+    for (const [field, [min, max]] of Object.entries(selection)) {
+      if (min != null) tests.push((d) => (d[field] as number) >= min);
+      if (max != null) tests.push((d) => (d[field] as number) <= max);
     }
-    return filters.join(' && ');
+    return allOf(tests);
   }
 
-  function PointSelectionToArqueroFilter(
-    selection: PointSelection | null,
-  ): string | null {
+  function PointSelectionToArqueroFilter(selection: PointSelection | null) {
     if (selection === null) return null;
-    const filters: string[] = [];
-    for (const [field, values] of Object.entries(selection)) {
-      if (values.length === 0) continue; // skip empty selections
-      const innerFilters: string[] = [];
-      for (const value of values) {
-        innerFilters.push(`d['${field}'] === ${JSON.stringify(value)}`);
-      }
-      filters.push(`(${innerFilters.join(' || ')})`);
-    }
-    return filters.join(' && ');
+    // Compared as text, as a click stores them (`String(datum[field])`): the
+    // table holds a CSV's 2020 as the number 2020, which `=== "2020"` missed.
+    const tests = Object.entries(selection)
+      .filter(([, values]) => values.length > 0) // empty: no constraint
+      .map(([field, values]): RowTest => {
+        const set = new Set(values.map(String));
+        return (d) => set.has(String(d[field]));
+      });
+    return allOf(tests);
   }
 
   function selectionToArqueroFilter(dataSelection: ActiveDataSelection) {
@@ -478,7 +522,7 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
       transformations.length > 0 &&
       'rollup' in (transformations[transformations.length - 1] as object);
     const displayDataOnly = options?.displayDataOnly ?? endsWithRollup;
-    const cacheKey = `${tablesVersion.value}|${selectionHash.value}|${displayDataOnly ? 'd' : 'a'}|${[...keys].sort().join('\0')}|${JSON.stringify(dataTransformations ?? null)}`;
+    const cacheKey = `${tablesVersion.value}|${selectionHash.value}|${displayDataOnly ? 'd' : 'a'}|${keys.join('\0')}|${JSON.stringify(dataTransformations ?? null)}`;
     const cached = getDataObjectCache.get(cacheKey);
     if (cached) {
       // LRU-ish touch: re-insert to mark as most-recently-used.
@@ -636,6 +680,44 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
             ? inTable.filter(mappedFilter).reify()
             : inTable;
         }
+      } else if ('only' in transform) {
+        const inTable = getInTable(transform.in);
+        const sourceKey = transform.in ?? currentTable.key;
+        const active = Array.isArray(transform.only)
+          ? transform.only
+          : [transform.only];
+        const dimensions =
+          transform.dimensions ?? getCubeMetadata(sourceKey)?.dimensions;
+        if (!dimensions) {
+          throw new Error(
+            `'only' transformation on source '${sourceKey}' requires cube ` +
+              `metadata: register the source's udi:dimensions via ` +
+              `loadDataPackage, or list them inline with 'dimensions'.`,
+          );
+        }
+        const unknown = active.filter((d) => !dimensions.includes(d));
+        if (unknown.length > 0) {
+          throw new Error(
+            `'only' transformation names non-dimension field(s) ` +
+              `${JSON.stringify(unknown)} on source '${sourceKey}'; its ` +
+              `dimensions are ${JSON.stringify(dimensions)}.`,
+          );
+        }
+        // A marginal is "these populated, all others null" — the same rule
+        // the agent's <MARGINAL:…> placeholder expands to, kept in one place
+        // so specs state the intent instead of enumerating the complement.
+        // `escape` keeps this a plain JS closure over `dimensions`/`activeSet`
+        // rather than an expression Arquero has to parse and re-scope.
+        const activeSet = new Set(active);
+        currentTable.table = inTable
+          .filter(
+            escape((d: Record<string, unknown>) =>
+              dimensions.every((dim) =>
+                activeSet.has(dim) ? d[dim] != null : d[dim] == null,
+              ),
+            ),
+          )
+          .reify();
       } else if ('groupby' in transform) {
         const inTable = getInTable(transform.in);
         if (Array.isArray(transform.groupby)) {
@@ -998,6 +1080,9 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
     selectionHash,
     initDataSources,
     seedDataSource,
+    setCubeMetadata,
+    getCubeMetadata,
+    isCubeSource,
     getDataObject,
     watchDataSelection,
     getDataSelection,

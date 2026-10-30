@@ -1,9 +1,10 @@
 /**
  * @vitest-environment jsdom
  *
- * Leaving read-only re-derives the column count. The chat pane comes back and
- * narrows the grid, and a count chosen for the full-width view — an embedded
- * session's — would otherwise squeeze every card.
+ * Changing read-only re-derives the column count. Leaving it brings the chat
+ * pane back and narrows the grid, and a count chosen for the full-width view —
+ * an embedded session's — would otherwise squeeze every card; going back
+ * widens it again. A host can turn this off.
  *
  * jsdom does no layout, so the grid's width is stubbed through offsetWidth.
  */
@@ -52,7 +53,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe('DashboardGrid — leaving read-only', () => {
+describe('DashboardGrid — changing read-only', () => {
   it('re-derives the column count for the narrower grid', async () => {
     // One column per 700px, rounded up: 800px fits 2.
     vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(800);
@@ -69,6 +70,40 @@ describe('DashboardGrid — leaving read-only', () => {
     act(() => stores.global.getState().setReadOnly(false));
 
     expect(stores.dashboard.getState().gridCols).toBe(2);
+  });
+
+  it('re-derives it for the wider grid on the way back', async () => {
+    const width = vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(800);
+    render(
+      <UDIChatProvider>
+        <Harness />
+      </UDIChatProvider>,
+    );
+    await vi.waitFor(() => expect(stores).toBeDefined());
+    act(() => stores.dashboard.getState().setGridCols(2));
+
+    width.mockReturnValue(1500);
+    act(() => stores.global.setState({ readOnly: true }));
+
+    expect(stores.dashboard.getState().gridCols).toBe(3);
+  });
+
+  it('keeps the column count both ways when the host turns refitting off', async () => {
+    const width = vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(800);
+    render(
+      <UDIChatProvider readOnly refitOnReadOnlyChange={false}>
+        <Harness />
+      </UDIChatProvider>,
+    );
+    await vi.waitFor(() => expect(stores).toBeDefined());
+    act(() => stores.dashboard.getState().setGridCols(4));
+
+    act(() => stores.global.getState().setReadOnly(false));
+    expect(stores.dashboard.getState().gridCols).toBe(4);
+
+    width.mockReturnValue(1500);
+    act(() => stores.global.setState({ readOnly: true }));
+    expect(stores.dashboard.getState().gridCols).toBe(4);
   });
 });
 

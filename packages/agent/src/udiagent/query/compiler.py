@@ -69,6 +69,11 @@ def _merge_columns(existing: list, added: list) -> list:
     return [c for c in existing if c not in added] + list(added)
 
 
+#: Most grid points a kde may ask for. The Python pass costs rows × samples, and
+#: `samples` arrives in the request.
+MAX_KDE_SAMPLES = 512
+
+
 @dataclass
 class KdePost:
     """Instructions for the engine's Python kde pass."""
@@ -123,6 +128,7 @@ class PipelineCompiler:
         selections: dict[str, Any] | None = None,
         probe: Callable[[str, list], list[dict]] | None = None,
         columns_of: Callable[[str], set] | None = None,
+        dimensions_of: Callable[[str], list | None] | None = None,
     ):
         """
         table_map: entity name -> physical table/view name.
@@ -133,12 +139,17 @@ class PipelineCompiler:
             engine's guard: named filters whose selection fields don't exist
             in the target table are SKIPPED (a brush on one dataset applied to
             another), matching GetMappedArqueroFilter in DataSourcesStore.ts.
+        dimensions_of: entity name -> declared cube dimensions (udi:dimensions),
+            or None for a row-level entity. Lets the `only` transformation
+            resolve a marginal's null complement without the spec enumerating
+            it, matching the toolkit's registered cube metadata.
         """
         self.table_map = table_map
         self.dialect = dialect
         self.selections = selections or {}
         self.probe = probe
         self.columns_of = columns_of
+        self.dimensions_of = dimensions_of
 
     # ── public entry ─────────────────────────────────────────────────────────
 
@@ -150,7 +161,13 @@ class PipelineCompiler:
         row_limit: int | None = None,
     ) -> CompiledQuery:
         st = self._run(sources, transformations, skip_named_filters)
-        sql = self._assemble(st, f"SELECT * FROM {st.current}", row_limit)
+        columns = "*"
+        if st.kde_post:
+            # The kde pass reads only these, and fetching every column of every
+            # row is most of its cost on a wide table.
+            kde = st.kde_post
+            columns = ", ".join(self._q(c) for c in dict.fromkeys([kde.field, *kde.groupby]))
+        sql = self._assemble(st, f"SELECT {columns} FROM {st.current}", row_limit)
         return CompiledQuery(
             sql=sql,
             params=st.params,
@@ -186,6 +203,8 @@ class PipelineCompiler:
             out_name = transform.get("out")
             if "filter" in transform:
                 self._compile_filter(st, transform, skip_named_filters, out_name)
+            elif "only" in transform:
+                self._compile_only(st, transform, out_name)
             elif "groupby" in transform:
                 gb = transform["groupby"]
                 st.pending_groupby = [gb] if isinstance(gb, str) else list(gb)
@@ -213,7 +232,7 @@ class PipelineCompiler:
                 st.kde_post = KdePost(
                     field=spec["field"],
                     bandwidth=spec.get("bandwidth"),
-                    samples=spec.get("samples", 100),
+                    samples=self._kde_samples(spec.get("samples", 100)),
                     output_sample=output.get("sample", "sample"),
                     output_density=output.get("density", "density"),
                     groupby=list(st.pending_groupby or []),
@@ -242,6 +261,12 @@ class PipelineCompiler:
 
     def _q(self, ident: str) -> str:
         return self.dialect.quote(ident)
+
+    @staticmethod
+    def _kde_samples(samples) -> int:
+        if isinstance(samples, bool) or not isinstance(samples, (int, float)):
+            raise UnsupportedQueryError("kde samples must be a number")
+        return max(2, min(int(samples), MAX_KDE_SAMPLES))
 
     def _table_ref(self, entity: str) -> str:
         table = self.table_map.get(entity)
@@ -485,6 +510,49 @@ class PipelineCompiler:
             out_name,
             self._in_columns(st, transform.get("in")),
         )
+
+    def _compile_only(self, st: _State, transform: dict, out_name: str | None) -> None:
+        """`only` -> the marginal WHERE clause for a pre-aggregated cube.
+
+        Selects the rows where exactly the named dimensions are populated and
+        every other dimension of the cube is null. The complement comes from
+        the entity's declared ``udi:dimensions`` rather than the spec, which
+        is the whole point of the operator: a caller shouldn't have to know
+        the cube's full dimension list to read one marginal.
+        """
+        in_ref = self._in_ref(st, transform.get("in"))
+        active = transform["only"]
+        active = [active] if isinstance(active, str) else list(active)
+
+        in_entity = transform.get("in") or st.current_name
+        entity = in_entity if isinstance(in_entity, str) else None
+        # An inline list is the escape hatch for sources whose cube metadata
+        # isn't configured; it mirrors the toolkit's Arquero executor.
+        dimensions = transform.get("dimensions") or self._dimensions_of(entity)
+        if not dimensions:
+            raise UnsupportedQueryError(
+                f"'only' needs the cube dimensions for entity {entity!r}: declare "
+                "udi:dimensions in the backend's schemas config, or list them "
+                "inline on the transformation"
+            )
+        unknown = [d for d in active if d not in dimensions]
+        if unknown:
+            raise UnsupportedQueryError(
+                f"'only' names non-dimension field(s) {unknown} on {entity!r}; "
+                f"its dimensions are {list(dimensions)}"
+            )
+
+        clauses = [
+            f"{self._q(d)} IS NOT NULL" if d in active else f"{self._q(d)} IS NULL"
+            for d in dimensions
+        ]
+        self._push(st, f"SELECT * FROM {in_ref} WHERE {' AND '.join(clauses)}", out_name)
+
+    def _dimensions_of(self, entity: str | None) -> list | None:
+        """Declared cube dimensions for an entity, or None when unknown."""
+        if self.dimensions_of is None or entity is None:
+            return None
+        return self.dimensions_of(entity)
 
     def _compile_rollup(self, st: _State, transform: dict, out_name: str | None) -> None:
         in_ref = self._in_ref(st, transform.get("in"))

@@ -48,7 +48,7 @@ Not every icon shows on every card: a chart with nothing to tweak has no sliders
 
 ## Arrange the dashboard
 
-The gear icon (**Display settings**) sets the number of columns, the row height and the text size, and **Reset layout** tidies the cards back into rows. Row height and text size are remembered in this browser.
+The gear icon (**Display settings**) sets the number of columns, the row height and the text size, and **Reset layout** tidies the cards back into rows. Row height and text size are remembered in this browser. When the dashboard is too narrow for the row counts and its buttons side by side, **Display settings**, **Session** and **Download Data** fold into one gear menu (**Dashboard options**).
 
 ## Download data
 

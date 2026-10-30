@@ -1,6 +1,6 @@
 {
   "name": "udi-toolkit",
-  "version": "0.0.75",
+  "version": "0.0.77",
   "description": "Universal Discovery Interface Toolkit",
   "author": "dev-lan <devinscottlange@gmail.com>",
   "type": "module",
@@ -40,7 +40,7 @@
   "scripts": {
     "lint": "eslint .",
     "format": "prettier --write \"**/*.{js,ts,vue,scss,html,md,json}\" --ignore-path .gitignore",
-    "test": "npm run build:all && node test/smoke-vue.mjs && node test/smoke-ce.mjs && node test/smoke-react.mjs && node test/smoke-exports.mjs && node test/expr-to-arquero.mjs && node test/describe-transformations.mjs && node test/query-backend.mjs && node test/brush-render.mjs && node test/unnest.mjs && node test/domain-form.mjs && node test/text-outline.mjs && node test/label-layout.mjs && node test/orderby-rank.mjs && node test/survival-strata.mjs && node test/derive-shadowing.mjs && node test/step-interpolate.mjs && node test/spec-shape-reembed.mjs && node test/changeset-identity.mjs && node test/censor-tick.mjs && node test/duplicate-source.mjs && node test/reified-table-cache.mjs && node test/table-domains.mjs && node test/point-select.mjs && node test/category-order.mjs && node test/axis-label-select.mjs && node test/temporal-columns.mjs && node test/kde-values.mjs && node test/cross-entity-filter.mjs && node test/query-data-bind.mjs",
+    "test": "npm run build:all && node test/smoke-vue.mjs && node test/smoke-ce.mjs && node test/smoke-react.mjs && node test/smoke-exports.mjs && node test/expr-to-arquero.mjs && node test/describe-transformations.mjs && node test/query-backend.mjs && node test/brush-render.mjs && node test/unnest.mjs && node test/domain-form.mjs && node test/text-outline.mjs && node test/label-layout.mjs && node test/orderby-rank.mjs && node test/survival-strata.mjs && node test/derive-shadowing.mjs && node test/step-interpolate.mjs && node test/spec-shape-reembed.mjs && node test/changeset-identity.mjs && node test/censor-tick.mjs && node test/duplicate-source.mjs && node test/reified-table-cache.mjs && node test/table-domains.mjs && node test/cube-only.mjs && node test/point-select.mjs && node test/record-url.mjs && node test/category-order.mjs && node test/axis-label-select.mjs && node test/temporal-columns.mjs && node test/kde-values.mjs && node test/cross-entity-filter.mjs && node test/query-data-bind.mjs && node test/selection-filter.mjs",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "build-schema": "ts-json-schema-generator --path './GrammarTypes.ts' --type 'UDIGrammar' --tsconfig ./tsconfig.json > UDIGrammarSchema.json",
@@ -84,9 +84,9 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@storybook/addon-docs": "^10.6.2",
-    "@storybook/vue3-vite": "^10.6.2",
-    "@types/lodash": "^4.17.26",
+    "@storybook/addon-docs": "^10.6.3",
+    "@storybook/vue3-vite": "^10.6.3",
+    "@types/lodash": "^4.17.27",
     "@types/node": "^22.20.5",
     "@types/react": "^19.3.0",
     "@vitejs/plugin-vue": "^6.0.10",
@@ -99,10 +99,10 @@
     "globals": "^17.13.0",
     "pinia": "^4.1.0",
     "prettier": "^3.9.10",
-    "storybook": "^10.6.2",
+    "storybook": "^10.6.3",
     "ts-json-schema-generator": "^2.9.0",
     "typescript": "^6.0.3",
-    "vite": "8.3.4",
+    "vite": "8.3.5",
     "vite-plugin-dts": "^5.1.2",
     "vue-tsc": "^3.3.13"
   },

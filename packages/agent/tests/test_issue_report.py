@@ -14,6 +14,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from starlette.testclient import TestClient
 
+import udiagent.api
 from udiagent.agent import UDIAgent
 from udiagent.orchestrator import Orchestrator, OrchestratorResult, Usage
 
@@ -78,7 +79,7 @@ def test_without_langfuse_the_report_is_refused_not_dropped(server):
 
 def test_oversized_report_is_rejected(server):
     server_app, client = server
-    with patch.object(server_app, "MAX_ISSUE_REPORT_BYTES", 100):
+    with patch.object(udiagent.api, "MAX_ISSUE_REPORT_BYTES", 100):
         resp = _post(client)
     assert resp.status_code == 413
 
@@ -103,7 +104,7 @@ def test_report_contents_never_reach_the_log(server, caplog):
     server_app, client = server
     with (
         patch.object(server_app.agent, "record_issue_report", return_value="t"),
-        caplog.at_level(logging.INFO, logger=server_app.__name__),
+        caplog.at_level(logging.INFO, logger="udiagent.api"),
     ):
         _post(client, conversation_id="patient-conversation-id")
 
@@ -304,7 +305,7 @@ def test_webhook_failure_still_accepts_the_report_and_keeps_the_url_out_of_logs(
 
     with (
         patch("urllib.request.urlopen", failing_urlopen),
-        caplog.at_level(logging.INFO, logger=server_app.__name__),
+        caplog.at_level(logging.INFO, logger="udiagent.api"),
     ):
         resp = _post(client)
 

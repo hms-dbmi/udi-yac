@@ -11,12 +11,15 @@
  * `loadDataPackage` reaches for CSVs, neither of which this package exercises
  * in jsdom.
  */
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { afterEach, describe, it, expect, vi } from 'vitest';
+import { act, render, screen, within } from '@testing-library/react';
 import type { DataPackage } from '@/types/dataPackage';
 import userEvent from '@testing-library/user-event';
 
+const { queryDataSpy } = vi.hoisted(() => ({ queryDataSpy: vi.fn() }));
+
 vi.mock('udi-toolkit/react', () => ({
+  queryData: queryDataSpy,
   UDIVis: () => <div data-testid="udi-vis" />,
   UDIToolkitProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   usePalette: () => undefined,
@@ -72,6 +75,79 @@ describe('UDIChat — read-only shell', () => {
     render(<UDIChat {...config} readOnly="locked" />);
     expect(screen.queryByRole('heading', { name: 'Chat' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Explore Data' })).toBeNull();
+  });
+});
+
+describe('UDIChat — host switching read-only', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('follows the readOnly prop both ways', () => {
+    const { rerender } = render(<UDIChat {...config} readOnly />);
+
+    rerender(<UDIChat {...config} readOnly={false} />);
+    expect(screen.getByRole('heading', { name: 'Chat' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Explore Data' })).toBeNull();
+
+    rerender(<UDIChat {...config} readOnly />);
+    expect(screen.queryByRole('heading', { name: 'Chat' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Explore Data' })).toBeTruthy();
+  });
+
+  it('leaves Explore Data to a host that handles it', async () => {
+    const user = userEvent.setup();
+    const onReadOnlyChange = vi.fn();
+    const { rerender } = render(
+      <UDIChat {...config} readOnly onReadOnlyChange={onReadOnlyChange} />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Explore Data' }));
+
+    expect(onReadOnlyChange).toHaveBeenCalledExactlyOnceWith(false);
+    // Controlled: still read-only until the host says otherwise.
+    expect(screen.queryByRole('heading', { name: 'Chat' })).toBeNull();
+    rerender(<UDIChat {...config} readOnly={false} onReadOnlyChange={onReadOnlyChange} />);
+    expect(screen.getByRole('heading', { name: 'Chat' })).toBeTruthy();
+  });
+
+  it('lets the host out of a lock the user cannot leave', () => {
+    const { rerender } = render(<UDIChat {...config} readOnly="locked" />);
+    rerender(<UDIChat {...config} readOnly={false} />);
+    expect(screen.getByRole('heading', { name: 'Chat' })).toBeTruthy();
+  });
+
+  it('keeps a draft through a round trip to read-only', async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<UDIChat {...config} />);
+    await user.type(screen.getByPlaceholderText('Ask a question...'), 'half a question');
+
+    rerender(<UDIChat {...config} readOnly />);
+    rerender(<UDIChat {...config} readOnly={false} />);
+
+    expect(screen.getByPlaceholderText('Ask a question...')).toHaveProperty(
+      'value',
+      'half a question',
+    );
+  });
+
+  it('hides the seeded transcript on the first exit only', async () => {
+    // Never answers: the sent message stays in the transcript, pending.
+    vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise(() => {}));
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <UDIChat {...seedConfig} readOnly initialSession={seededSession} />,
+    );
+    expect(await screen.findByText('Seeded cohort')).toBeTruthy();
+
+    rerender(<UDIChat {...seedConfig} readOnly={false} initialSession={seededSession} />);
+    expect(screen.queryByText('donors by sex')).toBeNull();
+    await user.type(screen.getByPlaceholderText('Ask a question...'), 'my own question{Enter}');
+    expect(screen.getByText('my own question')).toBeTruthy();
+
+    rerender(<UDIChat {...seedConfig} readOnly initialSession={seededSession} />);
+    rerender(<UDIChat {...seedConfig} readOnly={false} initialSession={seededSession} />);
+
+    expect(screen.getByText('my own question')).toBeTruthy();
+    expect(screen.queryByText('donors by sex')).toBeNull();
   });
 });
 
@@ -271,6 +347,88 @@ describe('UDIChat — issue reporting', () => {
   });
 });
 
+describe('UDIChat — folded top bar', () => {
+  it('folds the controls into one menu that still reaches every action', async () => {
+    // jsdom's row is 0 px wide, so any measured width overflows it.
+    const rect = vi
+      .spyOn(Element.prototype, 'getBoundingClientRect')
+      .mockReturnValue(new DOMRect(0, 0, 100, 20));
+    const user = userEvent.setup();
+    render(<UDIChat {...config} issueReporting />);
+    expect(screen.queryByRole('button', { name: /Session/ })).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: 'Dashboard options' }));
+    expect(screen.getByText('Columns')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Export session/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Download Raw Data/ })).toBeTruthy();
+
+    // The report dialog lives outside the popover, so closing it is no loss.
+    await user.click(screen.getByRole('button', { name: /Report an issue/ }));
+    expect(await screen.findByRole('dialog', { name: 'Report an issue' })).toBeTruthy();
+    rect.mockRestore();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  /** A 100 px chip beside controls 300 px wide, or 30 px folded, in a row
+   *  `rowWidth` wide. Returns a way to report a resize, since jsdom has none. */
+  function layout(rowWidth: number) {
+    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(rowWidth);
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (
+      this: Element,
+    ) {
+      const width = this.matches('[aria-label$="Open data overview."]')
+        ? 100
+        : this.querySelector('[aria-label="Dashboard options"]')
+          ? 30
+          : this.querySelector('[aria-label="Display settings"]')
+            ? 300
+            : 0;
+      return new DOMRect(0, 0, width, 20);
+    });
+    const watched: [ResizeObserverCallback, Element][] = [];
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        callback: ResizeObserverCallback;
+        constructor(callback: ResizeObserverCallback) {
+          this.callback = callback;
+        }
+        observe(target: Element) {
+          watched.push([this.callback, target]);
+        }
+        unobserve() {}
+        disconnect() {}
+      },
+    );
+    return (target: Element) =>
+      act(() =>
+        watched.filter(([, t]) => t === target).forEach(([cb]) => cb([], {} as ResizeObserver)),
+      );
+  }
+
+  it.each([
+    [500, { folded: false, compact: false }],
+    [200, { folded: true, compact: false }],
+    [100, { folded: true, compact: true }],
+  ])('in a %i px row, shrinks only as far as it must', async (rowWidth, expected) => {
+    const resize = layout(rowWidth);
+    render(<UDIChat {...seedConfig} />);
+    const chip = await screen.findByRole('button', { name: /^Donors:/ });
+    // The chip arrived after the header first measured itself.
+    resize(chip.parentElement!.parentElement!);
+
+    expect({
+      folded: screen.queryByRole('button', { name: 'Dashboard options' }) !== null,
+      // A compact chip holds its label itself; a full one gives it a line of its own.
+      compact: within(chip).getByText('Donors') === chip,
+    }).toEqual(expected);
+  });
+});
+
 describe('UDIChat — apiBaseUrl', () => {
   it('drops a trailing slash, so endpoints are not requested as //v1/...', async () => {
     const fetchMock = vi.fn(() => Promise.resolve(new Response('[]')));
@@ -306,6 +464,24 @@ describe('UDIChat — host filters', () => {
     expect(onFiltersChange).toHaveBeenLastCalledWith([{ ...sexFilter, origin: 'host' }]);
   });
 
+  it('in the shared mode, makes it the column’s filter and reports it under the column', async () => {
+    const onFiltersChange = vi.fn();
+    render(
+      <UDIDashboard
+        {...seedConfig}
+        initialSession={seededSession}
+        filters={[sexFilter]}
+        filterMode="shared"
+        onFiltersChange={onFiltersChange}
+      />,
+    );
+
+    expect(await screen.findAllByRole('button', { name: /Sex\s*Female/ })).toHaveLength(1);
+    expect(onFiltersChange).toHaveBeenLastCalledWith([
+      { ...sexFilter, id: 'col:donors.sex', origin: 'host' },
+    ]);
+  });
+
   it('rejects a malformed `filters` entry', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
     render(<UDIChat {...seedConfig} filters={[{ id: 'x' } as never]} />);
@@ -336,5 +512,73 @@ describe('UDIChat — host fontScale', () => {
     expect(rootScale(container)).toBe('2');
     expect(screen.getByText('Text size')).toBeTruthy();
     localStorage.removeItem('udi-yac:font-scale');
+  });
+});
+
+describe('UDIChat — cohort', () => {
+  afterEach(() => queryDataSpy.mockReset());
+
+  const sexFilter = {
+    id: 'cohort',
+    dataSourceKey: 'donors',
+    type: 'point' as const,
+    selection: { sex: ['Female'] },
+  };
+  const withKey = {
+    ...dataPackage,
+    resources: dataPackage.resources.map((r) => ({
+      ...r,
+      schema: { ...r.schema, primaryKey: ['sex'] },
+    })),
+  } as DataPackage;
+
+  it('reports null while no filter reaches the entity, without querying', async () => {
+    const onCohortChange = vi.fn();
+    render(
+      <UDIChat
+        {...seedConfig}
+        cohort={{ entity: 'donors', fields: ['sex'] }}
+        onCohortChange={onCohortChange}
+      />,
+    );
+    await vi.waitFor(() => expect(onCohortChange).toHaveBeenCalledWith(null));
+    expect(queryDataSpy).not.toHaveBeenCalled();
+  });
+
+  it('queries the filtered keys, grouped, and reports them once', async () => {
+    queryDataSpy.mockResolvedValue({
+      displayData: [{ sex: 'Female', n: 4 }],
+      allData: [],
+      isSubset: false,
+    });
+    const onCohortChange = vi.fn();
+    const props = {
+      ...seedConfig,
+      dataPackage: withKey,
+      filters: [sexFilter],
+      cohort: { entity: 'donors' },
+      onCohortChange,
+    };
+    const { rerender } = render(<UDIChat {...props} />);
+
+    await vi.waitFor(() =>
+      expect(onCohortChange).toHaveBeenLastCalledWith({
+        entity: 'donors',
+        keys: [{ sex: 'Female' }],
+      }),
+    );
+    const [spec, , options] = queryDataSpy.mock.calls.at(-1)!;
+    expect(spec.source.name).toBe('donors');
+    expect(spec.transformation.at(0)).toMatchObject({ filter: { name: 'host-filter-cohort' } });
+    // The primaryKey stands in for the fields left out.
+    expect(spec.transformation.slice(-2)).toEqual([
+      { groupby: ['sex'] },
+      { rollup: { n: { op: 'count' } } },
+    ]);
+    expect(options).toEqual({ displayDataOnly: true });
+
+    rerender(<UDIChat {...props} onCohortChange={onCohortChange} />);
+    await new Promise((r) => setTimeout(r, 400));
+    expect(onCohortChange.mock.calls.filter(([c]) => c !== null)).toHaveLength(1);
   });
 });

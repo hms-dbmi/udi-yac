@@ -7,6 +7,7 @@ calling the LLM with each skill's instructions and passing a shared
 context between them.
 """
 
+import difflib
 import json
 import logging
 import re
@@ -68,6 +69,9 @@ def _grouping_parts(tag):
 # the one-element list, which keeps a call made before the parameter took lists
 # meaning what it meant.
 _LIST_VALUE = re.compile(r"(V\d*):list")
+#: One entry of such a list, `<V2:list:0>`: what `_expand_value_lists` leaves in
+#: each comparison, so the value itself only enters the text at substitution.
+_LIST_ITEM = re.compile(r"(V\d*):list:(\d+)")
 
 
 def value_list(value):
@@ -96,10 +100,11 @@ def value_list(value):
 def _expand_value_lists(spec_template, bindings):
     """Rewrite each comparison against a `<V*:list>` into one per listed value.
 
-    Done on the parsed template, before any string substitution, because the
-    values are data the model supplied and only a structured rewrite keeps them
-    out of the JSON text. `==` becomes an `||` chain, `!=` an `&&` chain; the
-    field side is copied untouched, so its own placeholder resolves as usual.
+    Done on the parsed template, before any string substitution. Each clause
+    compares against an indexed `<V*:list:i>`, not the value: a value that looks
+    like a placeholder (`<NA>`) would otherwise be resolved as one. `==` becomes
+    an `||` chain, `!=` an `&&` chain; the field side is copied untouched, so its
+    own placeholder resolves as usual.
     """
     if ":list>" not in spec_template:
         return spec_template
@@ -128,12 +133,16 @@ def _expand_value_lists(spec_template, bindings):
                 key = list_key(node.get(value_side))
                 if key is None:
                     continue
-                # An empty list compares against "" so the chart still
-                # instantiates; validation has already reported it.
-                values = value_list(bindings.get(key)) or [""]
+                # An empty list compares against "" (item 0 of nothing) so the
+                # chart still instantiates; validation has already reported it.
+                count = max(len(value_list(bindings.get(key))), 1)
                 clauses = [
-                    {"op": op, other_side: node[other_side], value_side: {"literal": v}}
-                    for v in values
+                    {
+                        "op": op,
+                        other_side: node[other_side],
+                        value_side: {"literal": f"<{key}:list:{i}>"},
+                    }
+                    for i in range(count)
                 ]
                 expr = clauses[0]
                 for clause in clauses[1:]:
@@ -165,6 +174,13 @@ FALLBACK_INSTANTIATE_FAILED = "instantiate_failed"
 
 #: More categories than an axis or legend can show legibly.
 MAX_DRAWN_CATEGORIES = 500
+#: More categories than colour, offset or shape can tell apart. Far below the axis
+#: cap, which was raised for long, scrollable axes: under it alone a subject id
+#: (313 patients) passed as the colour and offset of a grouped bar chart.
+MAX_SPLIT_CATEGORIES = 30
+#: The channels that split marks another categorical field already places. See
+#: `_split_keys` for when MAX_SPLIT_CATEGORIES applies to them.
+SPLIT_ENCODINGS = frozenset({"color", "xOffset", "yOffset", "shape"})
 #: The value-count table: every distinct value of a field with its count, sorted.
 #: What a request falls back to when the chart it asked for would draw a field
 #: with more than MAX_DRAWN_CATEGORIES values. Found by suffix, which the
@@ -251,6 +267,7 @@ def _call_llm_with_tools(
     openai_api_key=None,
     req_id="-",
     model=None,
+    data_domains=None,
 ):
     """Call the LLM with function-calling tools. Returns (tool_name, arguments) or None.
 
@@ -262,35 +279,102 @@ def _call_llm_with_tools(
     problem, while "the request blew up" is a network or API one — and to the
     caller they are the same `None`, which is how a swallowed traceback used to
     surface as a mysterious freehand chart.
+
+    With `data_domains`, the model may also call `ListFieldValues` first. This is
+    the call that writes a grouping's values and a `<V*>` literal, and the
+    prompt shows only a sample of each column — so a protocol arm the sample
+    missed had to be guessed. Lookups are answered here and loop, bounded like
+    the orchestrator's; the last round offers only the chart tools.
     """
-    from udiagent.orchestrator import _call_with_budget_guard, BudgetExceededError
+    from udiagent.orchestrator import (
+        MAX_VALUE_LOOKUPS,
+        BudgetExceededError,
+        _call_with_budget_guard,
+    )
+    from udiagent.schema import lookup_field_values
+    from udiagent.tools import LIST_FIELD_VALUES_TOOL
+
+    lookup_name = LIST_FIELD_VALUES_TOOL["function"]["name"]
+    offered = [*tools, LIST_FIELD_VALUES_TOOL] if data_domains else tools
+    messages = list(messages)
 
     try:
         client = agent._get_gpt_client(openai_api_key)
-        resp = _call_with_budget_guard(
-            agent.create_completion,
-            usage,
-            client,
-            model=model or agent.gpt_model_name,
-            messages=messages,
-            tools=tools,
-            tool_choice=agent.vis_tool_choice,
-            max_completion_tokens=1024,
-        )
-        if usage is not None:
-            usage.add("create_visualization", getattr(resp, "usage", None))
-        choice = resp.choices[0]
-        if choice.message.tool_calls:
-            tc = choice.message.tool_calls[0]
-            return tc.function.name, json.loads(tc.function.arguments)
-        logger.warning(
-            "[vis %s] model returned no tool call from %d offered "
-            "(finish_reason=%s, content_chars=%d)",
-            req_id,
-            len(tools),
-            getattr(choice, "finish_reason", None),
-            len(choice.message.content or ""),
-        )
+        for lookup_round in range(MAX_VALUE_LOOKUPS + 1):
+            last = lookup_round == MAX_VALUE_LOOKUPS
+            resp = _call_with_budget_guard(
+                agent.create_completion,
+                usage,
+                client,
+                model=model or agent.gpt_model_name,
+                messages=messages,
+                tools=tools if last else offered,
+                tool_choice=agent.vis_tool_choice,
+                max_completion_tokens=1024,
+            )
+            if usage is not None:
+                usage.add("create_visualization", getattr(resp, "usage", None))
+            choice = resp.choices[0]
+            calls = choice.message.tool_calls or []
+            lookups = [tc for tc in calls if tc.function.name == lookup_name]
+            if lookups and not last:
+                messages.append(
+                    {
+                        "role": "assistant",
+                        "content": None,
+                        "tool_calls": [
+                            {
+                                "id": tc.id,
+                                "type": "function",
+                                "function": {
+                                    "name": tc.function.name,
+                                    "arguments": tc.function.arguments,
+                                },
+                            }
+                            for tc in calls
+                        ],
+                    }
+                )
+                for tc in calls:
+                    if tc in lookups:
+                        args = json.loads(tc.function.arguments or "{}")
+                        answer = lookup_field_values(
+                            data_domains,
+                            args.get("entity"),
+                            args.get("field"),
+                            args.get("contains"),
+                        )
+                        logger.info(
+                            "[vis %s] field values looked up: %s.%s contains=%r",
+                            req_id,
+                            args.get("entity"),
+                            args.get("field"),
+                            args.get("contains"),
+                        )
+                    else:
+                        # Same as the orchestrator: a chart asked for alongside a
+                        # lookup was chosen before its values were known.
+                        answer = (
+                            "Not run — you also asked to look something up. "
+                            "Call this again if you still want it."
+                        )
+                    messages.append(
+                        {"role": "tool", "tool_call_id": tc.id, "content": answer}
+                    )
+                continue
+
+            picked = next((tc for tc in calls if tc.function.name != lookup_name), None)
+            if picked is not None:
+                return picked.function.name, json.loads(picked.function.arguments)
+            logger.warning(
+                "[vis %s] model returned no tool call from %d offered "
+                "(finish_reason=%s, content_chars=%d)",
+                req_id,
+                len(tools),
+                getattr(choice, "finish_reason", None),
+                len(choice.message.content or ""),
+            )
+            break
     except BudgetExceededError:
         raise
     except Exception:
@@ -583,6 +667,12 @@ def _resolve_placeholder(tag, bindings, schema):
     if tag in CHOICES:
         return json.dumps(resolve_choice(tag, bindings.get(tag)))
 
+    item = _LIST_ITEM.fullmatch(tag)
+    if item is not None:
+        values = value_list(bindings.get(item.group(1)))
+        index = int(item.group(2))
+        return json.dumps(values[index] if index < len(values) else "")[1:-1]
+
     # Strip type suffix: F:n -> F, E1.F:q -> E1.F
     base = tag.split(":")[0] if ":" in tag else tag
 
@@ -622,12 +712,11 @@ def instantiate_template(spec_template, bindings, schema):
     # And a choice, which resolves to the expression for the chosen option.
     for key in CHOICES:
         spec = spec.replace(f'"<{key}>"', f"<{key}>")
-    while True:
-        match = re.search(PLACEHOLDER, spec)
-        if not match:
-            break
-        resolved = _resolve_placeholder(match.group(1), bindings, schema)
-        spec = spec.replace(match.group(0), resolved, 1)
+    # One pass: a resolved value is never scanned again, so a value that looks
+    # like a placeholder (`<V>`, `<NA>`) stays as written.
+    spec = re.sub(
+        PLACEHOLDER, lambda m: _resolve_placeholder(m.group(1), bindings, schema), spec
+    )
     parsed = _dedupe_sources(json.loads(spec))
     return _pin_stratum_colours(parsed, spec_template, bindings)
 
@@ -1100,6 +1189,98 @@ def _categorical_domains(data_domains):
     return out
 
 
+def _suggest_values(value, known, limit=8):
+    """Values in `known` the caller plausibly meant by `value`, best first.
+
+    Two kinds of near miss. Words: "Regimen B" for "ACNS0334: Regimen B", where
+    the value is a fragment of a longer label — every word of it appears, in any
+    order. Spelling: "Radiaton" for "Radiation", which difflib catches.
+    """
+    def words(text):
+        return set(re.findall(r"[a-z0-9]+", text.lower()))
+
+    wanted = words(value)
+    by_words = [v for v in known if wanted and wanted <= words(v)]
+    close = difflib.get_close_matches(value, known, n=limit, cutoff=0.6)
+    suggestions = []
+    for v in by_words + close:
+        if v not in suggestions:
+            suggestions.append(v)
+    return suggestions[:limit]
+
+
+def _missing_value_error(value, field_name, entity_name, known, consequence):
+    """Prose for a literal that `known`, the column's values, does not hold."""
+    # A near miss is worth naming as one: the model was told to copy a value
+    # exactly, and "deceased" for "Deceased" is a different mistake from having
+    # picked the wrong column entirely.
+    lowered = {v.lower(): v for v in known}
+    if value.lower() in lowered:
+        return (
+            f"Value '{value}' does not appear in column '{field_name}' on "
+            f"'{entity_name}', but '{lowered[value.lower()]}' does — copy it "
+            f"exactly, including case."
+        )
+    suggestions = _suggest_values(value, known)
+    if suggestions:
+        hint = (
+            "Did you mean one of these? "
+            + ", ".join(repr(v) for v in suggestions)
+            + ". Copy the values exactly, and list every one that applies."
+        )
+    else:
+        sample = ", ".join(repr(v) for v in known[:8])
+        more = "" if len(known) <= 8 else f", … ({len(known)} in all)"
+        hint = (
+            f"Either pick a value that is in that column ({sample}{more}), or "
+            f"bind a different column."
+        )
+    return (
+        f"Value '{value}' does not appear in column '{field_name}' on "
+        f"'{entity_name}', {consequence}. {hint}"
+    )
+
+
+def _grouping_value_errors(spec_template, bindings, entity_bindings, domains):
+    """Grouping values the column they group does not hold.
+
+    Only nominal groupings: a quantitative one cuts at numbers, which need not
+    occur in the column. A column without a value list is left unchecked, as
+    everywhere else — "not sent" is not "not there".
+    """
+    from udiagent.stratify import GroupingError, _nominal_groups, grouping_kind, parse_grouping
+
+    errors = []
+    for group_key, field_key in grouping_targets(spec_template).items():
+        try:
+            grouping = parse_grouping(bindings.get(group_key))
+            if grouping is None or grouping_kind(grouping) != "nominal":
+                continue
+            groups = _nominal_groups(grouping)
+        except GroupingError:
+            continue  # malformed: reported by the per-binding check
+        field_name = bindings.get(field_key)
+        entity_name = _entity_for_binding_key(field_key, entity_bindings)
+        known = domains.get((entity_name, field_name))
+        if not known:
+            continue
+        for label, values in groups:
+            for value in values:
+                if value in known:
+                    continue
+                errors.append(
+                    _missing_value_error(
+                        value,
+                        field_name,
+                        entity_name,
+                        known,
+                        f"so it puts no rows in group '{label}' — that group "
+                        f"would draw an empty curve",
+                    )
+                )
+    return errors
+
+
 def grouping_targets(spec_template):
     """``{grouping binding key: field binding key}`` for a template's `<GROUP:…>` tags.
 
@@ -1182,9 +1363,44 @@ def _grouped_field_keys(spec_template, bindings):
     return keys
 
 
-def over_cap_bindings(spec_template, bindings, schema, grouped_field_keys=frozenset()):
-    """`(key, entity, field, cardinality)` for each categorical binding the chart
-    would draw with more than MAX_DRAWN_CATEGORIES values.
+def _split_keys(encoding_info):
+    """Placeholders that split the bars of a categorical axis by colour, offset or
+    shape: drawn directly on a SPLIT_ENCODINGS channel, not themselves on an axis,
+    while another placeholder puts a nominal or ordinal field on x or y. Those
+    get MAX_SPLIT_CATEGORIES.
+
+    Deliberately narrow. A pie's colour *is* its category, a dot plot's colour
+    repeats its axis, and a survival curve or scatterplot coloured by a field
+    splits a quantitative axis, which has its own checks (and a `grouping` for
+    stratifiers); all of those keep MAX_DRAWN_CATEGORIES.
+    """
+    on_axis = {
+        key
+        for key, entry in encoding_info.items()
+        if {"x", "y"} & set(entry["direct_encodings"])
+    }
+    categorical_axes = {
+        key
+        for key in on_axis
+        if encoding_info[key]["declared_type"] in ("nominal", "ordinal")
+    }
+    return {
+        key
+        for key, entry in encoding_info.items()
+        if SPLIT_ENCODINGS & set(entry["direct_encodings"])
+        and key not in on_axis
+        and categorical_axes - {key}
+    }
+
+
+def over_cap_bindings(
+    spec_template, bindings, schema, grouped_field_keys=frozenset(), encoding_info=None
+):
+    """`(key, entity, field, cardinality, cap)` for each categorical binding the
+    chart would draw with more values than it can show: MAX_SPLIT_CATEGORIES for a
+    field that splits a categorical axis's bars (see `_split_keys`), otherwise
+    MAX_DRAWN_CATEGORIES. `encoding_info` is `placeholder_encoding_info`'s result,
+    when the caller already has it.
 
     Only drawn fields count; a grouping key the pipeline rolls up never reaches a
     visual channel (see _encoded_placeholders). A field the request supplies a
@@ -1199,22 +1415,55 @@ def over_cap_bindings(spec_template, bindings, schema, grouped_field_keys=frozen
     """
     if _is_row_table(spec_template):
         return []
-    encoded = _encoded_placeholders(spec_template)
+    if encoding_info is None:
+        encoding_info = placeholder_encoding_info(spec_template)
+    split_keys = _split_keys(encoding_info)
     entities = schema.get("entities", {})
     entity_bindings = {k: v for k, v in bindings.items() if _ENTITY_KEY.fullmatch(k)}
     over = []
     for key, field_name in bindings.items():
         # A grouping binding is a dict, not a column name.
-        if not isinstance(field_name, str) or key not in encoded or key in grouped_field_keys:
+        if not isinstance(field_name, str) or key not in encoding_info or key in grouped_field_keys:
             continue
         entity_name = _entity_for_binding_key(key, entity_bindings)
         info = entities.get(entity_name, {}).get("fields", {}).get(field_name)
         if not isinstance(info, dict):
             continue
+        cap = MAX_SPLIT_CATEGORIES if key in split_keys else MAX_DRAWN_CATEGORIES
         cardinality = info.get("cardinality", 0)
-        if info["type"] in ("nominal", "ordinal") and cardinality > MAX_DRAWN_CATEGORIES:
-            over.append((key, entity_name, field_name, cardinality))
+        if info["type"] in ("nominal", "ordinal") and cardinality > cap:
+            over.append((key, entity_name, field_name, cardinality, cap))
     return over
+
+
+def _duplicate_drawn_field_errors(encoding_info, bindings, xy_placeholders):
+    """An error for each pair of field bindings drawn *directly* on a channel and
+    set to one column of one table, except the x/y pair, which `validate_bindings`
+    reports itself. Placeholders that only meet inside a derive (a proportion, a
+    survival span) are combined before they are drawn, so are left alone."""
+    encodings = {
+        key: entry["direct_encodings"]
+        for key, entry in encoding_info.items()
+        if entry["direct_encodings"]
+    }
+    entity_bindings = {k: v for k, v in bindings.items() if _ENTITY_KEY.fullmatch(k)}
+    xy_pair = {(xy_placeholders.get(enc) or "").split(":")[0] for enc in ("x", "y")}
+    seen = {}
+    errors = []
+    for key, field_name in bindings.items():
+        if not isinstance(field_name, str) or key not in encodings or _ENTITY_KEY.fullmatch(key):
+            continue
+        column = (_entity_for_binding_key(key, entity_bindings), field_name)
+        other = seen.setdefault(column, key)
+        if other != key and {other, key} != xy_pair:
+            errors.append(
+                f"'{other}' and '{key}' are both set to '{field_name}', but they are "
+                f"drawn as different channels ({', '.join(encodings[other])} and "
+                f"{', '.join(encodings[key])}), so the chart would split each "
+                f"category by itself. Choose a different field for '{key}', or a "
+                f"chart that draws '{field_name}' once."
+            )
+    return errors
 
 
 def validate_bindings(
@@ -1252,6 +1501,35 @@ def validate_bindings(
                 f"Entity '{name}' not found. Available: {', '.join(entity_names)}"
             )
 
+    if errors:
+        return errors
+
+    # Each kind of template reads only its own kind of table. A cube template
+    # bound to a line-level table has no marginal to pick; a line-level template
+    # bound to a cube counts its pre-aggregated cells as if they were subjects,
+    # and draws a plausible chart of wrong numbers. Checked here rather than at
+    # tool selection, because a package can hold both kinds of table.
+    reads_cube = _template_reads_cube(spec_template)
+    for key, name in entity_bindings.items():
+        if bool(entities[name].get("is_cube")) == reads_cube:
+            continue
+        valid = [n for n, e in entities.items() if bool(e.get("is_cube")) == reads_cube]
+        if reads_cube:
+            problem = (
+                f"'{name}' is a line-level table, but this tool reads a "
+                "pre-aggregated data cube."
+            )
+            remedy = "Use a line-level tool for it, or a data cube"
+        else:
+            problem = (
+                f"'{name}' is a pre-aggregated data cube, but this tool reads "
+                "line-level rows."
+            )
+            remedy = "Use a data-cube tool for it, or a line-level table"
+        errors.append(
+            f"{problem} {remedy}"
+            + (f": {', '.join(valid)}." if valid else ".")
+        )
     if errors:
         return errors
 
@@ -1310,6 +1588,12 @@ def validate_bindings(
                 f"both '{x_binding}' and '{y_binding}' are set to '{x_val}'"
             )
 
+    # The same, for any two drawn fields: one column on the x axis and as the
+    # colour and offset of a grouped bar chart splits every bar into one segment
+    # of itself. Left to the x/y check above where that one applies.
+    encoding_info = placeholder_encoding_info(spec_template)
+    errors.extend(_duplicate_drawn_field_errors(encoding_info, bindings, xy_placeholders))
+
     placeholder_types = _placeholder_type_requirements(spec_template)
 
     targets = grouping_targets(spec_template)
@@ -1318,9 +1602,9 @@ def validate_bindings(
     # Fields drawn with more categories than a chart can show. Reported in the
     # per-binding loop below, so errors keep binding order.
     over_cap = {
-        key: cardinality
-        for key, _entity, _field, cardinality in over_cap_bindings(
-            spec_template, bindings, schema, grouped_field_keys
+        key: (cardinality, cap)
+        for key, _entity, _field, cardinality, cap in over_cap_bindings(
+            spec_template, bindings, schema, grouped_field_keys, encoding_info
         )
     }
 
@@ -1450,11 +1734,48 @@ def validate_bindings(
         # message names the way out, since the retry reads it: a table lists
         # every value.
         if key in over_cap:
-            errors.append(
-                f"Field '{field_name}' has {over_cap[key]} unique values, too many to draw "
-                f"on an axis or legend (max {MAX_DRAWN_CATEGORIES}). A table can list every "
-                f"value, e.g. each value with its count, sorted by count."
-            )
+            cardinality, cap = over_cap[key]
+            if cap == MAX_SPLIT_CATEGORIES:
+                errors.append(
+                    f"Field '{field_name}' has {cardinality} unique values, too many to "
+                    f"split marks by colour or offset (max {cap}). Split by a field with "
+                    f"fewer values, or use a chart that does not split, e.g. one bar per "
+                    f"category."
+                )
+            else:
+                errors.append(
+                    f"Field '{field_name}' has {cardinality} unique values, too many to "
+                    f"draw on an axis or legend (max {cap}). A table can list every "
+                    f"value, e.g. each value with its count, sorted by count."
+                )
+
+    # Only the survival templates take both <V1> and <V2>, and for them a value in
+    # both is never a chart: an event-log curve that starts and ends on the same
+    # event puts every subject's end at time 0 (a vertical line), and a cube curve
+    # whose event status is also its censored status counts each cell twice.
+    shared_values = set(value_list(bindings.get("V1"))) & set(value_list(bindings.get("V2")))
+    if shared_values:
+        roles = (
+            "the event status (value1) and the censored status (value2)"
+            if _template_reads_cube(spec_template)
+            else "the event that starts the clock (value1) and one that ends it (value2)"
+        )
+        errors.append(
+            f"{', '.join(repr(v) for v in sorted(shared_values))} cannot be both "
+            f"{roles}; they must be different values."
+        )
+    # An event-log curve's censored status (<V3>, a status column's "no event
+    # yet") naming one of its end events counts the dead as still alive. Compared
+    # ignoring case: the two come from different columns ('deceased' in a vital
+    # status, 'Deceased' in an event type).
+    censored = bindings.get("V3")
+    end_events = {v.casefold(): v for v in value_list(bindings.get("V2"))}
+    if isinstance(censored, str) and censored.casefold() in end_events:
+        errors.append(
+            f"'{censored}' (value3) must be the status meaning the subject had NO "
+            f"end event yet (e.g. 'alive'), but it names the end event "
+            f"'{end_events[censored.casefold()]}' (value2)."
+        )
 
     # A rollup output bound to the same column as the key it groups by is a
     # degenerate chart, not just the SQL hazard of one name on two columns: the
@@ -1590,28 +1911,25 @@ def validate_bindings(
                 known = domains.get((entity_name, field_name))
                 if not known or value in known:
                     continue
-                # A near miss is worth naming as one: the model was told to copy
-                # a value exactly, and "deceased" for "Deceased" is a different
-                # mistake from having picked the wrong column entirely.
-                lowered = {v.lower(): v for v in known}
-                if value.lower() in lowered:
-                    errors.append(
-                        f"Value '{value}' does not appear in column "
-                        f"'{field_name}' on '{entity_name}', but "
-                        f"'{lowered[value.lower()]}' does — copy it exactly, "
-                        f"including case."
+                errors.append(
+                    _missing_value_error(
+                        value,
+                        field_name,
+                        entity_name,
+                        known,
+                        "which this template compares it against — so the "
+                        "comparison would match no rows and the chart would come "
+                        "out empty",
                     )
-                else:
-                    sample = ", ".join(repr(v) for v in known[:8])
-                    more = "" if len(known) <= 8 else f", … ({len(known)} in all)"
-                    errors.append(
-                        f"Value '{value}' does not appear in column "
-                        f"'{field_name}' on '{entity_name}', which this template "
-                        f"compares it against — so the comparison would match no "
-                        f"rows and the chart would come out empty. Either pick a "
-                        f"value that is in that column ({sample}{more}), or bind a "
-                        f"different column."
-                    )
+                )
+
+        # A grouping's values are literals too, and nothing above reads them:
+        # a group of "arm b" on a column spelling it "ACNS0334: Regimen B"
+        # matches no rows, so that curve is empty (or, with an Other, its
+        # subjects quietly join Other) and the chart still renders.
+        errors.extend(
+            _grouping_value_errors(spec_template, bindings, entity_bindings, domains)
+        )
 
     return errors
 
@@ -1786,11 +2104,35 @@ def _load_generated_tools():
 
 
 def _active_template_tags(request_schema):
-    """Tags to select templates for this request: cube schemas get the
-    ``data_cube`` templates, everything else the ``line_item`` templates."""
-    from udiagent.schema import schema_is_cube
+    """Tags to select templates for this request: one per kind of table the
+    package holds. Cube tables get the ``data_cube`` templates and line-level
+    tables the ``line_item`` ones, so a package with both gets both;
+    ``validate_bindings`` then keeps each template on its own kind of table.
+    A package with no tables at all gets the ``line_item`` templates."""
+    from udiagent.schema import schema_has_line_items, schema_is_cube
 
-    return {"data_cube"} if schema_is_cube(request_schema) else {"line_item"}
+    tags = set()
+    if schema_is_cube(request_schema):
+        tags.add("data_cube")
+    if schema_has_line_items(request_schema) or not tags:
+        tags.add("line_item")
+    return tags
+
+
+def _preferred_tag(request_schema, active_tags):
+    """The template tag the package prefers (`udi:prefer`), when it has both
+    kinds of table to choose between; None otherwise."""
+    from udiagent.schema import PREFER_TAGS
+
+    tag = PREFER_TAGS.get(request_schema.get("prefer"))
+    return tag if tag and active_tags >= {"data_cube", "line_item"} else None
+
+
+def _template_reads_cube(spec_template):
+    """True if the template reads a pre-aggregated cube: it picks a marginal
+    (``<MARGINAL…>``) or reads the measure (``<M>``). Every other template
+    aggregates line-level rows itself."""
+    return "<M>" in spec_template or "<MARGINAL" in spec_template
 
 
 def _tool_entity_arity(tool_def):
@@ -2008,13 +2350,15 @@ def _substitute_value_counts(
         for entry in over_cap_bindings(
             spec_template, bindings, schema, _grouped_field_keys(spec_template, bindings)
         )
-        if _groups_by(spec_template, entry[0])
+        # Only over the axis cap: a split field between the two caps was the
+        # wrong field to split by, and a list of its values answers nothing.
+        if entry[3] > MAX_DRAWN_CATEGORIES and _groups_by(spec_template, entry[0])
     ]
     list_tool = next((n for n in tool_dispatch if n.endswith(VALUE_COUNTS_TOOL_SUFFIX)), None)
     if not over or list_tool is None:
         return None
 
-    _key, entity, field, cardinality = over[0]
+    _key, entity, field, cardinality, _cap = over[0]
     list_idx, list_map = tool_dispatch[list_tool]
     roles = {"E": entity, "F": field}
     list_args = {p: roles[ph] for p, ph in list_map.items() if ph in roles}
@@ -2047,6 +2391,53 @@ def _substitute_value_counts(
         list_tool,
     )
     return context
+
+
+#: Words that say a request is about a span of follow-up time.
+_TIME_SPAN_WORDS = re.compile(
+    r"\b(?:\d+\s*-?\s*)?(?:years?|yrs?|months?|weeks?|days?)\b"
+    r"|\bfollow[\s-]*up\b|\bhorizon\b|\btime\s*-?\s*span\b|\blong[\s-]*term\b|\bas far as\b",
+    re.IGNORECASE,
+)
+
+
+def _latest_user_text(messages):
+    """The text of the newest user message, or "" when there is none."""
+    for message in reversed(messages or []):
+        if message.get("role") != "user":
+            continue
+        content = message.get("content")
+        if isinstance(content, list):
+            content = " ".join(
+                part.get("text", "") for part in content if isinstance(part, dict)
+            )
+        return content if isinstance(content, str) else ""
+    return ""
+
+
+def _drop_unasked_horizon(tool_args, request_text, rid=None):
+    """Drop a `time_horizon` the request never asked for, so the curve keeps its
+    5-year default.
+
+    The model sets it on its own for words that are about *which data* rather
+    than how long: "across all data" or "the full data" read as the `full`
+    option. A tool description saying so did not stop it, and a survival curve
+    should only leave the default when the request names a span of time, so
+    `request_text` has to mention one ("10-year", "the first 2 years", "full
+    follow-up").
+    """
+    param = CHOICES["HORIZON"].param
+    if not tool_args or tool_args.get(param) in (None, ""):
+        return tool_args
+    if _TIME_SPAN_WORDS.search(request_text or ""):
+        return tool_args
+    logger.info(
+        "[vis %s] dropped %s=%r: the request names no time span",
+        rid,
+        param,
+        tool_args[param],
+    )
+    return {k: v for k, v in tool_args.items() if k != param}
 
 
 def _execute_generate(skill, context):
@@ -2084,6 +2475,14 @@ def _execute_generate(skill, context):
         # get the data-cube tools). Replaces a hard-coded active-set switch.
         active_tags = _active_template_tags(request_schema)
         selected_defs = _select_tools(tool_defs, tool_tags, active_tags, request_schema)
+        preferred_tag = _preferred_tag(request_schema, active_tags)
+        if preferred_tag:
+            # The package's preferred kind first. A nudge, not a filter: the
+            # other kind stays on offer for what only it can answer.
+            selected_defs = sorted(
+                selected_defs,
+                key=lambda d: preferred_tag not in tool_tags.get(d["function"]["name"], []),
+            )
         logger.info(
             "[vis %s] template tools offered: count=%d of %d (tags=%s)",
             rid,
@@ -2109,10 +2508,36 @@ def _execute_generate(skill, context):
             "and put those values in it. A tool without one can only split by "
             "whether a subject appears in a table at all: for a table with one row "
             "per drug given, that answers 'had any treatment', not 'had that drug'. "
-            "Name every spelling of the value you can see in the column, since one "
-            "drug or protocol is often recorded several ways.\n\n"
+            "Name every spelling of the value in the column, since one drug or "
+            "protocol is often recorded several ways. The Column Values below are "
+            "only a sample: unless the exact values are listed there, call "
+            "`ListFieldValues` with `contains` (e.g. the protocol or drug name) "
+            "to find them before writing the grouping, and copy them exactly.\n\n"
             f"## Available Datasets\n\n{data_schema_simple}"
         )
+        if active_tags >= {"data_cube", "line_item"}:
+            # Both kinds of table, so both kinds of tool. Said up front because
+            # nothing in a tool's parameters says which tables it accepts.
+            system_msg += (
+                "\n\n## Data cubes and line-level tables\n\n"
+                "Some tables are pre-aggregated data cubes (`kind: data_cube` "
+                "above) and the rest hold line-level rows. The data-cube tools "
+                "only accept the cube tables, and every other tool only accepts "
+                "the line-level tables: pick the tool that matches the table the "
+                "request is about."
+            )
+            if preferred_tag:
+                preferred, other = (
+                    ("line-level tables", "a data cube")
+                    if preferred_tag == "line_item"
+                    else ("data cubes", "a line-level table")
+                )
+                system_msg += (
+                    f" When the request can be answered from either, use the "
+                    f"{preferred}: this dataset prefers them. Use {other} only for "
+                    f"what the {preferred} cannot answer, such as a column only it "
+                    f"has, or when the user asks for it."
+                )
         # Some tools take a literal data value (a `value*` parameter) rather than
         # only column names. The schema lists columns but not their contents, so
         # without domains the model would have to guess those values. Append them
@@ -2123,8 +2548,9 @@ def _execute_generate(skill, context):
             if domains_simple:
                 system_msg += (
                     "\n\n## Column Values\n\n"
-                    "Use these when a tool asks for a literal `value` — copy one "
-                    "exactly rather than inventing it.\n\n"
+                    "Use these when a tool asks for a literal `value` or a "
+                    "`grouping` — copy one exactly rather than inventing it. Where "
+                    "a column is only sampled, `ListFieldValues` has the rest.\n\n"
                     f"{domains_simple}"
                 )
         tool_messages = [{"role": "system", "content": system_msg}] + list(
@@ -2137,6 +2563,7 @@ def _execute_generate(skill, context):
         result = _call_llm_with_tools(
             agent, tool_messages, selected_defs, config,
             usage=usage, openai_api_key=openai_api_key, req_id=rid, model=model,
+            data_domains=data_domains,
         )
         # Three attempts rather than two. A rejected binding is usually one
         # argument out of fifteen — a miscased literal value, a stratifier that
@@ -2147,6 +2574,11 @@ def _execute_generate(skill, context):
                 fallback_reason = FALLBACK_NO_TOOL_CALL
                 break
             tool_name, tool_args = result
+            tool_args = _drop_unasked_horizon(
+                tool_args,
+                context.get("request_text") or _latest_user_text(context["messages"]),
+                rid,
+            )
             logger.info(
                 "[vis %s] attempt=%d model chose %s args=%s",
                 rid,
@@ -2203,6 +2635,7 @@ def _execute_generate(skill, context):
                         openai_api_key=openai_api_key,
                         req_id=rid,
                         model=model,
+                        data_domains=data_domains,
                     )
                     continue
                 fallback_reason = FALLBACK_VALIDATION_FAILED
@@ -2423,12 +2856,17 @@ def generate_vis_spec(
     openai_api_key=None,
     data_domains=None,
     model=None,
+    request_text=None,
 ):
     """Generate a visualization spec using the skills pipeline.
 
     Args:
         agent: UDIAgent instance
         messages: chat history (list of dicts with role/content)
+        request_text: the user's own words, when `messages` ends in a rewrite
+            of them (the orchestrator's chart description). Optional choices
+            the request must ask for, such as the time span, are checked
+            against it; without it, against the newest user message.
         data_schema: JSON string describing available datasets
         grammar: dict from load_grammar()
         config: optional dict with keys:
@@ -2460,6 +2898,7 @@ def generate_vis_spec(
         "openai_api_key": openai_api_key,
         "model": model,
         "usage": usage,
+        "request_text": request_text,
         # Ties every log line from this request together. uvicorn interleaves
         # requests, so timestamps alone do not, and the value comes back in
         # `meta` so a reported chart carries its own grep key.

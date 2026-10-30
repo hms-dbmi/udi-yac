@@ -109,6 +109,24 @@ export function validateConfig(config: UDIChatConfig): void {
     }
   }
 
+  if (config.cohort != null) {
+    const { entity, fields } = config.cohort as { entity?: unknown; fields?: unknown };
+    if (typeof entity !== 'string' || !entity) {
+      errors.push('`cohort.entity` must be the name of a table in the data package.');
+    }
+    if (fields != null && !(Array.isArray(fields) && fields.every((f) => typeof f === 'string'))) {
+      errors.push('`cohort.fields` must be an array of field names when provided.');
+    }
+  }
+
+  if (
+    config.filterMode != null &&
+    config.filterMode !== 'separate' &&
+    config.filterMode !== 'shared'
+  ) {
+    errors.push('`filterMode` must be "separate" or "shared" when provided.');
+  }
+
   if (errors.length > 0) {
     throw new Error(
       `UDIChat config is invalid:\n  - ${errors.join('\n  - ')}\n\n` +

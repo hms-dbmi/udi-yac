@@ -1,0 +1,28 @@
+---
+title: 'Tutorial: a HuBMAP heatmap'
+description: Build a heatmap of HuBMAP dataset counts by organ and assay type, one grammar feature at a time.
+sidebar:
+  label: Tutorial
+  order: 2
+tableOfContents: false
+---
+
+import { Code } from '@astrojs/starlight/components';
+import Prose from '../../../components/Prose.astro';
+import UdiVis from '../../../components/UdiVis.astro';
+import { tutorialExamples } from '../../../grammar/tutorial';
+import { editorHref } from '../../../grammar/urls';
+
+This tutorial builds a heatmap of [HuBMAP](https://portal.hubmapconsortium.org/) dataset counts by source organ and assay type. Each step adds to the previous spec; the highlighted lines are what changed. The charts read live metadata from the HuBMAP Data Portal.
+
+{tutorialExamples.map((example) => (
+  <>
+    <h2>{example.name}</h2>
+    <Prose text={example.description ?? ''} />
+    <Code code={JSON.stringify(example.spec, null, 2)} lang="json" mark={example.highlightLines} />
+    <UdiVis spec={example.spec} />
+    <p>
+      <a href={editorHref(example.spec)}>Open this step in the editor →</a>
+    </p>
+  </>
+))}

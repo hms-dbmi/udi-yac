@@ -1,0 +1,14 @@
+---
+title: HuBMAP examples
+description: Grammar specs that chart live metadata from the HuBMAP Data Portal.
+sidebar:
+  order: 4
+tableOfContents: false
+---
+
+import SpecGallery from '../../../components/SpecGallery.astro';
+import { hubmapExampleGroups } from '../../../grammar/hubmap';
+
+These charts read the metadata endpoints of the [HuBMAP Data Portal](https://portal.hubmapconsortium.org/apis), to show how the grammar works with a project like HuBMAP. They follow a [Jupyter notebook](https://colab.research.google.com/drive/1qBmosMORt6oOC_Q0ALgLwNjNjoyNHltq?usp=sharing) that draws a similar set with Matplotlib.
+
+<SpecGallery groups={hubmapExampleGroups} wide />
