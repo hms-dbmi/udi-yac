@@ -16,7 +16,7 @@ dependencies = [
 
 [project.optional-dependencies]
 langfuse = [
-    "langfuse>=4",
+    "langfuse>=5.0.2",
 ]
 # Amazon Bedrock SigV4 auth (IAM instance profile / task role). Unpinned: the
 # core openai floor already covers openai.providers.bedrock (added in 2.44.0).
