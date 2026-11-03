@@ -1,4 +1,5 @@
 import type { Layout, LayoutItem } from 'react-grid-layout';
+import type { StoreApi } from 'zustand';
 import type { Message } from '@/types/messages';
 import { EMPTY_USAGE, type SessionUsage } from '@/types/usage';
 import type {
@@ -8,6 +9,7 @@ import type {
   DashboardState,
 } from '../stores/dashboardStore';
 import type { DataFiltersState, ExportedFilterState } from '../stores/dataFiltersStore';
+import type { MemoryBankState } from '../stores/memoryBankStore';
 import { DEFAULT_CARD_H, DEFAULT_CARD_W, MIN_CARD_H, MIN_CARD_W } from './gridDefaults';
 import { packAllRowMajor } from './gridPacking';
 
@@ -22,6 +24,9 @@ export interface SessionExport {
     sessionUsage?: SessionUsage;
   };
   visualizations: DashboardExportVisualization[];
+  /** Charts the user closed, which go back to the memory bank on import.
+   *  Older exports omit it, and an import re-adds every chart in the messages. */
+  removedVisualizations?: DashboardExportVisualization[];
   layout: DashboardLayout;
   /** Optional grid configuration (cols + row height). Old exports omit it
    *  and the importer falls back to current defaults. */
@@ -163,6 +168,7 @@ function parseVisualization(raw: unknown, idx: number): ParseResult<DashboardExp
       summaryTemplate: str(raw.summaryTemplate),
       spec: raw.spec as unknown as DashboardExportVisualization['spec'],
       template: parseTemplateProvenanceField(raw.template),
+      ...(raw.sortByTotal === true ? { sortByTotal: true } : {}),
     },
   };
 }
@@ -255,6 +261,13 @@ export function parseSessionExport(raw: unknown): ParseResult<SessionExport> {
     if (!r.ok) return r;
     visualizations.push(r.value);
   }
+  // Lenient: a closed chart that does not parse is dropped, and the import
+  // re-adds it from the messages as it did before closed charts were exported.
+  const removedVisualizations = Array.isArray(raw.removedVisualizations)
+    ? raw.removedVisualizations
+        .map((v, i) => parseVisualization(v, i))
+        .flatMap((r) => (r.ok ? [r.value] : []))
+    : undefined;
   const layoutResult = parseLayout(raw.layout);
   if (!layoutResult.ok) return layoutResult;
   let grid: { cols: number; rowHeight: number } | undefined;
@@ -278,6 +291,7 @@ export function parseSessionExport(raw: unknown): ParseResult<SessionExport> {
         sessionUsage: parseSessionUsage(raw.conversation.sessionUsage),
       },
       visualizations,
+      ...(removedVisualizations ? { removedVisualizations } : {}),
       layout: layoutResult.value,
       ...(grid ? { grid } : {}),
       ...(filters ? { filters } : {}),
@@ -300,6 +314,9 @@ export function buildSessionExport(args: {
       sessionUsage: args.sessionUsage ?? EMPTY_USAGE,
     },
     visualizations: args.dashboard.visualizations,
+    ...(args.dashboard.removedVisualizations
+      ? { removedVisualizations: args.dashboard.removedVisualizations }
+      : {}),
     layout: args.dashboard.layout,
     ...(args.grid ? { grid: args.grid } : {}),
     ...(args.filters ? { filters: args.filters } : {}),
@@ -310,16 +327,18 @@ export function buildSessionExport(args: {
  * The session as it stands, in the shape *Export session* writes. Takes store
  * snapshots (`getState()`), so callers inside and outside the providers share it.
  * The filter store adds the user's filter edits, scopes and chart-made filters,
- * which the messages alone do not rebuild.
+ * which the messages alone do not rebuild; the memory bank adds the charts the
+ * user closed, which the messages would otherwise bring back.
  */
 export function currentSessionExport(
   conversation: { messages: Message[]; sessionUsage?: SessionUsage },
   dashboard: Pick<DashboardState, 'exportDashboard' | 'gridCols' | 'gridRowHeight'>,
   dataFilters: Pick<DataFiltersState, 'exportFilterState'>,
+  memoryBankStore?: StoreApi<MemoryBankState>,
 ): SessionExport {
   return buildSessionExport({
     messages: conversation.messages,
-    dashboard: dashboard.exportDashboard(),
+    dashboard: dashboard.exportDashboard(memoryBankStore),
     grid: { cols: dashboard.gridCols, rowHeight: dashboard.gridRowHeight },
     sessionUsage: conversation.sessionUsage,
     filters: dataFilters.exportFilterState(),
