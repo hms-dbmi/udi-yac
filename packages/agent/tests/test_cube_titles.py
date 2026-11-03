@@ -19,7 +19,7 @@ def _cube_tools():
 
 def test_plain_cube_titles_lead_with_the_measure():
     plain = [n for n in _cube_tools() if not any(k in n for k in _KEEPS_ITS_TYPE)]
-    assert len(plain) == 10
+    assert len(plain) == 12
     for name in plain:
         title = resolve_text_templates(name, {})["title"]
         assert title.startswith("{enc:"), (name, title)

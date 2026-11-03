@@ -2234,8 +2234,9 @@ def generate():
         title_template="<M> by <D1:n> and <D2:n>",
         summary_template="Displays <M> for each <D1:n> category as bars, split by <D2:n>.",
         design_considerations=(
-            _CUBE_MARGINAL_NOTE + " Color encodes the sub-group; prefer the dimension with "
-            "fewer categories for color."
+            _CUBE_MARGINAL_NOTE + " Vertical stacked layout for few, short primary categories "
+            "(<=4); use the horizontal variant otherwise. Color encodes the sub-group; prefer "
+            "the dimension with fewer categories for color."
         ),
         tasks="Compare group compositions across categories; identify dominant sub-groups.",
         shape="data_cube",
@@ -2322,7 +2323,8 @@ def generate():
         summary_template="Displays <M> for each <D1:n> category as bars, placed side by side for each <D2:n>.",
         design_considerations=(
             _CUBE_MARGINAL_NOTE + " xOffset gives side-by-side grouping for direct comparison "
-            "of the sub-group within each category."
+            "of the sub-group within each category. Suitable for few, short primary categories "
+            "(<=4); use the horizontal variant otherwise."
         ),
         tasks="Directly compare sub-group values within and across categories.",
         shape="data_cube",
@@ -2451,7 +2453,8 @@ def generate():
         design_considerations=(
             "First filters to the two-dimension marginal (expanded from the schema), then sums "
             "the measure per primary-dimension group and divides each cell by its group total to "
-            "obtain proportions. Color is preferably the dimension with fewer categories."
+            "obtain proportions. Vertical layout for few, short primary categories (<=4); use the "
+            "horizontal variant otherwise. Color is preferably the dimension with fewer categories."
         ),
         tasks="Compare relative proportions across categories; identify dominant sub-groups.",
         shape="data_cube",
@@ -5098,6 +5101,116 @@ def generate():
         summary_template="Displays how many <E> are missing <F>, and what percentage of them that is.",
         design_considerations="Derives null count as total minus valid count. Percentage bar shows the null proportion with a 50% reference line.",
         tasks="Assess data quality; determine how many records are missing a value and what proportion.",
+    )
+
+    # ---------------------------------------------------------------
+    # Horizontal cube bars. Appended, not filed with their vertical
+    # siblings: tool names carry the template's position, and saved
+    # charts re-instantiate by name.
+    # ---------------------------------------------------------------
+
+    # DATA CUBE: horizontal stacked bar of the measure by two nominal dimensions
+    df = add_row(
+        df,
+        query_templates=[
+            "How many are there by <dimension1> and <dimension2>?",
+            "Make a horizontal stacked bar chart across two categorical dimensions.",
+        ],
+        spec=(
+            Chart()
+            .source("<E>", "<E.url>")
+            .filter("<MARGINAL:D1,D2>")
+            .mark("bar")
+            .x(field="<M>", type="quantitative")
+            .y(field="<D1:n>", type="nominal")
+            .color(field="<D2:n>", type="nominal")
+        ),
+        chart_type=ChartType.STACKED_BAR,
+        task_types=[TaskType.COMPUTE_DERIVED_VALUE],
+        description="Shows the pre-aggregated cube measure by two nominal dimensions as a horizontal stacked bar chart.",
+        title_template="<M> by <D1:n> and <D2:n>",
+        summary_template="Displays <M> for each <D1:n> category as horizontal bars, split by <D2:n>.",
+        design_considerations=(
+            _CUBE_MARGINAL_NOTE + " Horizontal stacked layout for more than 4 primary categories "
+            "or long labels (protocol arms, site names), which a vertical axis would rotate or "
+            "truncate. Color encodes the sub-group; prefer the dimension with fewer categories "
+            "for color."
+        ),
+        tasks="Compare group compositions across categories; identify dominant sub-groups.",
+        shape="data_cube",
+    )
+
+    # DATA CUBE: grouped (side-by-side) horizontal bar of the measure by two nominal dims
+    df = add_row(
+        df,
+        query_templates=[
+            "Make a horizontal grouped (side-by-side) bar chart across two categorical dimensions."
+        ],
+        spec=(
+            Chart()
+            .source("<E>", "<E.url>")
+            .filter("<MARGINAL:D1,D2>")
+            .mark("bar")
+            .x(field="<M>", type="quantitative")
+            .y(field="<D1:n>", type="nominal")
+            .yOffset(field="<D2:n>", type="nominal")
+            .color(field="<D2:n>", type="nominal")
+        ),
+        chart_type=ChartType.GROUPED_BAR,
+        task_types=[TaskType.COMPUTE_DERIVED_VALUE],
+        description="Shows the pre-aggregated cube measure by two nominal dimensions as a grouped (side-by-side) horizontal bar chart.",
+        title_template="<M> by <D1:n> and <D2:n>",
+        summary_template="Displays <M> for each <D1:n> category as horizontal bars, placed side by side for each <D2:n>.",
+        design_considerations=(
+            _CUBE_MARGINAL_NOTE + " yOffset gives side-by-side grouping in horizontal "
+            "orientation. Chosen when there are more than 4 primary categories or long labels "
+            "(protocol arms, site names)."
+        ),
+        tasks="Directly compare sub-group values within and across categories.",
+        shape="data_cube",
+    )
+
+    # DATA CUBE: normalized (proportional) horizontal stacked bar of two nominal dimensions
+    df = add_row(
+        df,
+        query_templates=[
+            "What is the proportion of <dimension2> for each <dimension1>, as horizontal bars?"
+        ],
+        spec=(
+            Chart()
+            .source("<E>", "<E.url>")
+            .filter("<MARGINAL:D1,D2>")
+            .groupby("<D1>", out_name="groupTotals")
+            .rollup({"axis_total": Op.sum("<M>")})
+            .groupby(["<D2>", "<D1>"], in_name="<E>")
+            .rollup({"cell_total": Op.sum("<M>")})
+            .join("<D1>", in_name=["<E>", "groupTotals"], out_name="datasets")
+            .derive(
+                {
+                    "proportion": Expr.binop(
+                        "/", Expr.field("cell_total"), Expr.field("axis_total")
+                    )
+                }
+            )
+            .mark("bar")
+            .x(field="proportion", type="quantitative")
+            .y(field="<D1:n>", type="nominal")
+            .color(field="<D2:n>", type="nominal")
+        ),
+        chart_type=ChartType.NORMALIZED_BAR,
+        task_types=[TaskType.COMPUTE_DERIVED_VALUE],
+        description="Shows the relative proportion of one nominal dimension within each category of another as a horizontal normalized stacked bar chart.",
+        title_template="Normalized bar chart of <D2:n> within <D1:n>",
+        summary_template="Displays what share of <M> in each <D1:n> category falls into each <D2:n> value, as horizontal bars scaled to 100%.",
+        design_considerations=(
+            "First filters to the two-dimension marginal (expanded from the schema), then sums "
+            "the measure per primary-dimension group and divides each cell by its group total to "
+            "obtain proportions. Horizontal layout for more than 4 primary categories or long "
+            "labels (protocol arms, site names). Color is preferably the dimension with fewer "
+            "categories."
+        ),
+        tasks="Compare relative proportions across categories; identify dominant sub-groups.",
+        shape="data_cube",
     )
 
     return df
