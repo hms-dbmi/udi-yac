@@ -11,6 +11,9 @@ name: Release udi-yac (chat)
 #   2. git fetch origin main
 #      git tag udi-yac-v<version> origin/main && git push origin udi-yac-v<version>
 #
+# A prerelease version (0.13.0-alpha.0) may skip the promotion and be tagged on
+# origin/dev; it publishes under its preid dist-tag, not `latest`.
+#
 # No release ordering against udi-toolkit: it is a devDependency that the
 # library build bundles into dist/, so the published tarball never asks npm for
 # it and the in-tree toolkit version need not be published first.
@@ -119,12 +122,24 @@ jobs:
           name: package
           path: package
 
+      # A prerelease (0.13.0-alpha.0) publishes under the dist-tag named by its
+      # preid (alpha), so `npm install udi-yac` keeps getting the last release;
+      # pnpm publish would otherwise move `latest` to it.
+      - name: Pick dist-tag
+        id: dist
+        run: |
+          version="${GITHUB_REF_NAME#udi-yac-v}"
+          case "$version" in
+            *-*) pre="${version#*-}"; echo "tag=${pre%%.*}" >> "$GITHUB_OUTPUT"; echo "prerelease=--prerelease" >> "$GITHUB_OUTPUT" ;;
+            *) echo "tag=latest" >> "$GITHUB_OUTPUT" ;;
+          esac
+
       # --no-git-checks: the tag is checked out in detached HEAD, which pnpm's
       # default branch/cleanliness checks reject.
       - name: Publish to npm
-        run: pnpm publish package/*.tgz --no-git-checks
+        run: pnpm publish package/*.tgz --no-git-checks --tag "${{ steps.dist.outputs.tag }}"
 
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release create "$GITHUB_REF_NAME" --generate-notes --verify-tag
+        run: gh release create "$GITHUB_REF_NAME" --generate-notes --verify-tag ${{ steps.dist.outputs.prerelease }}

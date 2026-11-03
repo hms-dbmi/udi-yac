@@ -2559,7 +2559,7 @@ dev = [{ name = "pytest", specifier = ">=8.3.5" }]
 
 [[package]]
 name = "udiagent"
-version = "0.12.1"
+version = "0.13.0a0"
 source = { editable = "packages/agent" }
 dependencies = [
     { name = "jsonschema" },
