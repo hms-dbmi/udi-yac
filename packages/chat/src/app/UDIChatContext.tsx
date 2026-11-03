@@ -82,6 +82,7 @@ export function UDIChatProvider({
       conversation: storesRef.current.conversation,
       dashboard: storesRef.current.dashboard,
       dataFilters: storesRef.current.dataFilters,
+      memoryBank: storesRef.current.memoryBank,
     });
   }
   const globalStore = storesRef.current.global;
