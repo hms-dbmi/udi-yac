@@ -25,6 +25,8 @@ from __future__ import annotations
 
 import json
 
+from udiagent.schema import point_domain_values
+
 SCOPE_MATCHES = ("any", "all", "none")
 
 _ORIGIN_LABELS = {
@@ -271,7 +273,9 @@ def _value_lists(data_domains) -> dict:
 
     A list the client shortened (``distinct`` above its length, or marked
     ``omitted``) is left out: a value missing from a sample may still exist,
-    and rejecting it would block a correct filter.
+    and rejecting it would block a correct filter. A ``null`` among the values
+    does not shorten it (see ``point_domain_values``); counting it that way
+    skipped the check on every cube column.
     """
     try:
         entries = (
@@ -286,10 +290,12 @@ def _value_lists(data_domains) -> dict:
         domain = entry.get("domain")
         if not isinstance(domain, dict) or not isinstance(domain.get("values"), list):
             continue
-        values = [v for v in domain["values"] if isinstance(v, str)]
-        if domain.get("omitted") or (domain.get("distinct") or 0) > len(values):
+        values, distinct = point_domain_values(domain)
+        if domain.get("omitted") or distinct > len(values):
             continue
-        out[(entry.get("entity"), entry.get("field"))] = values
+        out[(entry.get("entity"), entry.get("field"))] = [
+            v for v in values if isinstance(v, str)
+        ]
     return out
 
 

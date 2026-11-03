@@ -698,7 +698,7 @@ class Orchestrator:
         gpt_client = self.agent._get_gpt_client(openai_api_key)
 
         rejected = []
-        for _attempt in range(MAX_FILTER_ATTEMPTS):
+        for attempt in range(MAX_FILTER_ATTEMPTS):
             retry = (
                 _retry_turns(rejected, closing=FILTER_RETRY_CLOSING) if rejected else []
             )
@@ -718,6 +718,11 @@ class Orchestrator:
             if args is None:
                 errors = ["No filter change came back."]
                 continue
+            logger.info(
+                "filter attempt=%d model chose operations=%s",
+                attempt,
+                json.dumps(args.get("operations"), ensure_ascii=False),
+            )
             # A linked column's values may arrive in another column's spelling.
             operations = translate_linked_values(
                 args.get("operations"), schema, data_domains
@@ -725,6 +730,12 @@ class Orchestrator:
             errors = validate_operations(operations, schema, data_domains, current)
             if not errors:
                 return operation_tool_calls(operations, current)
+            logger.warning(
+                "filter attempt=%d rejected (%d error(s)): %s",
+                attempt,
+                len(errors),
+                "; ".join(errors),
+            )
             rejected.append((APPLY_FILTER_OPERATIONS, args, errors))
 
         logger.warning(
