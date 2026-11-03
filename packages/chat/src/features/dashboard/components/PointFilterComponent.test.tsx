@@ -9,12 +9,20 @@
  * dropped (removeLongDomains) must also render, falling back to the
  * clicked values as options.
  */
-import { describe, it, expect, vi } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useEffect, type ReactNode } from 'react';
 import { UDIChatProvider, useDataPackage, useDataPackageStore } from '@/app/UDIChatContext';
 import { PointFilterComponent } from './PointFilterComponent';
+import type { PresentValues } from '../hooks/usePresentFieldValues';
+
+// The narrowing query has tests of its own (presentValues.test.ts); here it
+// answers whatever a test sets.
+const present = vi.hoisted(() => ({ current: {} as PresentValues }));
+vi.mock('../hooks/usePresentFieldValues', () => ({
+  usePresentFieldValues: () => present.current,
+}));
 import type { DataSelection } from '../stores/dataFiltersStore';
 import type { DataPackage, DataFieldDomain } from '@/types/dataPackage';
 
@@ -330,5 +338,61 @@ describe('PointFilterComponent — long lists', () => {
   it('has no search box on a short list', () => {
     renderFilter({ dataSourceKey: 'Event', type: 'point', selection: { organization_name: [] } });
     expect(screen.queryByRole('textbox', { name: 'Search values' })).toBeNull();
+  });
+});
+
+describe('PointFilterComponent — narrowed by the other filters', () => {
+  afterEach(() => {
+    present.current = {};
+  });
+  const diagnosis = (values: string[]): DataSelection => ({
+    dataSourceKey: 'Event',
+    type: 'point',
+    selection: { diagnosis: values },
+  });
+  const listedLabels = () =>
+    DIAGNOSES.filter((d) => screen.queryByRole('checkbox', { name: d }) != null);
+
+  it('lists only the values the other filters leave, plus the checked ones, muted', () => {
+    present.current = { diagnosis: new Set(['Diagnosis A', 'Diagnosis C']) };
+    renderFilter(diagnosis(['Diagnosis K']));
+    expect(listedLabels()).toEqual(['Diagnosis A', 'Diagnosis C', 'Diagnosis K']);
+    expect(screen.getByText(/^2 of 12 match other filters/)).toBeTruthy();
+    expect(screen.getByText('1 of 3 selected')).toBeTruthy();
+    // Its chip and its row.
+    expect(screen.getAllByTitle('Diagnosis K (no rows match the other filters)')).toHaveLength(2);
+    // The select-all row plus the three listed.
+    expect(screen.getAllByRole('checkbox')).toHaveLength(4);
+  });
+
+  it('shows the whole domain on request, and back', async () => {
+    const user = userEvent.setup();
+    present.current = { diagnosis: new Set(['Diagnosis A']) };
+    renderFilter(diagnosis([]));
+    await user.click(screen.getByRole('button', { name: 'Show all' }));
+    expect(listedLabels()).toEqual(DIAGNOSES);
+    expect(screen.getByText(/^Showing all 12/)).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Only matching' }));
+    expect(listedLabels()).toEqual(['Diagnosis A']);
+  });
+
+  it('selects all of what it lists, never the hidden values', async () => {
+    const user = userEvent.setup();
+    const onCommit = vi.fn();
+    present.current = { diagnosis: new Set(['Diagnosis A', 'Diagnosis C']) };
+    renderFilter(diagnosis(['Diagnosis K']), { onCommit });
+    await user.click(screen.getByRole('checkbox', { name: '1 of 3 selected' }));
+    expect(onCommit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        selection: { diagnosis: ['Diagnosis A', 'Diagnosis C', 'Diagnosis K'] },
+      }),
+    );
+  });
+
+  it('says nothing when every value is present', () => {
+    present.current = { diagnosis: new Set(DIAGNOSES) };
+    renderFilter(diagnosis([]));
+    expect(screen.queryByText(/match other filters/)).toBeNull();
+    expect(listedLabels()).toEqual(DIAGNOSES);
   });
 });

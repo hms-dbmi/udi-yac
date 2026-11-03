@@ -6,8 +6,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useDataPackage, useDataFilters, useTracker } from '@/app/UDIChatContext';
+import { cn } from '@/lib/utils';
 import { highlightMatch } from '@/utils/highlightMatch';
 import type { DataSelection } from '../stores/dataFiltersStore';
+import { usePresentFieldValues } from '../hooks/usePresentFieldValues';
 import { FilterTarget } from './FilterTarget';
 import type { PointSelection } from 'udi-toolkit/react';
 
@@ -57,12 +59,17 @@ export function PointFilterComponent({
   // high-cardinality field whose domain was dropped by removeLongDomains)
   // fall back to the selected values so a chart click still renders as a
   // usable multiselect instead of an error.
-  const optionsOf = (f: string): string[] => {
+  const domainOf = (f: string): string[] | null => {
     const domain = getDomainForField(entity, f);
     const values = (domain?.domain as { values: string[] } | undefined)?.values;
-    if (values && values.length > 0) return values;
-    return selectedValuesOf(f);
+    return values && values.length > 0 ? values : null;
   };
+  const optionsOf = (f: string): string[] => domainOf(f) ?? selectedValuesOf(f);
+
+  // The values the other filters leave, per field. Display only: it never
+  // edits the selection. "Show all" is per instance and not remembered.
+  const present = usePresentFieldValues(entity, allFields, filterKey);
+  const [showAll, setShowAll] = useState(false);
 
   const selectedValues = field ? selectedValuesOf(field) : [];
 
@@ -102,9 +109,11 @@ export function PointFilterComponent({
   // The select-all row. Checking every value and checking none both take in
   // every row, but they are two different places to start from: none, then
   // tick the one value wanted; all, then untick the one to leave out.
-  const handleSetAll = (f: string, all: boolean) => {
+  // `listed` is what the list shows: narrowed, that is the matching values
+  // plus the checked ones, never the values the other filters hide.
+  const handleSetAll = (f: string, all: boolean, listed: string[]) => {
     const current = (dataSelection.selection ?? {}) as PointSelection;
-    const next = all ? optionsOf(f) : [];
+    const next = all ? listed : [];
     commit({ ...dataSelection, selection: { ...current, [f]: next } });
     trackEvent('filter_selection_changed', {
       entity,
@@ -175,7 +184,12 @@ export function PointFilterComponent({
               labelOf={labelOf}
               idPrefix={`${idPrefix}-${fieldIndex}`}
               onToggle={(value, checked) => handleToggle(f, value, checked)}
-              onSetAll={(all) => handleSetAll(f, all)}
+              onSetAll={(all, listed) => handleSetAll(f, all, listed)}
+              // A field without a domain lists only its checked values;
+              // there is nothing to narrow.
+              present={domainOf(f) ? (present[f] ?? null) : null}
+              showAll={showAll}
+              onShowAllChange={setShowAll}
             />
           ))}
         </div>
@@ -191,6 +205,7 @@ const SEARCH_THRESHOLD = 10;
 /** Chips show for at most this many selected values, and only on a field with
  *  more options than this: on a short list the checkboxes already show it all. */
 const CHIP_LIMIT = 10;
+const NO_MATCH = 'no rows match the other filters';
 
 interface FieldValueListProps {
   /** The field's label, for a multi-field selection; null for a single one. */
@@ -201,11 +216,16 @@ interface FieldValueListProps {
   /** Unique to this field in this instance; checkbox ids extend it. */
   idPrefix: string;
   onToggle: (value: string, checked: boolean) => void;
-  onSetAll: (all: boolean) => void;
+  onSetAll: (all: boolean, listed: string[]) => void;
+  /** The values the other filters leave, or null when nothing narrows them. */
+  present: Set<string> | null;
+  showAll: boolean;
+  onShowAllChange: (showAll: boolean) => void;
 }
 
 /**
- * One field's values: the select-all row, the selected values as chips when
+ * One field's values, narrowed to those the other filters leave (a checked
+ * value always stays, muted if it matches nothing): the select-all row, the selected values as chips when
  * they are a few out of many, a search box on a long list, and the checkboxes.
  * The search only hides rows; it never changes the filter.
  */
@@ -217,25 +237,37 @@ function FieldValueList({
   idPrefix,
   onToggle,
   onSetAll,
+  present,
+  showAll,
+  onShowAllChange,
 }: FieldValueListProps) {
   const [query, setQuery] = useState('');
   const trimmed = query.trim();
+  const isPresent = (value: string) => present == null || present.has(String(value));
+  const matching = present ? options.filter(isPresent).length : options.length;
+  const narrowed = matching < options.length && !showAll;
 
-  // Indexes into the full list, so a row keeps its checkbox id while the
-  // search hides the others.
-  const visible = useMemo(() => {
+  // Indexes into the full list, so a row keeps its checkbox id while
+  // narrowing or the search hides the others.
+  const listed = useMemo(() => {
     const all = options.map((value, index) => ({ value, index }));
-    if (!trimmed) return all;
+    if (!narrowed || !present) return all;
+    return all.filter(({ value }) => present.has(String(value)) || selected.includes(value));
+  }, [options, narrowed, present, selected]);
+  const listedValues = listed.map(({ value }) => value);
+
+  const visible = useMemo(() => {
+    if (!trimmed) return listed;
     const q = trimmed.toLowerCase();
-    return all.filter(
+    return listed.filter(
       ({ value }) =>
         labelOf(value).toLowerCase().includes(q) ||
         (value != null && String(value).toLowerCase().includes(q)),
     );
-  }, [options, trimmed, labelOf]);
+  }, [listed, trimmed, labelOf]);
 
-  const checkedCount = options.filter((o) => selected.includes(o)).length;
-  const allChecked = options.length > 0 && checkedCount === options.length;
+  const checkedCount = listedValues.filter((o) => selected.includes(o)).length;
+  const allChecked = listedValues.length > 0 && checkedCount === listedValues.length;
   const allId = `${idPrefix}-all`;
   const showChips =
     options.length > CHIP_LIMIT && selected.length > 0 && selected.length <= CHIP_LIMIT;
@@ -253,27 +285,43 @@ function FieldValueList({
           id={allId}
           checked={allChecked}
           indeterminate={checkedCount > 0 && !allChecked}
-          onCheckedChange={(checked) => onSetAll(!!checked)}
+          onCheckedChange={(checked) => onSetAll(!!checked, listedValues)}
         />
         <Label
           htmlFor={allId}
           className="udi:text-xs udi:font-normal udi:text-muted-foreground udi:cursor-pointer"
         >
-          {checkedCount} of {options.length} selected
+          {checkedCount} of {listedValues.length} selected
         </Label>
       </div>
+      {matching < options.length && (
+        <div className="udi:text-2xs udi:text-muted-foreground">
+          {showAll
+            ? `Showing all ${options.length}`
+            : `${matching} of ${options.length} match other filters`}
+          {' · '}
+          <button
+            type="button"
+            className="udi:underline udi:underline-offset-2 udi:hover:text-foreground"
+            onClick={() => onShowAllChange(!showAll)}
+          >
+            {showAll ? 'Only matching' : 'Show all'}
+          </button>
+        </div>
+      )}
       {/* What's checked, at a glance, when it is a few rows somewhere in a
           long list. In addition to the checkboxes, never instead of them. */}
       {showChips && (
         <div className="udi:flex udi:flex-wrap udi:gap-1">
           {selected.map((value) => {
             const label = labelOf(value);
+            const absent = !isPresent(value);
             return (
               <Badge
                 key={value ?? '__null__'}
                 variant="secondary"
-                className="udi:max-w-full udi:pr-0.5"
-                title={label}
+                className={cn('udi:max-w-full udi:pr-0.5', absent && 'udi:opacity-60')}
+                title={absent ? `${label} (${NO_MATCH})` : label}
               >
                 <span className="udi:truncate">{label}</span>
                 <button
@@ -313,6 +361,8 @@ function FieldValueList({
         {visible.map(({ value, index }) => {
           // Display only — `value` itself still goes into the filter.
           const label = labelOf(value);
+          // Checked, but no row under the other filters has it.
+          const absent = !isPresent(value);
           // Indexes, not names: values and fields hold spaces,
           // which make an invalid id.
           const id = `${idPrefix}-${index}`;
@@ -333,8 +383,11 @@ function FieldValueList({
                   title. */}
               <Label
                 htmlFor={id}
-                title={label}
-                className="udi:min-w-0 udi:text-xs udi:cursor-pointer"
+                title={absent ? `${label} (${NO_MATCH})` : label}
+                className={cn(
+                  'udi:min-w-0 udi:text-xs udi:cursor-pointer',
+                  absent && 'udi:text-muted-foreground udi:italic',
+                )}
               >
                 <span className="udi:truncate">{highlightMatch(label, trimmed)}</span>
               </Label>
@@ -349,7 +402,7 @@ function FieldValueList({
       </ScrollArea>
       {trimmed && visible.length > 0 && (
         <span className="udi:text-2xs udi:text-muted-foreground">
-          {visible.length} of {options.length} shown
+          {visible.length} of {listed.length} shown
         </span>
       )}
     </div>
