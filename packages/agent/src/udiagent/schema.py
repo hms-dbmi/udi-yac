@@ -302,6 +302,24 @@ def simplify_data_schema(data_schema):
 PROMPT_VALUE_SAMPLE = 8
 
 
+def point_domain_values(domain: dict) -> tuple[list, int]:
+    """A point domain's values and its distinct count, both without ``null``.
+
+    The client sends ``null`` among the values when the column holds one (a
+    cube's roll-up marker, a missing value) and counts it in ``distinct``.
+    Nothing can name it, so it is dropped from both. Dropping it from the
+    values alone makes a complete list read as a shortened one: one short of
+    ``distinct``, which every caller takes to mean "only a sample was sent".
+    """
+    raw = domain.get("values")
+    raw = raw if isinstance(raw, list) else []
+    values = [v for v in raw if v is not None]
+    distinct = domain.get("distinct")
+    if not isinstance(distinct, int) or distinct < len(raw):
+        distinct = len(raw)
+    return values, distinct - (len(raw) - len(values))
+
+
 def simplify_data_domains(data_domains):
     """Simplify data domains for better LLM consumption.
 
@@ -344,14 +362,11 @@ def simplify_data_domains(data_domains):
                 dmax = domain.get("max", "")
                 lines.append(f"        range: [{dmin}, {dmax}]")
             elif ftype == "point":
-                values = [v for v in domain.get("values", []) if v is not None]
                 # The client sends the true count alongside the values, which may
                 # be fewer or none. Without it a shortened list reads as the whole
                 # column, and the model starts telling users a value does not
                 # exist because it was not in the sample.
-                distinct = domain.get("distinct")
-                if not isinstance(distinct, int) or distinct < len(values):
-                    distinct = len(values)
+                values, distinct = point_domain_values(domain)
 
                 if domain.get("omitted") or (distinct and not values):
                     lines.append(
@@ -438,8 +453,7 @@ def lookup_field_values(data_domains, entity, field, contains=None):
             f"{domain.get('min')} to {domain.get('max')}."
         )
 
-    values = [v for v in domain.get("values", []) if v is not None]
-    distinct = domain.get("distinct", len(values))
+    values, distinct = point_domain_values(domain)
     if not values:
         # Omitted for size, which is not the same as being an identifier: a
         # long vocabulary can be omitted too. Say what is known and no more.
@@ -456,17 +470,28 @@ def lookup_field_values(data_domains, entity, field, contains=None):
                 f"No value of {entity}.{field} matches '{contains}' (searched all "
                 f"{len(values)} on record). Try a shorter or different search."
             )
-        shown = ", ".join(str(v) for v in found[:LOOKUP_MATCH_CAP])
+        shown = _quoted(found[:LOOKUP_MATCH_CAP])
         rest = len(found) - LOOKUP_MATCH_CAP
-        more = f" … and {rest} more; search more narrowly to see them" if rest > 0 else ""
+        more = f" (and {rest} more; search more narrowly to see them)" if rest > 0 else ""
         return (
-            f"{len(found)} value(s) of {entity}.{field} match '{contains}': "
-            f"{shown}{more}."
+            f"{len(found)} value(s) of {entity}.{field} match '{contains}'"
+            f"{_COPY_EXACTLY}{shown}{more}"
         )
-    listed = ", ".join(str(v) for v in values)
+    listed = _quoted(values)
     if len(values) < distinct:
         return (
             f"{entity}.{field} has {distinct} distinct values. The "
-            f"{len(values)} on record here: {listed}."
+            f"{len(values)} on record here{_COPY_EXACTLY}{listed}"
         )
-    return f"{entity}.{field} has {distinct} distinct values, all of them: {listed}."
+    return f"{entity}.{field} has {distinct} distinct values, all of them{_COPY_EXACTLY}{listed}"
+
+
+#: Leads a value list the model will copy into a filter or a chart. Each value
+#: is quoted and nothing follows the last one: a bare list ending in a sentence
+#: period was copied with the period ("PBTC026."), and a value containing a
+#: comma read as two.
+_COPY_EXACTLY = ", each in quotes (copy a value exactly, without the quotes): "
+
+
+def _quoted(values) -> str:
+    return ", ".join(json.dumps(str(v), ensure_ascii=False) for v in values)
