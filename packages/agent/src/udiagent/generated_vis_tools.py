@@ -2,7 +2,7 @@
 Auto-generated visualization tool definitions.
 
 Generated from: src/udiagent/data/skills/template_visualizations.json
-Tools: 78
+Tools: 81
 
 Schema-independent: tool params are free-form strings resolved against the
 per-request data schema at runtime (see vis_generate._execute_generate).
@@ -1780,7 +1780,22 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '"representation": {"mark": "row", "mapping": [{"encoding": "text", "field": "Null <F> Count", "mark": "text", '
  '"type": "nominal"}, {"encoding": "text", "field": "<E> Count", "mark": "text", "type": "nominal"}, {"encoding": "x", '
  '"field": "Null <F> %", "mark": "bar", "type": "quantitative", "domain": {"min": 0, "max": 1}}, {"encoding": "y", '
- '"field": "Null <F> %", "mark": "line", "type": "quantitative", "range": {"min": 0.5, "max": 0.5}}]}}']
+ '"field": "Null <F> %", "mark": "line", "type": "quantitative", "range": {"min": 0.5, "max": 0.5}}]}}',
+ '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"filter": "<MARGINAL:D1,D2>"}], '
+ '"representation": {"mark": "bar", "mapping": [{"encoding": "x", "field": "<M>", "type": "quantitative"}, '
+ '{"encoding": "y", "field": "<D1:n>", "type": "nominal"}, {"encoding": "color", "field": "<D2:n>", "type": '
+ '"nominal"}]}}',
+ '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"filter": "<MARGINAL:D1,D2>"}], '
+ '"representation": {"mark": "bar", "mapping": [{"encoding": "x", "field": "<M>", "type": "quantitative"}, '
+ '{"encoding": "y", "field": "<D1:n>", "type": "nominal"}, {"encoding": "yOffset", "field": "<D2:n>", "type": '
+ '"nominal"}, {"encoding": "color", "field": "<D2:n>", "type": "nominal"}]}}',
+ '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"filter": "<MARGINAL:D1,D2>"}, {"groupby": '
+ '"<D1>", "out": "groupTotals"}, {"rollup": {"axis_total": {"op": "sum", "field": "<M>"}}}, {"groupby": ["<D2>", '
+ '"<D1>"], "in": "<E>"}, {"rollup": {"cell_total": {"op": "sum", "field": "<M>"}}}, {"join": {"on": "<D1>"}, "in": '
+ '["<E>", "groupTotals"], "out": "datasets"}, {"derive": {"proportion": {"op": "/", "left": {"field": "cell_total"}, '
+ '"right": {"field": "axis_total"}}}}], "representation": {"mark": "bar", "mapping": [{"encoding": "x", "field": '
+ '"proportion", "type": "quantitative"}, {"encoding": "y", "field": "<D1:n>", "type": "nominal"}, {"encoding": '
+ '"color", "field": "<D2:n>", "type": "nominal"}]}}']
 
 
 # OpenAI function-calling tool definitions
@@ -1963,11 +1978,12 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'vertical stacked bar chart. Design: Reads the cube marginal by filtering to rows where '
                               'the chosen dimension(s) are present and every other dimension is empty; the measure is '
                               'mapped directly with no re-aggregation. The marginal filter is expanded from the '
-                              "per-request schema's dimension list, so this template works for any cube. Color encodes "
-                              'the sub-group; prefer the dimension with fewer categories for color. Tasks: Compare '
-                              'group compositions across categories; identify dominant sub-groups. Query patterns: How '
-                              'many are there by <dimension1> and <dimension2>?; Make a stacked bar chart across two '
-                              'categorical dimensions.',
+                              "per-request schema's dimension list, so this template works for any cube. Vertical "
+                              'stacked layout for few, short primary categories (<=4); use the horizontal variant '
+                              'otherwise. Color encodes the sub-group; prefer the dimension with fewer categories for '
+                              'color. Tasks: Compare group compositions across categories; identify dominant '
+                              'sub-groups. Query patterns: How many are there by <dimension1> and <dimension2>?; Make '
+                              'a stacked bar chart across two categorical dimensions.',
                'name': 'vis_010_stacked_bar_vert_stacked',
                'parameters': {'additionalProperties': False,
                               'properties': {'dimension1': {'description': 'cube nominal dimension, encodes x-axis.',
@@ -2019,7 +2035,8 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'measure is mapped directly with no re-aggregation. The marginal filter is expanded from '
                               "the per-request schema's dimension list, so this template works for any cube. xOffset "
                               'gives side-by-side grouping for direct comparison of the sub-group within each '
-                              'category. Tasks: Directly compare sub-group values within and across categories. Query '
+                              'category. Suitable for few, short primary categories (<=4); use the horizontal variant '
+                              'otherwise. Tasks: Directly compare sub-group values within and across categories. Query '
                               'patterns: Make a grouped (side-by-side) bar chart across two categorical dimensions.',
                'name': 'vis_013_stacked_bar_grouped',
                'parameters': {'additionalProperties': False,
@@ -2083,9 +2100,10 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'category of another as a normalized stacked bar chart. Design: First filters to the '
                               'two-dimension marginal (expanded from the schema), then sums the measure per '
                               'primary-dimension group and divides each cell by its group total to obtain proportions. '
-                              'Color is preferably the dimension with fewer categories. Tasks: Compare relative '
-                              'proportions across categories; identify dominant sub-groups. Query patterns: What is '
-                              'the proportion of <dimension2> for each <dimension1>?',
+                              'Vertical layout for few, short primary categories (<=4); use the horizontal variant '
+                              'otherwise. Color is preferably the dimension with fewer categories. Tasks: Compare '
+                              'relative proportions across categories; identify dominant sub-groups. Query patterns: '
+                              'What is the proportion of <dimension2> for each <dimension1>?',
                'name': 'vis_016_stacked_bar_proportion_stacked_normalized',
                'parameters': {'additionalProperties': False,
                               'properties': {'dimension1': {'description': 'cube nominal dimension, encodes x-axis — '
@@ -5423,6 +5441,73 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                        'type': 'string'}},
                               'required': ['entity', 'field'],
                               'type': 'object'}},
+  'type': 'function'},
+ {'function': {'description': '[stacked_bar] Shows the pre-aggregated cube measure by two nominal dimensions as a '
+                              'horizontal stacked bar chart. Design: Reads the cube marginal by filtering to rows '
+                              'where the chosen dimension(s) are present and every other dimension is empty; the '
+                              'measure is mapped directly with no re-aggregation. The marginal filter is expanded from '
+                              "the per-request schema's dimension list, so this template works for any cube. "
+                              'Horizontal stacked layout for more than 4 primary categories or long labels (protocol '
+                              'arms, site names), which a vertical axis would rotate or truncate. Color encodes the '
+                              'sub-group; prefer the dimension with fewer categories for color. Tasks: Compare group '
+                              'compositions across categories; identify dominant sub-groups. Query patterns: How many '
+                              'are there by <dimension1> and <dimension2>?; Make a horizontal stacked bar chart across '
+                              'two categorical dimensions.',
+               'name': 'vis_078_stacked_bar_horiz_stacked',
+               'parameters': {'additionalProperties': False,
+                              'properties': {'dimension1': {'description': 'cube nominal dimension, encodes y-axis.',
+                                                            'type': 'string'},
+                                             'dimension2': {'description': 'cube nominal dimension, encodes color.',
+                                                            'type': 'string'},
+                                             'entity': {'description': 'The data entity (table) to visualize.',
+                                                        'type': 'string'}},
+                              'required': ['entity', 'dimension1', 'dimension2'],
+                              'type': 'object'}},
+  'type': 'function'},
+ {'function': {'description': '[stacked_bar] Shows the pre-aggregated cube measure by two nominal dimensions as a '
+                              'grouped (side-by-side) horizontal bar chart. Design: Reads the cube marginal by '
+                              'filtering to rows where the chosen dimension(s) are present and every other dimension '
+                              'is empty; the measure is mapped directly with no re-aggregation. The marginal filter is '
+                              "expanded from the per-request schema's dimension list, so this template works for any "
+                              'cube. yOffset gives side-by-side grouping in horizontal orientation. Chosen when there '
+                              'are more than 4 primary categories or long labels (protocol arms, site names). Tasks: '
+                              'Directly compare sub-group values within and across categories. Query patterns: Make a '
+                              'horizontal grouped (side-by-side) bar chart across two categorical dimensions.',
+               'name': 'vis_079_stacked_bar_horiz_grouped',
+               'parameters': {'additionalProperties': False,
+                              'properties': {'dimension1': {'description': 'cube nominal dimension, encodes y-axis.',
+                                                            'type': 'string'},
+                                             'dimension2': {'description': 'cube nominal dimension, encodes y-axis '
+                                                                           'sub-group, color.',
+                                                            'type': 'string'},
+                                             'entity': {'description': 'The data entity (table) to visualize.',
+                                                        'type': 'string'}},
+                              'required': ['entity', 'dimension1', 'dimension2'],
+                              'type': 'object'}},
+  'type': 'function'},
+ {'function': {'description': '[stacked_bar] Shows the relative proportion of one nominal dimension within each '
+                              'category of another as a horizontal normalized stacked bar chart. Design: First filters '
+                              'to the two-dimension marginal (expanded from the schema), then sums the measure per '
+                              'primary-dimension group and divides each cell by its group total to obtain proportions. '
+                              'Horizontal layout for more than 4 primary categories or long labels (protocol arms, '
+                              'site names). Color is preferably the dimension with fewer categories. Tasks: Compare '
+                              'relative proportions across categories; identify dominant sub-groups. Query patterns: '
+                              'What is the proportion of <dimension2> for each <dimension1>, as horizontal bars?',
+               'name': 'vis_080_stacked_bar_proportion_horiz_stacked_normalized',
+               'parameters': {'additionalProperties': False,
+                              'properties': {'dimension1': {'description': 'cube nominal dimension, encodes y-axis — '
+                                                                           'the JOIN KEY on this table: the column '
+                                                                           'holding the shared record id (e.g. a '
+                                                                           'subject or patient id). Both sides of a '
+                                                                           'join must name columns holding the SAME '
+                                                                           'identifiers, or nothing matches.',
+                                                            'type': 'string'},
+                                             'dimension2': {'description': 'cube nominal dimension, encodes color.',
+                                                            'type': 'string'},
+                                             'entity': {'description': 'The data entity (table) to visualize.',
+                                                        'type': 'string'}},
+                              'required': ['entity', 'dimension1', 'dimension2'],
+                              'type': 'object'}},
   'type': 'function'}]
 
 
@@ -5731,7 +5816,11 @@ TOOL_DISPATCH = {'vis_000_barchart_count_vert_grouped': (0, {'entity': 'E', 'fie
  'vis_074_grouped_area_density': (74, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
  'vis_075_grouped_dot_distribution': (75, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
  'vis_076_table_count_null_nonnull': (76, {'entity': 'E', 'field': 'F'}),
- 'vis_077_table_count_null': (77, {'entity': 'E', 'field': 'F'})}
+ 'vis_077_table_count_null': (77, {'entity': 'E', 'field': 'F'}),
+ 'vis_078_stacked_bar_horiz_stacked': (78, {'dimension1': 'D1', 'dimension2': 'D2', 'entity': 'E'}),
+ 'vis_079_stacked_bar_horiz_grouped': (79, {'dimension1': 'D1', 'dimension2': 'D2', 'entity': 'E'}),
+ 'vis_080_stacked_bar_proportion_horiz_stacked_normalized': (80,
+                                                             {'dimension1': 'D1', 'dimension2': 'D2', 'entity': 'E'})}
 
 
 # Tags per tool name (drives per-request template selection)
@@ -5812,7 +5901,10 @@ TOOL_TAGS = {'vis_000_barchart_count_vert_grouped': ['line_item', 'barchart'],
  'vis_074_grouped_area_density': ['line_item', 'grouped_area'],
  'vis_075_grouped_dot_distribution': ['line_item', 'grouped_dot'],
  'vis_076_table_count_null_nonnull': ['line_item', 'table'],
- 'vis_077_table_count_null': ['line_item', 'table']}
+ 'vis_077_table_count_null': ['line_item', 'table'],
+ 'vis_078_stacked_bar_horiz_stacked': ['data_cube', 'stacked_bar'],
+ 'vis_079_stacked_bar_horiz_grouped': ['data_cube', 'stacked_bar'],
+ 'vis_080_stacked_bar_proportion_horiz_stacked_normalized': ['data_cube', 'stacked_bar']}
 
 
 # Entity keys per tool name that may share a table with another entity
@@ -5894,7 +5986,10 @@ TOOL_SHARED_ENTITIES = {'vis_000_barchart_count_vert_grouped': [],
  'vis_074_grouped_area_density': [],
  'vis_075_grouped_dot_distribution': [],
  'vis_076_table_count_null_nonnull': [],
- 'vis_077_table_count_null': []}
+ 'vis_077_table_count_null': [],
+ 'vis_078_stacked_bar_horiz_stacked': [],
+ 'vis_079_stacked_bar_horiz_grouped': [],
+ 'vis_080_stacked_bar_proportion_horiz_stacked_normalized': []}
 
 # User-facing text per tool name: (title_template, summary_template),
 # with placeholders rewritten to tokens the frontend resolves against
@@ -6125,4 +6220,14 @@ TOOL_TEXT = {'vis_000_barchart_count_vert_grouped': ('Bar chart of the number of
                                       'of them that is.'),
  'vis_077_table_count_null': ('Table of missing {enc:text} values',
                               'Displays how many {entity} are missing {field:text}, and what percentage of them that '
-                              'is.')}
+                              'is.'),
+ 'vis_078_stacked_bar_horiz_stacked': ('{enc:x} by {enc:y} and {enc:color}',
+                                       'Displays {enc:x} for each {enc:y} category as horizontal bars, split by '
+                                       '{enc:color}.'),
+ 'vis_079_stacked_bar_horiz_grouped': ('{enc:x} by {enc:y} and {enc:yOffset}',
+                                       'Displays {enc:x} for each {enc:y} category as horizontal bars, placed side by '
+                                       'side for each {enc:yOffset}.'),
+ 'vis_080_stacked_bar_proportion_horiz_stacked_normalized': ('Normalized bar chart of {enc:color} within {enc:y}',
+                                                             'Displays what share of {bind:M} in each {enc:y} category '
+                                                             'falls into each {enc:color} value, as horizontal bars '
+                                                             'scaled to 100%.')}
