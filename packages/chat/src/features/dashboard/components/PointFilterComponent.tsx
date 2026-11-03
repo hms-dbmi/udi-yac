@@ -1,8 +1,12 @@
-import { useId } from 'react';
+import { useCallback, useId, useMemo, useState } from 'react';
+import { Search, X } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useDataPackage, useDataFilters, useTracker } from '@/app/UDIChatContext';
+import { highlightMatch } from '@/utils/highlightMatch';
 import type { DataSelection } from '../stores/dataFiltersStore';
 import { FilterTarget } from './FilterTarget';
 import type { PointSelection } from 'udi-toolkit/react';
@@ -61,6 +65,12 @@ export function PointFilterComponent({
   };
 
   const selectedValues = field ? selectedValuesOf(field) : [];
+
+  // Stable, so a field's search doesn't refilter on every render.
+  const labelOf = useCallback(
+    (value: string) => (value == null ? '<null>' : getValueLabel(String(value))),
+    [getValueLabel],
+  );
 
   // Error only for the genuinely broken cases: no fields at all, or an LLM
   // (tweakable) single-field filter whose values fail domain validation.
@@ -156,86 +166,191 @@ export function PointFilterComponent({
       />
       {isValid ? (
         <div className="udi:space-y-2">
-          {allFields.map((f, fieldIndex) => {
-            const values = selectedValuesOf(f);
-            const options = optionsOf(f);
-            const checkedCount = options.filter((o) => values.includes(o)).length;
-            const allChecked = options.length > 0 && checkedCount === options.length;
-            const allId = `${idPrefix}-${fieldIndex}-all`;
-            return (
-              <div key={f} className="udi:space-y-1.5">
-                {allFields.length > 1 && (
-                  <div className="udi:text-xs udi:font-medium udi:text-muted-foreground">
-                    {getFieldLabel(entity, f)}
-                  </div>
-                )}
-                {/* Select all / none, mixed while some are checked; a click
-                    from mixed checks the rest. The count says how much of
-                    the list is out of view. Outside the scroll, so it stays. */}
-                <div className="udi:flex udi:h-6 udi:items-center udi:gap-2 udi:border-b udi:border-border">
-                  <Checkbox
-                    id={allId}
-                    checked={allChecked}
-                    indeterminate={checkedCount > 0 && !allChecked}
-                    onCheckedChange={(checked) => handleSetAll(f, !!checked)}
-                  />
-                  <Label
-                    htmlFor={allId}
-                    className="udi:text-xs udi:font-normal udi:text-muted-foreground udi:cursor-pointer"
-                  >
-                    {checkedCount} of {options.length} selected
-                  </Label>
-                </div>
-                {/* Rows are 1.5rem, and the list's height a whole number of
-                    them plus half, so a list that scrolls visibly cuts its
-                    last row in two. --udi-filter-rows sets the count (the
-                    chip popover asks for more). The edge shadows say the
-                    same where a half row alone is easy to miss. */}
-                <ScrollArea
-                  scrollShadow
-                  viewportClassName="udi:max-h-[calc((var(--udi-filter-rows,8)_+_0.5)_*_1.5rem)]"
-                >
-                  {options.map((value, i) => {
-                    // Display only — `value` itself still goes into the filter.
-                    const label = value == null ? '<null>' : getValueLabel(String(value));
-                    // Indexes, not names: values and fields hold spaces,
-                    // which make an invalid id.
-                    const id = `${idPrefix}-${fieldIndex}-${i}`;
-                    return (
-                      <div
-                        key={value ?? '__null__'}
-                        className="udi:flex udi:h-6 udi:items-center udi:gap-2"
-                      >
-                        {/* The checkbox's hit area reaches 8px past its
-                            16px box by default, which on the last row spills
-                            out of the list and makes even a short one scroll.
-                            4px fills the 24px row exactly. */}
-                        <Checkbox
-                          id={id}
-                          className="udi:after:-inset-y-1"
-                          checked={values.includes(value)}
-                          onCheckedChange={(checked) => handleToggle(f, value, !!checked)}
-                        />
-                        {/* One line, so every row is the same height and the
-                            half-row cut lands mid-row; the full text is the
-                            title. */}
-                        <Label
-                          htmlFor={id}
-                          title={label}
-                          className="udi:min-w-0 udi:text-xs udi:cursor-pointer"
-                        >
-                          <span className="udi:truncate">{label}</span>
-                        </Label>
-                      </div>
-                    );
-                  })}
-                </ScrollArea>
-              </div>
-            );
-          })}
+          {allFields.map((f, fieldIndex) => (
+            <FieldValueList
+              key={f}
+              heading={allFields.length > 1 ? getFieldLabel(entity, f) : null}
+              options={optionsOf(f)}
+              selected={selectedValuesOf(f)}
+              labelOf={labelOf}
+              idPrefix={`${idPrefix}-${fieldIndex}`}
+              onToggle={(value, checked) => handleToggle(f, value, checked)}
+              onSetAll={(all) => handleSetAll(f, all)}
+            />
+          ))}
         </div>
       ) : (
         <span className="udi:text-sm udi:text-destructive">Error: Invalid filter.</span>
+      )}
+    </div>
+  );
+}
+
+/** More options than this and a field gets a search box. */
+const SEARCH_THRESHOLD = 10;
+/** Chips show for at most this many selected values, and only on a field with
+ *  more options than this: on a short list the checkboxes already show it all. */
+const CHIP_LIMIT = 10;
+
+interface FieldValueListProps {
+  /** The field's label, for a multi-field selection; null for a single one. */
+  heading: string | null;
+  options: string[];
+  selected: string[];
+  labelOf: (value: string) => string;
+  /** Unique to this field in this instance; checkbox ids extend it. */
+  idPrefix: string;
+  onToggle: (value: string, checked: boolean) => void;
+  onSetAll: (all: boolean) => void;
+}
+
+/**
+ * One field's values: the select-all row, the selected values as chips when
+ * they are a few out of many, a search box on a long list, and the checkboxes.
+ * The search only hides rows; it never changes the filter.
+ */
+function FieldValueList({
+  heading,
+  options,
+  selected,
+  labelOf,
+  idPrefix,
+  onToggle,
+  onSetAll,
+}: FieldValueListProps) {
+  const [query, setQuery] = useState('');
+  const trimmed = query.trim();
+
+  // Indexes into the full list, so a row keeps its checkbox id while the
+  // search hides the others.
+  const visible = useMemo(() => {
+    const all = options.map((value, index) => ({ value, index }));
+    if (!trimmed) return all;
+    const q = trimmed.toLowerCase();
+    return all.filter(
+      ({ value }) =>
+        labelOf(value).toLowerCase().includes(q) ||
+        (value != null && String(value).toLowerCase().includes(q)),
+    );
+  }, [options, trimmed, labelOf]);
+
+  const checkedCount = options.filter((o) => selected.includes(o)).length;
+  const allChecked = options.length > 0 && checkedCount === options.length;
+  const allId = `${idPrefix}-all`;
+  const showChips =
+    options.length > CHIP_LIMIT && selected.length > 0 && selected.length <= CHIP_LIMIT;
+
+  return (
+    <div className="udi:space-y-1.5">
+      {heading && (
+        <div className="udi:text-xs udi:font-medium udi:text-muted-foreground">{heading}</div>
+      )}
+      {/* Select all / none, mixed while some are checked; a click
+          from mixed checks the rest. The count says how much of
+          the list is out of view. Outside the scroll, so it stays. */}
+      <div className="udi:flex udi:h-6 udi:items-center udi:gap-2 udi:border-b udi:border-border">
+        <Checkbox
+          id={allId}
+          checked={allChecked}
+          indeterminate={checkedCount > 0 && !allChecked}
+          onCheckedChange={(checked) => onSetAll(!!checked)}
+        />
+        <Label
+          htmlFor={allId}
+          className="udi:text-xs udi:font-normal udi:text-muted-foreground udi:cursor-pointer"
+        >
+          {checkedCount} of {options.length} selected
+        </Label>
+      </div>
+      {/* What's checked, at a glance, when it is a few rows somewhere in a
+          long list. In addition to the checkboxes, never instead of them. */}
+      {showChips && (
+        <div className="udi:flex udi:flex-wrap udi:gap-1">
+          {selected.map((value) => {
+            const label = labelOf(value);
+            return (
+              <Badge
+                key={value ?? '__null__'}
+                variant="secondary"
+                className="udi:max-w-full udi:pr-0.5"
+                title={label}
+              >
+                <span className="udi:truncate">{label}</span>
+                <button
+                  type="button"
+                  aria-label={`Remove ${label}`}
+                  className="udi:rounded-full udi:p-0.5 udi:hover:bg-muted-foreground/20"
+                  onClick={() => onToggle(value, false)}
+                >
+                  <X aria-hidden className="udi:size-3" />
+                </button>
+              </Badge>
+            );
+          })}
+        </div>
+      )}
+      {options.length > SEARCH_THRESHOLD && (
+        <div className="udi:relative">
+          <Search className="udi:pointer-events-none udi:absolute udi:top-1/2 udi:left-2 udi:h-3 udi:w-3 udi:-translate-y-1/2 udi:text-muted-foreground" />
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search values..."
+            aria-label="Search values"
+            className="udi:h-7 udi:pl-7 udi:text-xs"
+          />
+        </div>
+      )}
+      {/* Rows are 1.5rem, and the list's height a whole number of
+          them plus half, so a list that scrolls visibly cuts its
+          last row in two. --udi-filter-rows sets the count (the
+          chip popover asks for more). The edge shadows say the
+          same where a half row alone is easy to miss. */}
+      <ScrollArea
+        scrollShadow
+        viewportClassName="udi:max-h-[calc((var(--udi-filter-rows,8)_+_0.5)_*_1.5rem)]"
+      >
+        {visible.map(({ value, index }) => {
+          // Display only — `value` itself still goes into the filter.
+          const label = labelOf(value);
+          // Indexes, not names: values and fields hold spaces,
+          // which make an invalid id.
+          const id = `${idPrefix}-${index}`;
+          return (
+            <div key={value ?? '__null__'} className="udi:flex udi:h-6 udi:items-center udi:gap-2">
+              {/* The checkbox's hit area reaches 8px past its
+                  16px box by default, which on the last row spills
+                  out of the list and makes even a short one scroll.
+                  4px fills the 24px row exactly. */}
+              <Checkbox
+                id={id}
+                className="udi:after:-inset-y-1"
+                checked={selected.includes(value)}
+                onCheckedChange={(checked) => onToggle(value, !!checked)}
+              />
+              {/* One line, so every row is the same height and the
+                  half-row cut lands mid-row; the full text is the
+                  title. */}
+              <Label
+                htmlFor={id}
+                title={label}
+                className="udi:min-w-0 udi:text-xs udi:cursor-pointer"
+              >
+                <span className="udi:truncate">{highlightMatch(label, trimmed)}</span>
+              </Label>
+            </div>
+          );
+        })}
+        {visible.length === 0 && (
+          <span className="udi:text-xs udi:text-muted-foreground">
+            No values match {`"${trimmed}"`}.
+          </span>
+        )}
+      </ScrollArea>
+      {trimmed && visible.length > 0 && (
+        <span className="udi:text-2xs udi:text-muted-foreground">
+          {visible.length} of {options.length} shown
+        </span>
       )}
     </div>
   );

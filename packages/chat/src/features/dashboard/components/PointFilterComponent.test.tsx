@@ -30,6 +30,7 @@ const pkg = {
           { name: 'organization_name', 'udi:data_type': 'nominal' },
           { name: 'event_type', 'udi:data_type': 'nominal' },
           { name: 'protocol_name_and_arm', 'udi:data_type': 'nominal' },
+          { name: 'diagnosis', 'udi:data_type': 'nominal' },
         ],
       },
     },
@@ -41,6 +42,9 @@ const pkg = {
     },
   ],
 } as unknown as DataPackage;
+
+/** Twelve values: past the search and chip thresholds of ten. */
+const DIAGNOSES = Array.from({ length: 12 }, (_, i) => `Diagnosis ${String.fromCharCode(65 + i)}`);
 
 // protocol_name_and_arm deliberately has NO domain (high-cardinality drop).
 const domains: DataFieldDomain[] = [
@@ -57,6 +61,13 @@ const domains: DataFieldDomain[] = [
     type: 'point',
     fieldDescription: '',
     domain: { values: ['Deceased', 'Progressive', 'Recurrence'] },
+  },
+  {
+    entity: 'Event',
+    field: 'diagnosis',
+    type: 'point',
+    fieldDescription: '',
+    domain: { values: DIAGNOSES },
   },
   {
     entity: 'Donor',
@@ -97,7 +108,7 @@ function Harness({ children, labels }: { children: ReactNode; labels: LabelOverr
       loadingPhase: 'ready',
       entityNames: ['Event', 'Donor'],
       categoricalSourceFields: {
-        Event: ['organization_name', 'event_type', 'protocol_name_and_arm'],
+        Event: ['organization_name', 'event_type', 'protocol_name_and_arm', 'diagnosis'],
         Donor: ['sex'],
       },
     });
@@ -243,5 +254,81 @@ describe('PointFilterComponent — entity/field pickers', () => {
     expect(onCommit).toHaveBeenCalledWith(
       expect.objectContaining({ dataSourceKey: 'Donor', selection: { sex: [] } }),
     );
+  });
+});
+
+describe('PointFilterComponent — long lists', () => {
+  const diagnosis = (values: string[]): DataSelection => ({
+    dataSourceKey: 'Event',
+    type: 'point',
+    selection: { diagnosis: values },
+  });
+  const chipRemovers = () => screen.queryAllByRole('button', { name: /^Remove / });
+
+  it('shows the selected values as chips when they are a few of many', () => {
+    renderFilter(diagnosis(['Diagnosis B', 'Diagnosis K']));
+    expect(chipRemovers().map((b) => b.getAttribute('aria-label'))).toEqual([
+      'Remove Diagnosis B',
+      'Remove Diagnosis K',
+    ]);
+    // In addition to the checkboxes, not instead of them.
+    expect(screen.getAllByRole('checkbox')).toHaveLength(DIAGNOSES.length + 1);
+  });
+
+  it('shows no chips for none, all, more than ten, or a short list', () => {
+    const { unmount } = renderFilter(diagnosis([]));
+    expect(chipRemovers()).toHaveLength(0);
+    unmount();
+    const all = renderFilter(diagnosis(DIAGNOSES));
+    expect(chipRemovers()).toHaveLength(0);
+    all.unmount();
+    const eleven = renderFilter(diagnosis(DIAGNOSES.slice(0, 11)));
+    expect(chipRemovers()).toHaveLength(0);
+    eleven.unmount();
+    renderFilter({
+      dataSourceKey: 'Event',
+      type: 'point',
+      selection: { organization_name: ['CHOP'] },
+    });
+    expect(chipRemovers()).toHaveLength(0);
+  });
+
+  it("unchecks a value from its chip's remove button", async () => {
+    const user = userEvent.setup();
+    const onCommit = vi.fn();
+    renderFilter(diagnosis(['Diagnosis B', 'Diagnosis K']), { onCommit });
+    await user.click(screen.getByRole('button', { name: 'Remove Diagnosis B' }));
+    expect(onCommit).toHaveBeenCalledWith(
+      expect.objectContaining({ selection: { diagnosis: ['Diagnosis K'] } }),
+    );
+  });
+
+  it('searches a long list only, without changing the filter', async () => {
+    const user = userEvent.setup();
+    const onCommit = vi.fn();
+    renderFilter(diagnosis(['Diagnosis B']), { onCommit });
+    await user.type(screen.getByRole('textbox', { name: 'Search values' }), 'diagnosis k');
+    expect(screen.queryByLabelText('Diagnosis A')).toBeNull();
+    expect(screen.getByText('1 of 12 shown')).toBeTruthy();
+    // The checked value is out of the list but still in the filter, and
+    // still visible as a chip.
+    expect(screen.getByRole('button', { name: 'Remove Diagnosis B' })).toBeTruthy();
+    expect(onCommit).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('checkbox', { name: 'Diagnosis K' }));
+    expect(onCommit).toHaveBeenCalledWith(
+      expect.objectContaining({ selection: { diagnosis: ['Diagnosis B', 'Diagnosis K'] } }),
+    );
+  });
+
+  it('matches the display label as well as the raw value', async () => {
+    const user = userEvent.setup();
+    renderFilter(diagnosis([]), { valueLabels: { 'Diagnosis C': 'Medulloblastoma' } });
+    await user.type(screen.getByRole('textbox', { name: 'Search values' }), 'medullo');
+    expect(screen.getByText('1 of 12 shown')).toBeTruthy();
+  });
+
+  it('has no search box on a short list', () => {
+    renderFilter({ dataSourceKey: 'Event', type: 'point', selection: { organization_name: [] } });
+    expect(screen.queryByRole('textbox', { name: 'Search values' })).toBeNull();
   });
 });
