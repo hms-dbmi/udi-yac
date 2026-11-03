@@ -222,7 +222,7 @@
     "task_types": ["Compute_Derived_Value"],
     "tags": ["data_cube", "stacked_bar"],
     "description": "Shows the pre-aggregated cube measure by two nominal dimensions as a vertical stacked bar chart.",
-    "design_considerations": "Reads the cube marginal by filtering to rows where the chosen dimension(s) are present and every other dimension is empty; the measure is mapped directly with no re-aggregation. The marginal filter is expanded from the per-request schema's dimension list, so this template works for any cube. Color encodes the sub-group; prefer the dimension with fewer categories for color.",
+    "design_considerations": "Reads the cube marginal by filtering to rows where the chosen dimension(s) are present and every other dimension is empty; the measure is mapped directly with no re-aggregation. The marginal filter is expanded from the per-request schema's dimension list, so this template works for any cube. Vertical stacked layout for few, short primary categories (<=4); use the horizontal variant otherwise. Color encodes the sub-group; prefer the dimension with fewer categories for color.",
     "tasks": "Compare group compositions across categories; identify dominant sub-groups.",
     "review_hint": "",
     "preview_bindings": null,
@@ -281,7 +281,7 @@
     "task_types": ["Compute_Derived_Value"],
     "tags": ["data_cube", "stacked_bar"],
     "description": "Shows the pre-aggregated cube measure by two nominal dimensions as a grouped (side-by-side) bar chart.",
-    "design_considerations": "Reads the cube marginal by filtering to rows where the chosen dimension(s) are present and every other dimension is empty; the measure is mapped directly with no re-aggregation. The marginal filter is expanded from the per-request schema's dimension list, so this template works for any cube. xOffset gives side-by-side grouping for direct comparison of the sub-group within each category.",
+    "design_considerations": "Reads the cube marginal by filtering to rows where the chosen dimension(s) are present and every other dimension is empty; the measure is mapped directly with no re-aggregation. The marginal filter is expanded from the per-request schema's dimension list, so this template works for any cube. xOffset gives side-by-side grouping for direct comparison of the sub-group within each category. Suitable for few, short primary categories (<=4); use the horizontal variant otherwise.",
     "tasks": "Directly compare sub-group values within and across categories.",
     "review_hint": "",
     "preview_bindings": null,
@@ -340,7 +340,7 @@
     "task_types": ["Compute_Derived_Value"],
     "tags": ["data_cube", "stacked_bar"],
     "description": "Shows the relative proportion of one nominal dimension within each category of another as a normalized stacked bar chart.",
-    "design_considerations": "First filters to the two-dimension marginal (expanded from the schema), then sums the measure per primary-dimension group and divides each cell by its group total to obtain proportions. Color is preferably the dimension with fewer categories.",
+    "design_considerations": "First filters to the two-dimension marginal (expanded from the schema), then sums the measure per primary-dimension group and divides each cell by its group total to obtain proportions. Vertical layout for few, short primary categories (<=4); use the horizontal variant otherwise. Color is preferably the dimension with fewer categories.",
     "tasks": "Compare relative proportions across categories; identify dominant sub-groups.",
     "review_hint": "",
     "preview_bindings": null,
@@ -1921,6 +1921,70 @@
     "shared_entities": [],
     "title_template": "Table of missing <F> values",
     "summary_template": "Displays how many <E> are missing <F>, and what percentage of them that is.",
+    "value_descriptions": {}
+  },
+  {
+    "query_templates": [
+      "How many are there by <dimension1> and <dimension2>?",
+      "Make a horizontal stacked bar chart across two categorical dimensions."
+    ],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": \"<MARGINAL:D1,D2>\"}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<M>\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"<D1:n>\", \"type\": \"nominal\"}, {\"encoding\": \"color\", \"field\": \"<D2:n>\", \"type\": \"nominal\"}]}}",
+    "creation_method": "template",
+    "chart_type": "stacked_bar",
+    "chart_complexity": "medium",
+    "spec_key_count": 13,
+    "task_types": ["Compute_Derived_Value"],
+    "tags": ["data_cube", "stacked_bar"],
+    "description": "Shows the pre-aggregated cube measure by two nominal dimensions as a horizontal stacked bar chart.",
+    "design_considerations": "Reads the cube marginal by filtering to rows where the chosen dimension(s) are present and every other dimension is empty; the measure is mapped directly with no re-aggregation. The marginal filter is expanded from the per-request schema's dimension list, so this template works for any cube. Horizontal stacked layout for more than 4 primary categories or long labels (protocol arms, site names), which a vertical axis would rotate or truncate. Color encodes the sub-group; prefer the dimension with fewer categories for color.",
+    "tasks": "Compare group compositions across categories; identify dominant sub-groups.",
+    "review_hint": "",
+    "preview_bindings": null,
+    "shared_entities": [],
+    "title_template": "<M> by <D1:n> and <D2:n>",
+    "summary_template": "Displays <M> for each <D1:n> category as horizontal bars, split by <D2:n>.",
+    "value_descriptions": {}
+  },
+  {
+    "query_templates": [
+      "Make a horizontal grouped (side-by-side) bar chart across two categorical dimensions."
+    ],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": \"<MARGINAL:D1,D2>\"}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<M>\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"<D1:n>\", \"type\": \"nominal\"}, {\"encoding\": \"yOffset\", \"field\": \"<D2:n>\", \"type\": \"nominal\"}, {\"encoding\": \"color\", \"field\": \"<D2:n>\", \"type\": \"nominal\"}]}}",
+    "creation_method": "template",
+    "chart_type": "stacked_bar",
+    "chart_complexity": "medium",
+    "spec_key_count": 16,
+    "task_types": ["Compute_Derived_Value"],
+    "tags": ["data_cube", "stacked_bar"],
+    "description": "Shows the pre-aggregated cube measure by two nominal dimensions as a grouped (side-by-side) horizontal bar chart.",
+    "design_considerations": "Reads the cube marginal by filtering to rows where the chosen dimension(s) are present and every other dimension is empty; the measure is mapped directly with no re-aggregation. The marginal filter is expanded from the per-request schema's dimension list, so this template works for any cube. yOffset gives side-by-side grouping in horizontal orientation. Chosen when there are more than 4 primary categories or long labels (protocol arms, site names).",
+    "tasks": "Directly compare sub-group values within and across categories.",
+    "review_hint": "",
+    "preview_bindings": null,
+    "shared_entities": [],
+    "title_template": "<M> by <D1:n> and <D2:n>",
+    "summary_template": "Displays <M> for each <D1:n> category as horizontal bars, placed side by side for each <D2:n>.",
+    "value_descriptions": {}
+  },
+  {
+    "query_templates": [
+      "What is the proportion of <dimension2> for each <dimension1>, as horizontal bars?"
+    ],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": \"<MARGINAL:D1,D2>\"}, {\"groupby\": \"<D1>\", \"out\": \"groupTotals\"}, {\"rollup\": {\"axis_total\": {\"op\": \"sum\", \"field\": \"<M>\"}}}, {\"groupby\": [\"<D2>\", \"<D1>\"], \"in\": \"<E>\"}, {\"rollup\": {\"cell_total\": {\"op\": \"sum\", \"field\": \"<M>\"}}}, {\"join\": {\"on\": \"<D1>\"}, \"in\": [\"<E>\", \"groupTotals\"], \"out\": \"datasets\"}, {\"derive\": {\"proportion\": {\"op\": \"/\", \"left\": {\"field\": \"cell_total\"}, \"right\": {\"field\": \"axis_total\"}}}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"proportion\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"<D1:n>\", \"type\": \"nominal\"}, {\"encoding\": \"color\", \"field\": \"<D2:n>\", \"type\": \"nominal\"}]}}",
+    "creation_method": "template",
+    "chart_type": "stacked_bar",
+    "chart_complexity": "complex",
+    "spec_key_count": 29,
+    "task_types": ["Compute_Derived_Value"],
+    "tags": ["data_cube", "stacked_bar"],
+    "description": "Shows the relative proportion of one nominal dimension within each category of another as a horizontal normalized stacked bar chart.",
+    "design_considerations": "First filters to the two-dimension marginal (expanded from the schema), then sums the measure per primary-dimension group and divides each cell by its group total to obtain proportions. Horizontal layout for more than 4 primary categories or long labels (protocol arms, site names). Color is preferably the dimension with fewer categories.",
+    "tasks": "Compare relative proportions across categories; identify dominant sub-groups.",
+    "review_hint": "",
+    "preview_bindings": null,
+    "shared_entities": [],
+    "title_template": "Normalized bar chart of <D2:n> within <D1:n>",
+    "summary_template": "Displays what share of <M> in each <D1:n> category falls into each <D2:n> value, as horizontal bars scaled to 100%.",
     "value_descriptions": {}
   }
 ]
