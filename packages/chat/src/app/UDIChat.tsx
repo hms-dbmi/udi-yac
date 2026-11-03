@@ -154,7 +154,12 @@ function UDIChatInner({
     seededRef.current = true;
     applySessionExport(
       parsedInitialSession.value,
-      { conversation: conversationStore, dashboard: dashboardStore, dataFilters: dataFiltersStore },
+      {
+        conversation: conversationStore,
+        dashboard: dashboardStore,
+        dataFilters: dataFiltersStore,
+        memoryBank: memoryBankStore,
+      },
       dataPackageStore.getState().sourceFields,
       dataPackageStore.getState().cubeMeasureFields,
     );
@@ -165,6 +170,7 @@ function UDIChatInner({
     dashboardStore,
     dataFiltersStore,
     dataPackageStore,
+    memoryBankStore,
   ]);
   // Until then the dashboard is not empty, only not filled yet.
   const seeding =

@@ -2,12 +2,15 @@ import type { StoreApi } from 'zustand';
 import type { ConversationState } from '@/features/chat';
 import type { DashboardState } from '../stores/dashboardStore';
 import type { DataFiltersState } from '../stores/dataFiltersStore';
+import type { MemoryBankState } from '../stores/memoryBankStore';
 import type { SessionExport } from './dashboardSerialization';
 
 interface SessionTargetStores {
   conversation: StoreApi<ConversationState>;
   dashboard: StoreApi<DashboardState>;
   dataFilters?: StoreApi<DataFiltersState>;
+  /** Replaced by the session's closed charts, so they stay closed. */
+  memoryBank?: StoreApi<MemoryBankState>;
 }
 
 /**
@@ -54,8 +57,13 @@ export function applySessionExport(
     dashboard.setGridRowHeight(session.grid.rowHeight);
   }
   dashboard.importDashboard(
-    { visualizations: session.visualizations, layout: session.layout },
+    {
+      visualizations: session.visualizations,
+      layout: session.layout,
+      removedVisualizations: session.removedVisualizations,
+    },
     sourceFields,
     cubeMeasureFields,
+    stores.memoryBank,
   );
 }

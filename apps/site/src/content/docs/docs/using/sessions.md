@@ -35,4 +35,6 @@ To keep a session for good, or to share it, use the **Session** menu:
 - **Export session** downloads it as a `.json` file.
 - **Import session** loads such a file, replacing the current conversation and dashboard.
 
+A session keeps the chat, the charts with their layout, titles, filters and sort order, and the charts you closed, which stay closed and can be restored from the memory bank.
+
 Import a session into the dataset it was made with. Its charts refer to that dataset's tables and fields, and won't draw against another one.

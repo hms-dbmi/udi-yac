@@ -137,8 +137,9 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
 
   // Categories render alphabetically; bar charts can switch to largest-total
   // first. Also render-time only — see sortCategoriesByTotal. Null means the
-  // chart has no category axis to reorder, so there is no toggle.
-  const [sortByTotal, setSortByTotal] = useState(false);
+  // chart has no category axis to reorder, so there is no toggle. The flag
+  // lives in the store so a session export keeps it.
+  const sortByTotal = useDashboard((s) => s.sortedByTotalKeys.has(vizKey));
   const byTotalSpec = useMemo(() => sortCategoriesByTotal(labelledSpec), [labelledSpec]);
   const plainSpec = sortByTotal && byTotalSpec ? byTotalSpec : labelledSpec;
 
@@ -389,7 +390,7 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
                         size="icon"
                         className="udi:h-6 udi:w-6"
                         aria-label={sortByTotal ? 'Sort alphabetically' : 'Sort by total'}
-                        onClick={() => setSortByTotal((v) => !v)}
+                        onClick={() => dashboardStore.getState().toggleSortByTotal(vizKey)}
                       />
                     }
                   >

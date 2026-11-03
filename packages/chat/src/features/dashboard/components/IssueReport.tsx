@@ -15,6 +15,7 @@ import {
   useConversationStore,
   useDashboardStore,
   useDataFiltersStore,
+  useMemoryBankStore,
   useGlobal,
   useGlobalStore,
   useTracker,
@@ -165,6 +166,7 @@ export function IssueReportDialog() {
   const conversationStore = useConversationStore();
   const dashboardStore = useDashboardStore();
   const dataFiltersStore = useDataFiltersStore();
+  const memoryBankStore = useMemoryBankStore();
   const apiConfig = useApiConfig();
   const trackEvent = useTracker();
 
@@ -192,6 +194,7 @@ export function IssueReportDialog() {
                 conversationStore.getState(),
                 dashboardStore.getState(),
                 dataFiltersStore.getState(),
+                memoryBankStore,
               )
             }
             getConversationId={() => conversationStore.getState().conversationId}
