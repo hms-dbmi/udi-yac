@@ -205,6 +205,17 @@ const SEARCH_THRESHOLD = 10;
 /** Chips show for at most this many selected values, and only on a field with
  *  more options than this: on a short list the checkboxes already show it all. */
 const CHIP_LIMIT = 10;
+/** Natural order: "Grade 2" before "Grade 10", case and accents aside. */
+const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+
+/** Values in alphabetical order of what the reader sees, a null last. */
+function sortByLabel(values: string[], labelOf: (value: string) => string): string[] {
+  return [...values].sort((a, b) => {
+    if (a == null || b == null) return a == null ? (b == null ? 0 : 1) : -1;
+    return collator.compare(labelOf(a), labelOf(b));
+  });
+}
+
 const NO_MATCH = 'no rows match the other filters';
 
 interface FieldValueListProps {
@@ -249,11 +260,12 @@ function FieldValueList({
 
   // Indexes into the full list, so a row keeps its checkbox id while
   // narrowing or the search hides the others.
+  const sorted = useMemo(() => sortByLabel(options, labelOf), [options, labelOf]);
   const listed = useMemo(() => {
-    const all = options.map((value, index) => ({ value, index }));
+    const all = sorted.map((value, index) => ({ value, index }));
     if (!narrowed || !present) return all;
     return all.filter(({ value }) => present.has(String(value)) || selected.includes(value));
-  }, [options, narrowed, present, selected]);
+  }, [sorted, narrowed, present, selected]);
   const listedValues = listed.map(({ value }) => value);
 
   const visible = useMemo(() => {
@@ -313,7 +325,7 @@ function FieldValueList({
           long list. In addition to the checkboxes, never instead of them. */}
       {showChips && (
         <div className="udi:flex udi:flex-wrap udi:gap-1">
-          {selected.map((value) => {
+          {sortByLabel(selected, labelOf).map((value) => {
             const label = labelOf(value);
             const absent = !isPresent(value);
             return (

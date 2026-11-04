@@ -396,3 +396,32 @@ describe('PointFilterComponent — narrowed by the other filters', () => {
     expect(listedLabels()).toEqual(DIAGNOSES);
   });
 });
+
+describe('PointFilterComponent — order', () => {
+  // Row labels in page order, after the select-all row's.
+  const labels = () =>
+    Array.from(document.querySelectorAll('label'))
+      .slice(1)
+      .map((l) => l.textContent);
+
+  it('lists values alphabetically by display label, in natural order', () => {
+    renderFilter(
+      { dataSourceKey: 'Event', type: 'point', selection: { organization_name: [] } },
+      // UCSF is labelled "benioff": it sorts by the label, ahead of CHOP
+      // despite the lower case.
+      { valueLabels: { UCSF: 'benioff' } },
+    );
+    expect(labels()).toEqual(['benioff', 'CHOP', 'Seattle']);
+  });
+
+  it('orders the chips the same way, whatever order they were checked in', () => {
+    renderFilter({
+      dataSourceKey: 'Event',
+      type: 'point',
+      selection: { diagnosis: ['Diagnosis K', 'Diagnosis B'] },
+    });
+    expect(
+      screen.getAllByRole('button', { name: /^Remove / }).map((b) => b.getAttribute('aria-label')),
+    ).toEqual(['Remove Diagnosis B', 'Remove Diagnosis K']);
+  });
+});
