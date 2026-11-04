@@ -2,8 +2,10 @@ import { describe, it, expect } from 'vitest';
 import { createConversationStore } from '@/features/chat';
 import { createDashboardStore } from '../stores/dashboardStore';
 import { createDataFiltersStore } from '../stores/dataFiltersStore';
+import { createMemoryBankStore } from '../stores/memoryBankStore';
 import {
   buildSessionExport,
+  currentSessionExport,
   parseSessionExport,
   type SessionExport,
 } from './dashboardSerialization';
@@ -254,5 +256,108 @@ describe('applySessionExport — filters', () => {
       origins: {},
       anchors: {},
     });
+  });
+});
+
+describe('closed charts and the sort flag', () => {
+  const viz = (key: string) => ({
+    key,
+    uuid: `uuid-${key}`,
+    index: Number(key[0]),
+    toolCallIndex: 0,
+    userPrompt: key,
+    spec: countBySex,
+  });
+
+  function withBank() {
+    return {
+      ...stores(),
+      dataFilters: createDataFiltersStore(),
+      memoryBank: createMemoryBankStore(),
+    };
+  }
+
+  it('round-trips a closed chart into the memory bank, not onto the grid', () => {
+    const live = withBank();
+    applySessionExport(
+      session({ visualizations: [viz('0-0'), viz('1-0')], layout: { items: [] } }),
+      live,
+      { donors: ['sex'] },
+    );
+    live.dashboard.getState().closeVisualization('1-0', live.memoryBank);
+
+    const exported = currentSessionExport(
+      live.conversation.getState(),
+      live.dashboard.getState(),
+      live.dataFilters.getState(),
+      live.memoryBank,
+    );
+    expect(exported.visualizations.map((v) => v.key)).toEqual(['0-0']);
+    expect(exported.removedVisualizations?.map((v) => v.key)).toEqual(['1-0']);
+
+    const parsed = parseSessionExport(JSON.parse(JSON.stringify(exported)));
+    if (!parsed.ok) throw new Error(parsed.error);
+    const restored = withBank();
+    applySessionExport(parsed.value, restored, { donors: ['sex'] });
+
+    expect([...restored.dashboard.getState().activeVisualizations.keys()]).toEqual(['0-0']);
+    const closed = restored.memoryBank.getState().closedVisualizations.get('1-0');
+    expect(closed?.uuid).toBe('uuid-1-0');
+    expect(closed?.interactiveSpec).toBeTruthy();
+  });
+
+  it("replaces the previous session's closed charts", () => {
+    const s = withBank();
+    s.memoryBank.getState().addToMemoryBank('0-0', {} as never);
+    applySessionExport(session(), s, { donors: ['sex'] });
+    // A stale entry keyed like this session's chart would keep it off the grid.
+    expect(s.memoryBank.getState().closedVisualizations.size).toBe(0);
+    expect(s.dashboard.getState().activeVisualizations.has('0-0')).toBe(true);
+  });
+
+  it('round-trips the sort flag, on open and closed charts alike', () => {
+    const live = withBank();
+    applySessionExport(
+      session({ visualizations: [viz('0-0'), viz('1-0'), viz('2-0')], layout: { items: [] } }),
+      live,
+      { donors: ['sex'] },
+    );
+    const dashboard = live.dashboard.getState();
+    dashboard.toggleSortByTotal('0-0');
+    dashboard.toggleSortByTotal('2-0');
+    dashboard.closeVisualization('2-0', live.memoryBank);
+
+    const exported = currentSessionExport(
+      live.conversation.getState(),
+      live.dashboard.getState(),
+      live.dataFilters.getState(),
+      live.memoryBank,
+    );
+    expect(exported.visualizations.map((v) => [v.key, v.sortByTotal])).toEqual([
+      ['0-0', true],
+      ['1-0', undefined],
+    ]);
+    expect(exported.removedVisualizations?.[0].sortByTotal).toBe(true);
+
+    const parsed = parseSessionExport(JSON.parse(JSON.stringify(exported)));
+    if (!parsed.ok) throw new Error(parsed.error);
+    const restored = withBank();
+    applySessionExport(parsed.value, restored, { donors: ['sex'] });
+    expect([...restored.dashboard.getState().sortedByTotalKeys].sort()).toEqual(['0-0', '2-0']);
+  });
+
+  it('reads an older export with neither field', () => {
+    const parsed = parseSessionExport(session());
+    if (!parsed.ok) throw new Error(parsed.error);
+    expect(parsed.value.removedVisualizations).toBeUndefined();
+    expect(parsed.value.visualizations[0].sortByTotal).toBeUndefined();
+  });
+
+  it('drops a malformed closed chart rather than the session', () => {
+    const parsed = parseSessionExport({
+      ...session(),
+      removedVisualizations: [viz('1-0'), { key: 'broken' }],
+    });
+    expect(parsed.ok && parsed.value.removedVisualizations?.map((v) => v.key)).toEqual(['1-0']);
   });
 });

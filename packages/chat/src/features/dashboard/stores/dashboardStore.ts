@@ -117,11 +117,17 @@ export interface DashboardExportVisualization {
   spec: UDIGrammar;
   /** Kept so a restored dashboard is as tweakable as a live one. */
   template?: TemplateProvenance;
+  /** Categories drawn largest total first. Written only when set. */
+  sortByTotal?: boolean;
 }
 
 export interface DashboardExport {
   visualizations: DashboardExportVisualization[];
   layout: DashboardLayout;
+  /** Charts the user closed, still restorable from the memory bank. Without
+   *  them an import re-adds every chart its messages hold. Older exports
+   *  omit it. */
+  removedVisualizations?: DashboardExportVisualization[];
 }
 
 /** A cross-panel jump request: which vizKey to reveal, plus a bumped nonce so
@@ -143,6 +149,10 @@ export interface DashboardState {
   containerWidth: number;
   filterAllNullValues: boolean;
   tableViewKeys: Set<string>;
+  /** Cards whose categories are drawn largest total first (see
+   *  `sortCategoriesByTotal`). Kept here rather than on the card so a session
+   *  export carries it. */
+  sortedByTotalKeys: Set<string>;
   // Linked-hover state, one field per direction so each stays unambiguous:
   // `hoveredVisualizationIndex` = the hovered card's vizKey (drives the chat
   // message + matching accordion-item highlight); `hoveredMessageVizKey` = the
@@ -195,6 +205,7 @@ export interface DashboardState {
   setFilterAllNullValues: (value: boolean) => void;
   toggleTableView: (key: string) => void;
   isTableView: (key: string) => boolean;
+  toggleSortByTotal: (key: string) => void;
   setHoveredVisualizationIndex: (key: string | null) => void;
   isHovered: (key: string) => boolean;
   setHoveredMessageVizKey: (key: string | null) => void;
@@ -250,11 +261,14 @@ export interface DashboardState {
   setContainerWidth: (px: number) => void;
   repackLayout: (dataPackageStore?: StoreApi<DataPackageState>) => void;
   resetLayout: (dataPackageStore?: StoreApi<DataPackageState>) => void;
-  exportDashboard: () => DashboardExport;
+  /** With the memory bank, the closed charts come along as `removedVisualizations`. */
+  exportDashboard: (memoryBankStore?: StoreApi<MemoryBankState>) => DashboardExport;
+  /** With the memory bank, it is replaced by the payload's closed charts. */
   importDashboard: (
     payload: DashboardExport,
     sourceFields: Record<string, string[]> | null,
     cubeMeasureFields?: Record<string, string[]> | null,
+    memoryBankStore?: StoreApi<MemoryBankState>,
   ) => void;
 }
 
@@ -526,6 +540,7 @@ export function createDashboardStore() {
     containerWidth: 0,
     filterAllNullValues: true,
     tableViewKeys: new Set(),
+    sortedByTotalKeys: new Set(),
     hoveredVisualizationIndex: null,
     hoveredMessageVizKey: null,
     jumpToVisualization: null,
@@ -675,6 +690,7 @@ export function createDashboardStore() {
       set({
         activeVisualizations: new Map(),
         tableViewKeys: new Set(),
+        sortedByTotalKeys: new Set(),
         layout: emptyLayout(),
       }),
 
@@ -690,6 +706,15 @@ export function createDashboardStore() {
     },
 
     isTableView: (key) => get().tableViewKeys.has(key),
+
+    toggleSortByTotal: (key) => {
+      set((state) => {
+        const next = new Set(state.sortedByTotalKeys);
+        if (next.has(key)) next.delete(key);
+        else next.add(key);
+        return { sortedByTotalKeys: next };
+      });
+    },
 
     setHoveredVisualizationIndex: (key) => set({ hoveredVisualizationIndex: key }),
 
@@ -1107,48 +1132,38 @@ export function createDashboardStore() {
       get().repackLayout(dataPackageStore);
     },
 
-    exportDashboard: () => {
+    exportDashboard: (memoryBankStore) => {
       const state = get();
-      const visualizations: DashboardExportVisualization[] = [];
-      for (const [key, viz] of state.activeVisualizations) {
-        visualizations.push({
-          key,
-          uuid: viz.uuid,
-          index: viz.index,
-          toolCallIndex: viz.toolCallIndex,
-          userPrompt: viz.userPrompt,
-          title: viz.title,
-          userTitle: viz.userTitle,
-          titleTemplate: viz.titleTemplate,
-          summaryTemplate: viz.summaryTemplate,
-          spec: structuredClone(viz.spec),
-          template: viz.template ? structuredClone(viz.template) : undefined,
-        });
-      }
+      const exportOne = (key: string, viz: ActiveVisualization) =>
+        exportVisualization(key, viz, state.sortedByTotalKeys.has(key));
+      const visualizations = [...state.activeVisualizations].map(([key, viz]) =>
+        exportOne(key, viz),
+      );
+      const closed = memoryBankStore?.getState().closedVisualizations;
       return {
         visualizations,
         layout: { items: state.layout.items.map((it) => ({ ...it })) },
+        ...(closed
+          ? { removedVisualizations: [...closed].map(([key, viz]) => exportOne(key, viz)) }
+          : {}),
       };
     },
 
-    importDashboard: (payload, sourceFields, cubeMeasureFields) => {
+    importDashboard: (payload, sourceFields, cubeMeasureFields, memoryBankStore) => {
+      const restore = (v: DashboardExportVisualization) =>
+        importVisualization(v, sourceFields, cubeMeasureFields);
       const next = new Map<string, ActiveVisualization>();
-      for (const v of payload.visualizations) {
-        const uuid = v.uuid || generateId();
-        const interactiveSpec = injectInteractivity(v.spec, uuid, sourceFields, cubeMeasureFields);
-        next.set(v.key, {
-          index: v.index,
-          toolCallIndex: v.toolCallIndex,
-          spec: v.spec,
-          interactiveSpec,
-          userPrompt: v.userPrompt,
-          title: v.title,
-          userTitle: v.userTitle,
-          titleTemplate: v.titleTemplate,
-          summaryTemplate: v.summaryTemplate,
-          uuid,
-          template: v.template,
-        });
+      for (const v of payload.visualizations) next.set(v.key, restore(v));
+      const removed = (payload.removedVisualizations ?? []).filter((v) => !next.has(v.key));
+      const sortedByTotalKeys = new Set(
+        [...payload.visualizations, ...removed].filter((v) => v.sortByTotal).map((v) => v.key),
+      );
+      if (memoryBankStore) {
+        // Replaced, not merged: the previous session's closed charts would
+        // otherwise share keys with this one's and keep its charts off the grid.
+        const bank = memoryBankStore.getState();
+        bank.clearMemoryBank();
+        for (const v of removed) bank.addToMemoryBank(v.key, restore(v));
       }
       const knownKeys = new Set(next.keys());
       const cols = get().gridCols;
@@ -1170,10 +1185,53 @@ export function createDashboardStore() {
       set({
         activeVisualizations: next,
         tableViewKeys: new Set(),
+        sortedByTotalKeys,
         layout: { items },
       });
     },
   }));
+}
+
+function exportVisualization(
+  key: string,
+  viz: ActiveVisualization,
+  sortByTotal: boolean,
+): DashboardExportVisualization {
+  return {
+    key,
+    uuid: viz.uuid,
+    index: viz.index,
+    toolCallIndex: viz.toolCallIndex,
+    userPrompt: viz.userPrompt,
+    title: viz.title,
+    userTitle: viz.userTitle,
+    titleTemplate: viz.titleTemplate,
+    summaryTemplate: viz.summaryTemplate,
+    spec: structuredClone(viz.spec),
+    template: viz.template ? structuredClone(viz.template) : undefined,
+    ...(sortByTotal ? { sortByTotal: true } : {}),
+  };
+}
+
+function importVisualization(
+  v: DashboardExportVisualization,
+  sourceFields: Record<string, string[]> | null,
+  cubeMeasureFields?: Record<string, string[]> | null,
+): ActiveVisualization {
+  const uuid = v.uuid || generateId();
+  return {
+    index: v.index,
+    toolCallIndex: v.toolCallIndex,
+    spec: v.spec,
+    interactiveSpec: injectInteractivity(v.spec, uuid, sourceFields, cubeMeasureFields),
+    userPrompt: v.userPrompt,
+    title: v.title,
+    userTitle: v.userTitle,
+    titleTemplate: v.titleTemplate,
+    summaryTemplate: v.summaryTemplate,
+    uuid,
+    template: v.template,
+  };
 }
 
 // --- Pure helper functions for spec extraction ---
