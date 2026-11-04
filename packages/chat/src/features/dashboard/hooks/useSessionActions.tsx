@@ -14,6 +14,7 @@ import {
   useDataPackage,
   useGlobalStore,
   useIssueReporting,
+  useMemoryBankStore,
   useSavedSessionsKey,
   useTracker,
 } from '@/app/UDIChatContext';
@@ -44,6 +45,7 @@ export function useSessionActions(): {
   const conversationStore = useConversationStore();
   const dashboardStore = useDashboardStore();
   const dataFiltersStore = useDataFiltersStore();
+  const memoryBankStore = useMemoryBankStore();
   const sourceFields = useDataPackage((s) => s.sourceFields);
   const cubeMeasureFields = useDataPackage((s) => s.cubeMeasureFields);
   const globalStore = useGlobalStore();
@@ -60,8 +62,9 @@ export function useSessionActions(): {
         conversationStore.getState(),
         dashboardStore.getState(),
         dataFiltersStore.getState(),
+        memoryBankStore,
       ),
-    [conversationStore, dashboardStore, dataFiltersStore],
+    [conversationStore, dashboardStore, dataFiltersStore, memoryBankStore],
   );
 
   const handleExport = useCallback(() => {
@@ -88,6 +91,7 @@ export function useSessionActions(): {
           conversation: conversationStore,
           dashboard: dashboardStore,
           dataFilters: dataFiltersStore,
+          memoryBank: memoryBankStore,
         },
         sourceFields,
         cubeMeasureFields,
@@ -103,6 +107,7 @@ export function useSessionActions(): {
       conversationStore,
       dashboardStore,
       dataFiltersStore,
+      memoryBankStore,
       sourceFields,
       cubeMeasureFields,
       trackEvent,
