@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.13"
 resolution-markers = [
     "python_full_version >= '3.14' and sys_platform == 'win32'",
@@ -2675,7 +2675,7 @@ requires-dist = [
     { name = "datasets", marker = "extra == 'benchmark'", specifier = ">=5.0.1" },
     { name = "duckdb", marker = "extra == 'duckdb'", specifier = ">=2.0.0" },
     { name = "duckdb", marker = "extra == 'test'", specifier = ">=2.0.0" },
-    { name = "fastapi", extras = ["standard"], marker = "extra == 'server'", specifier = ">=0.146.0" },
+    { name = "fastapi", extras = ["standard"], marker = "extra == 'server'", specifier = ">=0.162.0" },
     { name = "huggingface-hub", marker = "extra == 'benchmark'", specifier = ">=2.2.0" },
     { name = "ijson", marker = "extra == 'benchmark'", specifier = ">=3.4.0.post0" },
     { name = "jsonschema", specifier = ">=4.26.0" },
