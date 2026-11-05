@@ -2635,10 +2635,10 @@ def generate():
             Chart()
             .source("<E>", "<E.url>")
             .groupby("<F>")
-            .rollup({"proportion": Op.frequency()})
+            .rollup({"<E> count": Op.count()})
             .mark("arc")
             .theta(
-                field="proportion", type="quantitative", domainWhenFiltered="filtered"
+                field="<E> count", type="quantitative", domainWhenFiltered="filtered"
             )
             .color(field="<F>", type="nominal")
         ),
@@ -2650,7 +2650,7 @@ def generate():
         description="Creates a pie chart showing the proportional distribution of a nominal field.",
         title_template="Pie chart of the number of <E> by <F>",
         summary_template="Displays the share of <E> that falls into each <F> category as slices of a circle.",
-        design_considerations="Arc marks with theta encoding map proportion to angle. Suitable for fields with few categories (<8) where part-to-whole perception is the goal.",
+        design_considerations="Arc marks with theta encoding map each count's share of the total to angle; the renderer labels each slice with its count and percentage. Suitable for fields with few categories (<8) where part-to-whole perception is the goal.",
         tasks="Assess part-to-whole proportions; identify the dominant category.",
     )
 
@@ -2664,10 +2664,10 @@ def generate():
             Chart()
             .source("<E>", "<E.url>")
             .groupby("<F>")
-            .rollup({"proportion": Op.frequency()})
+            .rollup({"<E> count": Op.count()})
             .mark("arc")
             .theta(
-                field="proportion", type="quantitative", domainWhenFiltered="filtered"
+                field="<E> count", type="quantitative", domainWhenFiltered="filtered"
             )
             .color(field="<F>", type="nominal")
             .radius(value=60)
@@ -2681,7 +2681,7 @@ def generate():
         description="Creates a donut chart showing the proportional distribution of a nominal field.",
         title_template="Donut chart of the number of <E> by <F>",
         summary_template="Displays the share of <E> that falls into each <F> category as segments of a ring.",
-        design_considerations="Donut variant with inner/outer radius creates a hollow center that can improve label readability. Suitable for few categories (<8).",
+        design_considerations="Donut variant with inner/outer radius creates a hollow center; the renderer labels each segment outside the ring with its count and percentage. Suitable for few categories (<8).",
         tasks="Assess part-to-whole proportions; identify the dominant category.",
     )
 

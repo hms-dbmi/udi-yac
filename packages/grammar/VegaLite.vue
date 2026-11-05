@@ -28,6 +28,8 @@ import type { UDIPalette } from './Palette';
 import { DEFAULT_PALETTE, toVegaRange, toVegaRamp } from './Palette';
 import { registerRampScheme } from './paletteScheme';
 import { formatTime } from './temporal';
+import { fitLegend, patchLegendLimit } from './legendFit';
+import { warnIfUnstyled } from './styleCheck';
 import {
   PICK_SIGNAL,
   type PickMode,
@@ -369,17 +371,13 @@ function initVegaChart() {
     actions: props.hideActions ? false : true,
     config: buildVegaConfig(),
     expressionFunctions: { udiTime: formatTime },
-    ...(axis || legend
-      ? {
-          patch: (vgSpec) => {
-            // A point selection's gestures light the empty labels they pick.
-            const picks = props.pointSelect ? PICK_SIGNAL : undefined;
-            if (axis) patchLabelAxis(vgSpec, axis, picks);
-            if (legend) patchLabelLegend(vgSpec, legend, picks);
-            return vgSpec;
-          },
-        }
-      : {}),
+    patch: (vgSpec) => {
+      // A point selection's gestures light the empty labels they pick.
+      const picks = props.pointSelect ? PICK_SIGNAL : undefined;
+      if (axis) patchLabelAxis(vgSpec, axis, picks);
+      if (legend) patchLabelLegend(vgSpec, legend, picks);
+      return patchLegendLimit(vgSpec);
+    },
   })
     .then((result) => {
       errorMessage.value = null;
@@ -581,11 +579,11 @@ function initVegaChart() {
 // the only way to get correct ticks. Debounced trailing so a drag-resize
 // re-renders once on settle instead of flickering every frame.
 //
-// Only react when the spec uses container sizing on some axis; a fixed-size
-// chart doesn't care about its container's size. `lastW/lastH` skip the
+// Only react to an axis the spec sizes to its container; a fixed-size chart
+// doesn't care about its container's size. `lastW/lastH` skip the
 // ResizeObserver's initial fire and any no-op callbacks (and, with fit-x, the
-// chart fits its container exactly so a re-embed never changes the container
-// size — no feedback loop).
+// chart fits its container's width exactly, so a re-embed never changes it —
+// no feedback loop).
 let resizeObserver: ResizeObserver | null = null;
 let widthIsContainer = false;
 let heightIsContainer = false;
@@ -817,20 +815,24 @@ onMounted(() => {
   vegaContainer.value?.addEventListener('pointerover', onLabelPointerOver);
   vegaContainer.value?.addEventListener('pointerout', onLabelPointerOut);
   initVegaChart();
+  warnIfUnstyled(vegaContainer.value?.parentElement);
   if (vegaContainer.value && typeof ResizeObserver !== 'undefined') {
     lastW = vegaContainer.value.offsetWidth;
     lastH = vegaContainer.value.offsetHeight;
     resizeObserver = new ResizeObserver(() => {
-      if (!widthIsContainer && !heightIsContainer) return;
       const el = vegaContainer.value;
       if (!el) return;
       const w = el.offsetWidth;
       const h = el.offsetHeight;
       if (w <= 0 || h <= 0) return; // detached / display:none
-      if (w === lastW && h === lastH) return; // initial fire / no real change
+      // Only a change on a container-sized axis counts. A content-sized height
+      // is the chart's own doing (fitLegend grows it), and re-embedding for it
+      // would start over at the old height.
+      const changed =
+        (widthIsContainer && w !== lastW) || (heightIsContainer && h !== lastH);
       lastW = w;
       lastH = h;
-      reembedForResize();
+      if (changed) reembedForResize();
     });
     resizeObserver.observe(vegaContainer.value);
   }
@@ -961,6 +963,9 @@ async function updateVegaChart() {
   // rendered at positions that don't match the axis (e.g. after a brush
   // is dismissed).
   await vegaView.value.resize().runAsync();
+  // A chart sized to its content grows to fit its legend; a container-sized
+  // one has no room to, so it cuts the legend instead.
+  if (vegaView.value) await fitLegend(vegaView.value, !heightIsContainer);
   ignore.value = false;
 
   // Re-assert the external selection as the FINAL step, against the now-

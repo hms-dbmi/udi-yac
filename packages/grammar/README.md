@@ -231,6 +231,7 @@ npm install udi-toolkit vega vega-lite vega-embed arquero ag-grid-community
 ```html
 <script type="module">
   import 'udi-toolkit/ce';
+  import 'udi-toolkit/style.css';
 </script>
 
 <udi-vis id="chart"></udi-vis>
@@ -249,6 +250,13 @@ npm install udi-toolkit vega vega-lite vega-embed arquero ag-grid-community
 </script>
 ```
 
+The stylesheet is not optional. `<udi-vis>` renders without a shadow root, so
+its components' styles reach the page only through `udi-toolkit/style.css`.
+Without it every chart sizes to 0×0 with no error, and table cell marks
+collapse to nothing. The toolkit logs a console warning when it finds the
+stylesheet missing. The React wrapper renders the same element and needs the
+same import.
+
 ### React
 
 ```bash
@@ -257,6 +265,7 @@ npm install udi-toolkit vega vega-lite vega-embed arquero ag-grid-community reac
 
 ```tsx
 import { UDIVis } from 'udi-toolkit/react';
+import 'udi-toolkit/style.css';
 
 function App() {
   return (
