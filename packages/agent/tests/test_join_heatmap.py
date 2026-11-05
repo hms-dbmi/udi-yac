@@ -1,9 +1,11 @@
-"""The cross-table count heatmap counts DISTINCT records, not joined rows.
+"""The cross-table count heatmap counts DISTINCT entity2 records, not joined rows.
 
 A therapy table holds one row per regimen, so joining it to a patient table
 repeats each patient once per regimen. Counting the joined rows would report
-regimens under an axis that says patients; the template reduces to one row per
-(cell, patient) on the join key first.
+regimens under an axis that says patients; the template reduces the therapy
+table to one row per (patient, protocol) before the join. The same template
+must also count the child side: regimens by vital status, where a dedup on the
+join key would count patients instead.
 """
 
 import pytest
@@ -38,6 +40,8 @@ p4,alive
 
 @pytest.fixture()
 def heatmap(tmp_path):
+    """Run the template with the given bindings; cells keyed by (entity1 field,
+    entity2 field)."""
     therapy = tmp_path / "therapy.csv"
     therapy.write_text(_THERAPY)
     patients = tmp_path / "patients.csv"
@@ -84,28 +88,41 @@ def heatmap(tmp_path):
     _defs, dispatch, templates, _tags = _load_generated_tools()
     tool = next(n for n in dispatch if n.endswith("_heatmap_count_join"))
     idx, param_map = dispatch[tool]
-    args = {
-        "entity1": "therapy",
-        "entity1_field1": "protocol",
-        "entity2": "patients",
-        "entity2_field2": "vital_status",
-    }
-    bindings = {param_map[k]: v for k, v in args.items() if k in param_map}
-    assert validate_bindings(templates[idx], bindings, schema) == []
-    spec = instantiate_template(templates[idx], bindings, schema)
     engine = QueryEngine(
         DuckDBConnector(views={"therapy": str(therapy), "patients": str(patients)}),
         table_map={"therapy": "therapy", "patients": "patients"},
     )
-    rows = engine.run_query(source=spec["source"], transformation=spec["transformation"])[
-        "displayData"
-    ]
-    return {(r["protocol"], r["vital_status"]): r["count patients"] for r in rows}
+
+    def run(entity1, field1, entity2, field2):
+        args = {
+            "entity1": entity1,
+            "entity1_field1": field1,
+            "entity2": entity2,
+            "entity2_field2": field2,
+        }
+        bindings = {param_map[k]: v for k, v in args.items() if k in param_map}
+        assert validate_bindings(templates[idx], bindings, schema) == []
+        spec = instantiate_template(templates[idx], bindings, schema)
+        rows = engine.run_query(source=spec["source"], transformation=spec["transformation"])[
+            "displayData"
+        ]
+        return {(r[field1], r[field2]): r[f"count {entity2}"] for r in rows}
+
+    return run
 
 
 def test_cells_count_distinct_patients_not_joined_rows(heatmap):
-    assert heatmap == {
+    assert heatmap("therapy", "protocol", "patients", "vital_status") == {
         ("A", "deceased"): 1,  # p1's two regimens are one patient
         ("A", "alive"): 1,
         ("B", "alive"): 2,
+    }
+
+
+def test_cells_count_child_rows_when_entity2_is_the_child(heatmap):
+    # Regimens, not patients: p1's two protocol-A rows are two, and p4 has none.
+    assert heatmap("patients", "vital_status", "therapy", "protocol") == {
+        ("deceased", "A"): 2,
+        ("alive", "A"): 1,
+        ("alive", "B"): 2,
     }
