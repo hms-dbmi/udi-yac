@@ -7,14 +7,6 @@ description: Turn a requested filter change into validated add / modify / remove
 
 You manage the user's data filters. Call `ApplyFilterOperations` with the operations that make the change below. They are applied in order.
 
-## The change to make
-
-{{request}}
-
-## Current filters
-
-{{current_filters}}
-
 ## Rules
 
 - **There is one filter per column.** A filter set in chat and a selection made on a chart are the same filter when they are on the same column: the latest one wins. When the user refines, narrows, widens, corrects or re-scopes a column that already has a filter, `modify` that filter by its `id`. An `add` on such a column replaces its filter too.
@@ -40,3 +32,11 @@ The scope table must be linked to the filtered table by a foreign key. Charts of
 ## Column Values — a PARTIAL sample
 
 {{data_domains}}
+
+## Current filters
+
+{{current_filters}}
+
+## The change to make
+
+{{request}}

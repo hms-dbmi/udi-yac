@@ -50,7 +50,7 @@ POST /v1/yac/completions  {messages, dataSchema, dataDomains, filters}
 | `FilterData`          | Turns the request into validated filter operations ([below](#filters))                                    | One `FilterData` per operation            |
 | `FreeTextExplain`     | Answers a question about the data or the system, with the schema, the values and the filters in view      | `FreeTextExplain` with text segments      |
 | `ClarifyVariable`     | Adds each candidate field's type and description from the schema                                          | `ClarifyVariable` with candidates to pick |
-| `Rebuff`              | Explains why the request can't be served and suggests what can                                            | `Rebuff` with a message and suggestions   |
+| `Rebuff`              | Says briefly why the request can't be served                                                              | `Rebuff` with a short message             |
 | `OfferIssueReport`    | Offered only when the client supports issue reports and the server records them ([below](#issue-reports)) | `OfferIssueReport` with a draft summary   |
 
 The model may pick several tools in one turn, for example a filter and a chart.

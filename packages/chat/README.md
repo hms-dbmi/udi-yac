@@ -759,7 +759,7 @@ src/
         VisualizationCard.tsx       # UDIVis preview (chat) / pinned badge
         FilterComponent.tsx         # A FilterData tool call's chat item
         FreeTextExplain.tsx         # Markdown explanation with structured text
-        RebuffNotice.tsx            # Rejection with suggestion buttons
+        RebuffNotice.tsx            # Rejection message
         ClarifyVariable.tsx         # Field disambiguation UI
 
   components/

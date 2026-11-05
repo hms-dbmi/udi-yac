@@ -481,47 +481,40 @@ class Orchestrator:
             if t["function"]["name"] != "Rebuff"
         ]
 
+        fallback = (
+            f"Sorry, I cannot fulfill this request. {tool_args.get('reason', '')}"
+        )
         rebuff_skill = self.skills.get("rebuff")
-        if rebuff_skill:
-            rendered = render_template(
-                rebuff_skill.instructions,
-                {
-                    "user_request": tool_args.get("user_request", ""),
-                    "reason": tool_args.get("reason", ""),
-                    "available_tools": "\n".join(
-                        f"- {cap}" for cap in available_capabilities
-                    ),
-                },
-            )
-            gpt_client = self.agent._get_gpt_client(openai_api_key)
-            msgs = normalize_tool_calls(copy.deepcopy(messages))
-            msgs.insert(0, {"role": "system", "content": rendered})
-            resp = _call_with_budget_guard(
-                self.agent.create_completion,
-                usage,
-                gpt_client,
-                model=model or self.agent.gpt_model_name,
-                messages=msgs,
-                max_completion_tokens=1024,
-            )
-            usage.add("rebuff", getattr(resp, "usage", None))
-            try:
-                response_data = json.loads(resp.choices[0].message.content)
-            except (json.JSONDecodeError, IndexError):
-                response_data = {
-                    "message": f"Sorry, I cannot fulfill this request. {tool_args.get('reason', '')}",
-                    "suggestions": [],
-                }
-        else:
-            response_data = {
-                "message": f"Sorry, I cannot fulfill this request. {tool_args.get('reason', '')}",
-                "suggestions": [],
-            }
-
-        return {
-            "name": "Rebuff",
-            "arguments": response_data,
-        }
+        if not rebuff_skill:
+            return build_rebuff_toolcall(fallback)
+        rendered = render_template(
+            rebuff_skill.instructions,
+            {
+                "user_request": tool_args.get("user_request", ""),
+                "reason": tool_args.get("reason", ""),
+                "available_tools": "\n".join(
+                    f"- {cap}" for cap in available_capabilities
+                ),
+            },
+        )
+        gpt_client = self.agent._get_gpt_client(openai_api_key)
+        msgs = normalize_tool_calls(copy.deepcopy(messages))
+        msgs.insert(0, {"role": "system", "content": rendered})
+        resp = _call_with_budget_guard(
+            self.agent.create_completion,
+            usage,
+            gpt_client,
+            model=model or self.agent.gpt_model_name,
+            messages=msgs,
+            max_completion_tokens=1024,
+        )
+        usage.add("rebuff", getattr(resp, "usage", None))
+        # A plain-text reply (#43): the old JSON one also carried a capability
+        # summary and suggested queries that were often off-target, and the
+        # chat had stopped showing both. ``suggestions`` stays on the wire,
+        # empty, for clients that still read it.
+        text = resp.choices[0].message.content if resp.choices else None
+        return build_rebuff_toolcall((text or "").strip() or fallback)
 
     def _handle_free_text_explain(
         self,
