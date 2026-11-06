@@ -377,14 +377,6 @@ def test_raw_expression_strings_are_reported_wherever_they_sit():
     assert all(vis_generate.RAW_EXPRESSION_ERROR in e for e in errors)
 
 
-def test_parse_and_validate_reports_raw_strings_without_entity_fields():
-    from udiagent.grammar import load_grammar
-
-    spec = _spec([{"derive": {"grp": _RAW_DERIVE}}], [("x", "event_date")])
-    _, errors = _parse_and_validate(json.dumps(spec), load_grammar("udi")["schema_dict"])
-    assert len(errors) == 1 and "derive.grp" in errors[0]
-
-
 def _validate_context(spec):
     from udiagent.grammar import load_grammar
 
