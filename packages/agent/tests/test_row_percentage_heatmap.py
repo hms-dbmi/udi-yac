@@ -21,8 +21,9 @@ _PCX = Path(__file__).resolve().parents[3] / "sample-data" / "pcx"
 _EVENTS = _PCX / "pcx_30_event_level_deid.csv"
 
 
-def test_cells_are_shares_of_the_rows_distinct_subjects():
-    index, param_map = TOOL_DISPATCH["vis_084_heatmap_row_percentage"]
+def _rows(tool):
+    """Organization by metastasis per patient, run through DuckDB."""
+    index, param_map = TOOL_DISPATCH[tool]
     args = {
         "entity": "Event",
         "field1": "organization_name",
@@ -33,14 +34,15 @@ def test_cells_are_shares_of_the_rows_distinct_subjects():
     schema = parse_schema_from_dict(json.loads((_PCX / "datapackage.json").read_text()))
     assert validate_bindings(TEMPLATES[index], bindings, schema) == []
     spec = instantiate_template(TEMPLATES[index], bindings, schema)
-
     engine = QueryEngine(
         DuckDBConnector(views={"event": str(_EVENTS)}), table_map={"Event": "event"}
     )
-    rows = engine.run_query(source=spec["source"], transformation=spec["transformation"])[
+    return engine.run_query(source=spec["source"], transformation=spec["transformation"])[
         "displayData"
     ]
 
+
+def test_cells_are_shares_of_the_rows_distinct_subjects():
     cell, row = defaultdict(set), defaultdict(set)
     with _EVENTS.open() as f:
         for event in csv.DictReader(f):
@@ -48,6 +50,7 @@ def test_cells_are_shares_of_the_rows_distinct_subjects():
             cell[org, event["metastasis"]].add(patient)
             row[org].add(patient)
     expected = {key: 100 * len(ids) / len(row[key[0]]) for key, ids in cell.items()}
+    rows = _rows("vis_084_heatmap_row_percentage")
     got = {(r["organization_name"], r["metastasis"]): r["% of row"] for r in rows}
     assert got == pytest.approx(expected)
     # 57 of Seattle's 132 patients have a metastatic event; counting events
@@ -56,21 +59,6 @@ def test_cells_are_shares_of_the_rows_distinct_subjects():
 
 
 def test_count_heatmap_counts_each_subject_once_per_cell():
-    index, param_map = TOOL_DISPATCH["vis_085_heatmap_count_subjects"]
-    args = {
-        "entity": "Event",
-        "field1": "organization_name",
-        "field2": "metastasis",
-        "field3": "research_id",
-    }
-    bindings = {param_map[k]: v for k, v in args.items()}
-    schema = parse_schema_from_dict(json.loads((_PCX / "datapackage.json").read_text()))
-    spec = instantiate_template(TEMPLATES[index], bindings, schema)
-    engine = QueryEngine(
-        DuckDBConnector(views={"event": str(_EVENTS)}), table_map={"Event": "event"}
-    )
-    rows = engine.run_query(source=spec["source"], transformation=spec["transformation"])[
-        "displayData"
-    ]
+    rows = _rows("vis_085_heatmap_count_subjects")
     got = {(r["organization_name"], r["metastasis"]): r["subjects"] for r in rows}
     assert got["Seattle Children's Hospital", "Yes"] == 57

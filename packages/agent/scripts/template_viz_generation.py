@@ -5412,18 +5412,10 @@ def generate():
     )
 
 
-    # Row-percentage heatmap of SUBJECTS: each cell is the share of the row's
-    # distinct subjects (patients) that have that column value, the question
-    # the experiment log asked ("convert each row to percentages" of a unique
-    # patient count). Both sides count distinct subjects: one row per
-    # (row, column, subject) and per (row, subject) first, then a count. The
-    # row total cannot be a group aggregate over the cells, since a subject
-    # with two column values sits in two cells and the sum would count them
-    # twice; it is its own reduction, joined back on the row field. The model's
-    # own attempt joined the raw table to itself instead, which collided every
-    # non-key column and surfaced as "Invalid column reference". A subject with
-    # several column values counts in each, so a row can exceed 100%. The label
-    # rounds the share, floor(x + 0.5) via `%` since the grammar has no round().
+    # Row-percentage heatmap of distinct subjects (#81). The row total is its
+    # own reduction joined back on the row field: a sum over the cells would
+    # count a subject with two column values twice. The label rounds with
+    # floor(x + 0.5) via `%`; the grammar has no round().
     _cell_subjects = "subjects"
     _row_subjects = "<F1> subjects"
     _row_share = Expr.binop(
@@ -5431,6 +5423,7 @@ def generate():
         Expr.binop("*", Expr.field(_cell_subjects), Expr.lit(100)),
         Expr.field(_row_subjects),
     )
+    _half_up = Expr.binop("+", Expr.field("% of row"), Expr.lit(0.5))
     df = add_row(
         df,
         query_templates=[
@@ -5451,16 +5444,11 @@ def generate():
             .rollup({_row_subjects: Op.count()}, out_name="<E>__rows")
             .join(in_name=["<E>__cells", "<E>__rows"], on=["<F1>", "<F1>"], out_name="<E>__shares")
             .derive({"% of row": _row_share})
-            .derive({"_half_up": Expr.binop("+", Expr.field("% of row"), Expr.lit(0.5))})
             .derive(
                 {
                     "row label": Expr.concat(
                         [
-                            Expr.binop(
-                                "-",
-                                Expr.field("_half_up"),
-                                Expr.binop("%", Expr.field("_half_up"), Expr.lit(1)),
-                            ),
+                            Expr.binop("-", _half_up, Expr.binop("%", _half_up, Expr.lit(1))),
                             Expr.lit("%"),
                         ]
                     )
@@ -5508,11 +5496,8 @@ def generate():
         ),
     )
 
-    # Unique-subject count heatmap: the count the row-percentage heatmap above
-    # divides. One row per (row, column, subject) first, so a patient with
-    # five events in one cell counts once there. Without it, "unique patient
-    # counts" had only the row-count heatmap (events, not patients) or the
-    # row-percentage one to choose from.
+    # Unique-subject count heatmap, the count the one above divides. Without
+    # it, "unique patient counts" got the row-percentage heatmap.
     df = add_row(
         df,
         query_templates=[
