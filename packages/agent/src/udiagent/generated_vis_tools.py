@@ -2,7 +2,7 @@
 Auto-generated visualization tool definitions.
 
 Generated from: src/udiagent/data/skills/template_visualizations.json
-Tools: 81
+Tools: 82
 
 Schema-independent: tool params are free-form strings resolved against the
 per-request data schema at runtime (see vis_generate._execute_generate).
@@ -1796,7 +1796,13 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '["<E>", "groupTotals"], "out": "datasets"}, {"derive": {"proportion": {"op": "/", "left": {"field": "cell_total"}, '
  '"right": {"field": "axis_total"}}}}], "representation": {"mark": "bar", "mapping": [{"encoding": "x", "field": '
  '"proportion", "type": "quantitative"}, {"encoding": "y", "field": "<D1:n>", "type": "nominal"}, {"encoding": '
- '"color", "field": "<D2:n>", "type": "nominal"}]}}']
+ '"color", "field": "<D2:n>", "type": "nominal"}]}}',
+ '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"derive": {"Match": {"if": {"fn": "contains", '
+ '"args": [{"fn": "lower", "args": [{"field": "<F:n>"}]}, {"fn": "lower", "args": [{"literal": "<V1>"}]}]}, "then": '
+ '{"literal": "Contains \\u201c<V1>\\u201d"}, "else": {"literal": "Does not contain \\u201c<V1>\\u201d"}}}}, '
+ '{"groupby": "Match"}, {"rollup": {"<E> count": {"op": "count"}}}], "representation": {"mark": "bar", "mapping": '
+ '[{"encoding": "x", "field": "Match", "type": "nominal"}, {"encoding": "y", "field": "<E> count", "type": '
+ '"quantitative"}]}}']
 
 
 # OpenAI function-calling tool definitions
@@ -5510,6 +5516,31 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                         'type': 'string'}},
                               'required': ['entity', 'dimension1', 'dimension2'],
                               'type': 'object'}},
+  'type': 'function'},
+ {'function': {'description': '[barchart] Counts entities whose nominal or text field contains a given piece of text '
+                              '(ignoring case) against those whose field does not, as two bars. For a partial match '
+                              "inside values, e.g. every location mentioning 'brain stem'; for whole values use a "
+                              'filter or a plain count by the field. Design: Both sides are lower-cased, so the match '
+                              "ignores case whatever the reader typed. A null field is 'does not contain', on both "
+                              'executors. Tasks: Compare how many records mention a term against how many do not. '
+                              'Query patterns: How many <E> have a <F:n> containing <V1>, compared to those that do '
+                              "not?; Compare the count of <E> whose <F:n> includes vs doesn't include <V1>.",
+               'name': 'vis_081_barchart_count_contains',
+               'parameters': {'additionalProperties': False,
+                              'properties': {'entity': {'description': 'The data entity (table) to visualize.',
+                                                        'type': 'string'},
+                                             'field': {'description': 'nominal field, encodes x-axis.',
+                                                       'type': 'string'},
+                                             'value1': {'description': "The text to look for INSIDE the field's values "
+                                                                       '(a substring, matched ignoring case), not '
+                                                                       'necessarily a whole value. A literal data '
+                                                                       'VALUE to match (not a column name) — one of '
+                                                                       'the values actually present in the relevant '
+                                                                       'column, copied exactly, including case and '
+                                                                       'spacing.',
+                                                        'type': 'string'}},
+                              'required': ['entity', 'field', 'value1'],
+                              'type': 'object'}},
   'type': 'function'}]
 
 
@@ -5822,7 +5853,8 @@ TOOL_DISPATCH = {'vis_000_barchart_count_vert_grouped': (0, {'entity': 'E', 'fie
  'vis_078_stacked_bar_horiz_stacked': (78, {'dimension1': 'D1', 'dimension2': 'D2', 'entity': 'E'}),
  'vis_079_stacked_bar_horiz_grouped': (79, {'dimension1': 'D1', 'dimension2': 'D2', 'entity': 'E'}),
  'vis_080_stacked_bar_proportion_horiz_stacked_normalized': (80,
-                                                             {'dimension1': 'D1', 'dimension2': 'D2', 'entity': 'E'})}
+                                                             {'dimension1': 'D1', 'dimension2': 'D2', 'entity': 'E'}),
+ 'vis_081_barchart_count_contains': (81, {'entity': 'E', 'field': 'F', 'value1': 'V1'})}
 
 
 # Tags per tool name (drives per-request template selection)
@@ -5906,7 +5938,8 @@ TOOL_TAGS = {'vis_000_barchart_count_vert_grouped': ['line_item', 'barchart'],
  'vis_077_table_count_null': ['line_item', 'table'],
  'vis_078_stacked_bar_horiz_stacked': ['data_cube', 'stacked_bar'],
  'vis_079_stacked_bar_horiz_grouped': ['data_cube', 'stacked_bar'],
- 'vis_080_stacked_bar_proportion_horiz_stacked_normalized': ['data_cube', 'stacked_bar']}
+ 'vis_080_stacked_bar_proportion_horiz_stacked_normalized': ['data_cube', 'stacked_bar'],
+ 'vis_081_barchart_count_contains': ['line_item', 'barchart']}
 
 
 # Entity keys per tool name that may share a table with another entity
@@ -5991,7 +6024,8 @@ TOOL_SHARED_ENTITIES = {'vis_000_barchart_count_vert_grouped': [],
  'vis_077_table_count_null': [],
  'vis_078_stacked_bar_horiz_stacked': [],
  'vis_079_stacked_bar_horiz_grouped': [],
- 'vis_080_stacked_bar_proportion_horiz_stacked_normalized': []}
+ 'vis_080_stacked_bar_proportion_horiz_stacked_normalized': [],
+ 'vis_081_barchart_count_contains': []}
 
 # User-facing text per tool name: (title_template, summary_template),
 # with placeholders rewritten to tokens the frontend resolves against
@@ -6232,4 +6266,8 @@ TOOL_TEXT = {'vis_000_barchart_count_vert_grouped': ('Bar chart of the number of
  'vis_080_stacked_bar_proportion_horiz_stacked_normalized': ('Normalized bar chart of {enc:color} within {enc:y}',
                                                              'Displays what share of {bind:M} in each {enc:y} category '
                                                              'falls into each {enc:color} value, as horizontal bars '
-                                                             'scaled to 100%.')}
+                                                             'scaled to 100%.'),
+ 'vis_081_barchart_count_contains': ('Number of {entity} whose {col:field} contains “{col:value1}”',
+                                     'Displays how many {entity} have a {col:field} containing “{col:value1}” '
+                                     '(ignoring case) and how many do not. A missing {col:field} counts as not '
+                                     'containing it.')}

@@ -150,6 +150,10 @@
                 }
               },
               "type": "object"
+            },
+            "unit": {
+              "description": "Make the bin width a nice multiple of this many field units, rather than of a power of ten — e.g. `365.25` bins an age in days by whole years. Optional. The renderer sets it for a column with a `udi:time_format`.",
+              "type": "number"
             }
           },
           "required": ["field"],
@@ -246,6 +250,26 @@
         }
       },
       "required": ["if", "then", "else"],
+      "type": "object"
+    },
+    "ContainsExpr": {
+      "additionalProperties": false,
+      "description": "Substring test: true when the first argument (a string) contains the second. Case-sensitive; compose with `lower` to ignore case. A null on either side is false, never null, so it is safe as a filter or a conditional on its own.",
+      "properties": {
+        "args": {
+          "items": {
+            "$ref": "#/definitions/Expr"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "type": "array"
+        },
+        "fn": {
+          "const": "contains",
+          "type": "string"
+        }
+      },
+      "required": ["fn", "args"],
       "type": "object"
     },
     "DataSelection": {
@@ -376,6 +400,9 @@
         },
         {
           "$ref": "#/definitions/Unnest"
+        },
+        {
+          "$ref": "#/definitions/Only"
         }
       ],
       "description": "The possible data transformations. These include operations like grouping, filtering, joining, and more."
@@ -490,7 +517,7 @@
           "$ref": "#/definitions/FunctionExpr"
         }
       ],
-      "description": "A backend-neutral expression AST used by `derive` and `filter`, so the same spec can be compiled to Arquero (client/interactive) or SQL (server/remote).\n\nIt is deliberately NOT a general expression language: it covers exactly the surface the visualization templates emit today — field references, literals, binary arithmetic/comparison/logic, ternary conditionals, per-group aggregates (count/sum/…), and window functions (rank). Add a node only when a template needs one.\n\nThe union is untagged; nodes are distinguished by key (`field` | `literal` | `op` | `if` | `agg` | `window`) without a `type` tag. CAVEAT for compiler authors: `AggregateExpr` optionally carries a `field` prop ({ agg: 'max', field: 'g' }), so dispatch must test the bare FieldExpr case LAST (or test `agg` first). `BinaryExpr` owns `op`; the aggregate node uses `agg`.\n\nponytail: the `string` form in DeriveExpression/FilterExpression is transitional. Once all templates/specs emit Expr, drop `string |` from those unions and the SQL backend no longer needs to reject raw expressions."
+      "description": "A backend-neutral expression AST used by `derive` and `filter`, so the same spec can be compiled to Arquero (client/interactive) or SQL (server/remote).\n\nIt is deliberately NOT a general expression language: it covers exactly the surface the visualization templates emit today — field references, literals, binary arithmetic/comparison/logic, ternary conditionals, per-group aggregates (count/sum/…), window functions (rank), the log/exp math functions, and lower/contains for substring matching. Add a node only when a template or a real query needs one.\n\nThe union is untagged; nodes are distinguished by key (`field` | `literal` | `op` | `if` | `agg` | `window` | `concat` | `fn`) without a `type` tag. CAVEAT for compiler authors: `AggregateExpr` optionally carries a `field` prop ({ agg: 'max', field: 'g' }), so dispatch must test the bare FieldExpr case LAST (or test `agg` first). `BinaryExpr` owns `op`; the aggregate node uses `agg`.\n\nponytail: the `string` form in DeriveExpression/FilterExpression is transitional. Once all templates/specs emit Expr, drop `string |` from those unions and the SQL backend no longer needs to reject raw expressions."
     },
     "FieldExpr": {
       "additionalProperties": false,
@@ -593,6 +620,17 @@
       "enum": ["all", "any", "none"],
       "type": "string"
     },
+    "FunctionExpr": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/UnaryFunctionExpr"
+        },
+        {
+          "$ref": "#/definitions/ContainsExpr"
+        }
+      ],
+      "description": "A scalar function call: `log`/`exp`/`lower` take one argument, `contains` takes two."
+    },
     "GenericFieldMapping<ArcEncodingOptions>": {
       "additionalProperties": false,
       "description": "A generic field mapping for visual encodings.",
@@ -628,6 +666,11 @@
         "range": {
           "$ref": "#/definitions/Domain",
           "description": "The custom range will change the scaling of visual encodings."
+        },
+        "sort": {
+          "description": "Order of a categorical domain the renderer computes (no explicit `domain`, `domainWhenFiltered` not `\"filtered\"`). Always computed from the unfiltered data, so it holds still as filters change.\n- `\"ascending\"` (default): alphabetical, numbers in numeric order, nulls last.\n- `\"-x\"` / `\"-y\"`: by the per-category sum of that channel's field, largest   first (a bar chart's bar totals); ties alphabetical.",
+          "enum": ["ascending", "-x", "-y"],
+          "type": "string"
         },
         "title": {
           "description": "Custom title for the axis or legend label of this encoding. Overrides the default field name displayed on the axis.",
@@ -677,6 +720,11 @@
           "$ref": "#/definitions/Domain",
           "description": "The custom range will change the scaling of visual encodings."
         },
+        "sort": {
+          "description": "Order of a categorical domain the renderer computes (no explicit `domain`, `domainWhenFiltered` not `\"filtered\"`). Always computed from the unfiltered data, so it holds still as filters change.\n- `\"ascending\"` (default): alphabetical, numbers in numeric order, nulls last.\n- `\"-x\"` / `\"-y\"`: by the per-category sum of that channel's field, largest   first (a bar chart's bar totals); ties alphabetical.",
+          "enum": ["ascending", "-x", "-y"],
+          "type": "string"
+        },
         "title": {
           "description": "Custom title for the axis or legend label of this encoding. Overrides the default field name displayed on the axis.",
           "type": "string"
@@ -724,6 +772,11 @@
         "range": {
           "$ref": "#/definitions/Domain",
           "description": "The custom range will change the scaling of visual encodings."
+        },
+        "sort": {
+          "description": "Order of a categorical domain the renderer computes (no explicit `domain`, `domainWhenFiltered` not `\"filtered\"`). Always computed from the unfiltered data, so it holds still as filters change.\n- `\"ascending\"` (default): alphabetical, numbers in numeric order, nulls last.\n- `\"-x\"` / `\"-y\"`: by the per-category sum of that channel's field, largest   first (a bar chart's bar totals); ties alphabetical.",
+          "enum": ["ascending", "-x", "-y"],
+          "type": "string"
         },
         "title": {
           "description": "Custom title for the axis or legend label of this encoding. Overrides the default field name displayed on the axis.",
@@ -773,6 +826,11 @@
           "$ref": "#/definitions/Domain",
           "description": "The custom range will change the scaling of visual encodings."
         },
+        "sort": {
+          "description": "Order of a categorical domain the renderer computes (no explicit `domain`, `domainWhenFiltered` not `\"filtered\"`). Always computed from the unfiltered data, so it holds still as filters change.\n- `\"ascending\"` (default): alphabetical, numbers in numeric order, nulls last.\n- `\"-x\"` / `\"-y\"`: by the per-category sum of that channel's field, largest   first (a bar chart's bar totals); ties alphabetical.",
+          "enum": ["ascending", "-x", "-y"],
+          "type": "string"
+        },
         "title": {
           "description": "Custom title for the axis or legend label of this encoding. Overrides the default field name displayed on the axis.",
           "type": "string"
@@ -820,6 +878,11 @@
         "range": {
           "$ref": "#/definitions/Domain",
           "description": "The custom range will change the scaling of visual encodings."
+        },
+        "sort": {
+          "description": "Order of a categorical domain the renderer computes (no explicit `domain`, `domainWhenFiltered` not `\"filtered\"`). Always computed from the unfiltered data, so it holds still as filters change.\n- `\"ascending\"` (default): alphabetical, numbers in numeric order, nulls last.\n- `\"-x\"` / `\"-y\"`: by the per-category sum of that channel's field, largest   first (a bar chart's bar totals); ties alphabetical.",
+          "enum": ["ascending", "-x", "-y"],
+          "type": "string"
         },
         "title": {
           "description": "Custom title for the axis or legend label of this encoding. Overrides the default field name displayed on the axis.",
@@ -869,6 +932,11 @@
           "$ref": "#/definitions/Domain",
           "description": "The custom range will change the scaling of visual encodings."
         },
+        "sort": {
+          "description": "Order of a categorical domain the renderer computes (no explicit `domain`, `domainWhenFiltered` not `\"filtered\"`). Always computed from the unfiltered data, so it holds still as filters change.\n- `\"ascending\"` (default): alphabetical, numbers in numeric order, nulls last.\n- `\"-x\"` / `\"-y\"`: by the per-category sum of that channel's field, largest   first (a bar chart's bar totals); ties alphabetical.",
+          "enum": ["ascending", "-x", "-y"],
+          "type": "string"
+        },
         "title": {
           "description": "Custom title for the axis or legend label of this encoding. Overrides the default field name displayed on the axis.",
           "type": "string"
@@ -917,6 +985,11 @@
           "$ref": "#/definitions/Domain",
           "description": "The custom range will change the scaling of visual encodings."
         },
+        "sort": {
+          "description": "Order of a categorical domain the renderer computes (no explicit `domain`, `domainWhenFiltered` not `\"filtered\"`). Always computed from the unfiltered data, so it holds still as filters change.\n- `\"ascending\"` (default): alphabetical, numbers in numeric order, nulls last.\n- `\"-x\"` / `\"-y\"`: by the per-category sum of that channel's field, largest   first (a bar chart's bar totals); ties alphabetical.",
+          "enum": ["ascending", "-x", "-y"],
+          "type": "string"
+        },
         "title": {
           "description": "Custom title for the axis or legend label of this encoding. Overrides the default field name displayed on the axis.",
           "type": "string"
@@ -964,6 +1037,11 @@
         "range": {
           "$ref": "#/definitions/Domain",
           "description": "The custom range will change the scaling of visual encodings."
+        },
+        "sort": {
+          "description": "Order of a categorical domain the renderer computes (no explicit `domain`, `domainWhenFiltered` not `\"filtered\"`). Always computed from the unfiltered data, so it holds still as filters change.\n- `\"ascending\"` (default): alphabetical, numbers in numeric order, nulls last.\n- `\"-x\"` / `\"-y\"`: by the per-category sum of that channel's field, largest   first (a bar chart's bar totals); ties alphabetical.",
+          "enum": ["ascending", "-x", "-y"],
+          "type": "string"
         },
         "title": {
           "description": "Custom title for the axis or legend label of this encoding. Overrides the default field name displayed on the axis.",
@@ -2059,6 +2137,43 @@
       "required": ["numberFields"],
       "type": "object"
     },
+    "Only": {
+      "additionalProperties": false,
+      "description": "Selects one marginal of a pre-aggregated data cube: the rows in which\n**only** the named dimensions are populated and every other dimension of that cube is null.\n\nA powerset cube stores one row per dimension-subset combination, with the non-participating dimensions null and the measure pre-aggregated over the matching line-item rows. Reading such a source means picking a marginal, so `{ only: ['sex'] }` on a cube whose dimensions are `[sex, race, age]` is equivalent to the predicate `sex != null && race == null && age == null`.\n\nWriting that predicate by hand requires the caller to know the cube's entire dimension list, which pushes cube metadata into every call site and makes specs brittle to schema changes. `only` names just the dimensions it wants and resolves the null complement from the source's registered `udi:dimensions`.",
+      "properties": {
+        "dimensions": {
+          "description": "The cube's full dimension list. Optional escape hatch for sources whose cube metadata isn't registered with the toolkit — a spec loaded outside a data package, a Storybook story, a test fixture. When omitted (the normal case) the list is resolved from the source's `udi:dimensions`.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "in": {
+          "description": "The name of the input table. If not specified, it assumes the output of the previous operation.",
+          "type": "string"
+        },
+        "only": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ],
+          "description": "The dimension(s) that must be populated. Every other dimension of the cube must be null. An empty list selects the grand-total row (every dimension null)."
+        },
+        "out": {
+          "description": "The name of the output table. If not specified, it overwrites the name of the previous table.",
+          "type": "string"
+        }
+      },
+      "required": ["only"],
+      "type": "object"
+    },
     "OrderBy": {
       "additionalProperties": false,
       "description": "Orders data by a specified field or fields.",
@@ -2309,6 +2424,11 @@
           "$ref": "#/definitions/Domain",
           "description": "The custom range will change the scaling of visual encodings."
         },
+        "sort": {
+          "description": "Order of a categorical domain the renderer computes (no explicit `domain`, `domainWhenFiltered` not `\"filtered\"`). Always computed from the unfiltered data, so it holds still as filters change.\n- `\"ascending\"` (default): alphabetical, numbers in numeric order, nulls last.\n- `\"-x\"` / `\"-y\"`: by the per-category sum of that channel's field, largest   first (a bar chart's bar totals); ties alphabetical.",
+          "enum": ["ascending", "-x", "-y"],
+          "type": "string"
+        },
         "title": {
           "description": "Custom title for the axis or legend label of this encoding. Overrides the default field name displayed on the axis.",
           "type": "string"
@@ -2431,9 +2551,29 @@
       },
       "type": "object"
     },
+    "UnaryFunctionExpr": {
+      "additionalProperties": false,
+      "description": "A scalar function of one argument.\n\n- `log` is the NATURAL logarithm, and with `exp` exists for running   products: no executor has a portable product aggregate, but a product is   `exp(sum(log(x)))`, and a running sum is already a rolling derive, which is   how the survival templates compute the Kaplan-Meier estimate. `log` of zero   or a negative number is -Infinity/NaN in Arquero and an error in SQL, so   guard the argument with a conditional.\n- `lower` lower-cases a string (null stays null). Wrap both sides of a   `contains` in it for a case-insensitive match.",
+      "properties": {
+        "args": {
+          "items": {
+            "$ref": "#/definitions/Expr"
+          },
+          "maxItems": 1,
+          "minItems": 1,
+          "type": "array"
+        },
+        "fn": {
+          "enum": ["log", "exp", "lower"],
+          "type": "string"
+        }
+      },
+      "required": ["fn", "args"],
+      "type": "object"
+    },
     "Unnest": {
       "additionalProperties": false,
-      "description": "Expands a delimited multi-value field into one row per value.\n\nSome source columns hold a set rather than a scalar — `\"Spine;Brain\"` means the row belongs to both categories. Grouping on such a column treats every distinct combination as its own category, which is both wrong and unusable (a column with 22 real values can have 78 combinations). This is the only transformation that increases the row count: a row with n values becomes n rows, each carrying one value and a copy of every other column. Rows whose field is null or empty are dropped, since they belong to no category.\n\nNOTE: currently implemented by the in-browser Arquero executor only. The SQL backend rejects it rather than silently returning different results.",
+      "description": "Expands a delimited multi-value field into one row per value.\n\nSome source columns hold a set rather than a scalar — `\"Spine;Brain\"` means the row belongs to both categories. Grouping on such a column treats every distinct combination as its own category, which is both wrong and unusable (a column with 22 real values can have 78 combinations). This is the only transformation that increases the row count: a row with n values becomes n rows, each carrying one value and a copy of every other column. Rows whose field is null or empty are dropped, since they belong to no category.",
       "properties": {
         "in": {
           "description": "The name of the input table. If not specified, it assumes the output of the previous operation.",
@@ -2522,26 +2662,6 @@
         }
       },
       "required": ["window"],
-      "type": "object"
-    },
-    "FunctionExpr": {
-      "additionalProperties": false,
-      "description": "A scalar math function of one argument. `log` is the NATURAL logarithm.\n\nExists for running products: no executor has a portable product aggregate, but a product is `exp(sum(log(x)))`, and a running sum is already a rolling derive — which is how the survival templates compute the Kaplan-Meier estimate. `log` of zero or a negative number is -Infinity/NaN in Arquero and an error in SQL, so guard the argument with a conditional.",
-      "properties": {
-        "args": {
-          "items": {
-            "$ref": "#/definitions/Expr"
-          },
-          "maxItems": 1,
-          "minItems": 1,
-          "type": "array"
-        },
-        "fn": {
-          "enum": ["log", "exp"],
-          "type": "string"
-        }
-      },
-      "required": ["fn", "args"],
       "type": "object"
     }
   }

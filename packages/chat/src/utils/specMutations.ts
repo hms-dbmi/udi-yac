@@ -223,6 +223,16 @@ function renameExprFields(
       }
     }
   }
+  // Function arguments and concat parts are lists of child Exprs.
+  for (const key of ['args', 'concat'] as const) {
+    const parts = obj[key];
+    if (!Array.isArray(parts)) continue;
+    const results = parts.map((part) => renameExprFields(part, renames));
+    if (results.some((r) => r.changed)) {
+      changed = true;
+      next[key] = results.map((r) => r.value);
+    }
+  }
   return changed ? { value: next, changed } : { value: node, changed: false };
 }
 

@@ -34,12 +34,16 @@ _BINARY_OPERATORS = {
     "||": "OR",
 }
 
-# UDI function -> SQL function. `log` is the natural logarithm (Arquero's
-# op.log), so LN — not LOG, which is base 10 in some dialects. Both exist in
-# DuckDB and StarRocks.
+# UDI function -> (SQL template, arity); every function exists in DuckDB and
+# StarRocks. `log` is the natural logarithm (Arquero's op.log), so LN — not LOG,
+# which is base 10 in some dialects. `contains` mirrors Arquero's op.includes,
+# which is false (never null) when either side is null, hence the COALESCE; the
+# search string is a literal, so it arrives as a bind parameter.
 _FUNCTIONS = {
-    "log": "LN",
-    "exp": "EXP",
+    "log": ("LN({0})", 1),
+    "exp": ("EXP({0})", 1),
+    "lower": ("LOWER({0})", 1),
+    "contains": ("COALESCE(INSTR({0}, {1}) > 0, FALSE)", 2),
 }
 
 _AGGREGATES = {
@@ -144,13 +148,13 @@ def compile_expr(node: Any, ctx: ExprContext) -> str:
 
     if "fn" in node:
         name = node["fn"]
-        sql_fn = _FUNCTIONS.get(name)
-        if sql_fn is None:
+        if not isinstance(name, str) or name not in _FUNCTIONS:
             raise UnsupportedQueryError(f"unsupported function '{name}'")
+        template, arity = _FUNCTIONS[name]
         args = node.get("args")
-        if not isinstance(args, list) or len(args) != 1:
-            raise UnsupportedQueryError(f"function '{name}' takes exactly one argument")
-        return f"{sql_fn}({compile_expr(args[0], ctx)})"
+        if not isinstance(args, list) or len(args) != arity:
+            raise UnsupportedQueryError(f"function '{name}' takes exactly {arity} argument(s)")
+        return template.format(*(compile_expr(arg, ctx) for arg in args))
 
     if "if" in node:
         cond = compile_expr(node["if"], ctx)

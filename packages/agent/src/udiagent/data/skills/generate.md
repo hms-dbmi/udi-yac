@@ -31,6 +31,8 @@ The output must be a valid UDI Grammar JSON object with three top-level keys. On
   - conditional: `{"if": <expr>, "then": <expr>, "else": <expr>}`
   - group aggregate broadcast to rows: `{"agg": "count|sum|mean|min|max|median", "field": "name"}` (omit `field` for count)
   - window function: `{"window": "rank"}`
+  - substring test: `{"fn": "contains", "args": [<expr>, <expr>]}` (case-sensitive; null is false), lower-case: `{"fn": "lower", "args": [<expr>]}` — e.g. case-insensitive match: `{"fn": "contains", "args": [{"fn": "lower", "args": [{"field": "f"}]}, {"literal": "brain stem"}]}`
+  - Never write a raw JavaScript string as an expression: method calls like `.includes()` or `.toLowerCase()` are not evaluated and silently yield false.
   - `{"binby": {"field": "name", "step": number}}`
 
   Cross-table specs (joins, cross-entity filters) must follow the

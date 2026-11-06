@@ -5222,6 +5222,70 @@ def generate():
         shape="data_cube",
     )
 
+    # ---------------------------------------------------------------
+    # Appended templates. New templates go at the END: a tool name embeds its
+    # position (vis_065_…), saved sessions record that name as a chart's
+    # provenance, and inserting earlier renames every template after it.
+    # ---------------------------------------------------------------
+
+    # Text match: count the rows whose field contains a piece of text, ignoring
+    # case, against those whose does not. The value is a SUBSTRING, so it is
+    # deliberately compared with `contains`, not `==`: the domain check that
+    # guards `==` values would reject "brain stem" for not being a whole value.
+    _match = "Match"
+    df = add_row(
+        df,
+        query_templates=[
+            "How many <E> have a <F:n> containing <V1>, compared to those that do not?",
+            "Compare the count of <E> whose <F:n> includes vs doesn't include <V1>.",
+        ],
+        spec=(
+            Chart()
+            .source("<E>", "<E.url>")
+            .derive(
+                {
+                    _match: Expr.cond(
+                        Expr.contains(
+                            Expr.lower(Expr.field("<F:n>")), Expr.lower(Expr.lit("<V1>"))
+                        ),
+                        Expr.lit("Contains “<V1>”"),
+                        Expr.lit("Does not contain “<V1>”"),
+                    )
+                }
+            )
+            .groupby(_match)
+            .rollup({"<E> count": Op.count()})
+            .mark("bar")
+            .x(field=_match, type="nominal")
+            .y(field="<E> count", type="quantitative")
+        ),
+        chart_type=ChartType.BARCHART,
+        task_types=[TaskType.COMPUTE_DERIVED_VALUE],
+        description=(
+            "Counts entities whose nominal or text field contains a given piece of text "
+            "(ignoring case) against those whose field does not, as two bars. For a "
+            "partial match inside values, e.g. every location mentioning 'brain stem'; "
+            "for whole values use a filter or a plain count by the field."
+        ),
+        title_template="Number of <E> whose <F> contains “<V1>”",
+        summary_template=(
+            "Displays how many <E> have a <F> containing “<V1>” (ignoring case) and how "
+            "many do not. A missing <F> counts as not containing it."
+        ),
+        design_considerations=(
+            "Both sides are lower-cased, so the match ignores case whatever the reader "
+            "typed. A null field is 'does not contain', on both executors."
+        ),
+        tasks="Compare how many records mention a term against how many do not.",
+        name_hint="count_contains",
+        value_descriptions={
+            "V1": (
+                "The text to look for INSIDE the field's values (a substring, matched "
+                "ignoring case), not necessarily a whole value."
+            )
+        },
+    )
+
     return df
 
 
