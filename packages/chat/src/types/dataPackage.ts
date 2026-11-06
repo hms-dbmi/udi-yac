@@ -5,6 +5,8 @@ export interface DataPackageResource {
   /** Friendly label for the entity, e.g. `donors` → "Donors". Frictionless's
    *  standard `title`; falls back to a humanized `name` when absent. */
   title?: string;
+  /** Frictionless's standard description of the table. */
+  description?: string;
   path: string;
   schema: {
     fields: Array<{
