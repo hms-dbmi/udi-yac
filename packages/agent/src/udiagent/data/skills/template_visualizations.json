@@ -1986,5 +1986,30 @@
     "title_template": "Normalized bar chart of <D2:n> within <D1:n>",
     "summary_template": "Displays what share of <M> in each <D1:n> category falls into each <D2:n> value, as horizontal bars scaled to 100%.",
     "value_descriptions": {}
+  },
+  {
+    "query_templates": [
+      "How many <E> have a <F:n> containing <V1>, compared to those that do not?",
+      "Compare the count of <E> whose <F:n> includes vs doesn't include <V1>."
+    ],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"derive\": {\"Match\": {\"if\": {\"fn\": \"contains\", \"args\": [{\"fn\": \"lower\", \"args\": [{\"field\": \"<F:n>\"}]}, {\"fn\": \"lower\", \"args\": [{\"literal\": \"<V1>\"}]}]}, \"then\": {\"literal\": \"Contains \\u201c<V1>\\u201d\"}, \"else\": {\"literal\": \"Does not contain \\u201c<V1>\\u201d\"}}}}, {\"groupby\": \"Match\"}, {\"rollup\": {\"<E> count\": {\"op\": \"count\"}}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"Match\", \"type\": \"nominal\"}, {\"encoding\": \"y\", \"field\": \"<E> count\", \"type\": \"quantitative\"}]}}",
+    "creation_method": "template",
+    "chart_type": "barchart",
+    "chart_complexity": "medium",
+    "spec_key_count": 18,
+    "task_types": ["Compute_Derived_Value"],
+    "tags": ["line_item", "barchart"],
+    "description": "Counts entities whose nominal or text field contains a given piece of text (ignoring case) against those whose field does not, as two bars. For a partial match inside values, e.g. every location mentioning 'brain stem'; for whole values use a filter or a plain count by the field.",
+    "design_considerations": "Both sides are lower-cased, so the match ignores case whatever the reader typed. A null field is 'does not contain', on both executors.",
+    "tasks": "Compare how many records mention a term against how many do not.",
+    "review_hint": "",
+    "preview_bindings": null,
+    "name_hint": "count_contains",
+    "shared_entities": [],
+    "title_template": "Number of <E> whose <F> contains \u201c<V1>\u201d",
+    "summary_template": "Displays how many <E> have a <F> containing \u201c<V1>\u201d (ignoring case) and how many do not. A missing <F> counts as not containing it.",
+    "value_descriptions": {
+      "V1": "The text to look for INSIDE the field's values (a substring, matched ignoring case), not necessarily a whole value."
+    }
   }
 ]
