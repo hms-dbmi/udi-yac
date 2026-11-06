@@ -2,7 +2,7 @@
 Auto-generated visualization tool definitions.
 
 Generated from: src/udiagent/data/skills/template_visualizations.json
-Tools: 85
+Tools: 86
 
 Schema-independent: tool params are free-form strings resolved against the
 per-request data schema at runtime (see vis_generate._execute_generate).
@@ -1821,17 +1821,29 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '"mapping": [{"encoding": "text", "field": "subjects", "type": "quantitative", "title": "Subjects"}, {"encoding": '
  '"y", "field": "<E2.F2>", "type": "nominal"}, {"encoding": "x", "field": "<E1.F2>", "type": "nominal"}, {"encoding": '
  '"color", "value": "black"}], "stroke": "white", "strokeWidth": 3, "strokeOpacity": 0.7}]}',
- '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"groupby": ["<F2>", "<F1>"]}, {"rollup": '
- '{"count <E>": {"op": "count"}}}, {"groupby": "<F1>"}, {"derive": {"% of row": {"op": "/", "left": {"op": "*", '
- '"left": {"field": "count <E>"}, "right": {"literal": 100}}, "right": {"agg": "sum", "field": "count <E>"}}}}, '
- '{"derive": {"_half_up": {"op": "+", "left": {"field": "% of row"}, "right": {"literal": 0.5}}}}, {"derive": {"row '
- 'label": {"concat": [{"op": "-", "left": {"field": "_half_up"}, "right": {"op": "%", "left": {"field": "_half_up"}, '
- '"right": {"literal": 1}}}, {"literal": "%"}]}}}], "representation": [{"mark": "rect", "mapping": [{"encoding": '
- '"color", "field": "% of row", "type": "quantitative", "title": "% of row"}, {"encoding": "y", "field": "<F1>", '
- '"type": "nominal"}, {"encoding": "x", "field": "<F2>", "type": "nominal"}]}, {"mark": "text", "mapping": '
- '[{"encoding": "text", "field": "row label", "type": "nominal"}, {"encoding": "y", "field": "<F1>", "type": '
- '"nominal"}, {"encoding": "x", "field": "<F2>", "type": "nominal"}, {"encoding": "color", "value": "black"}], '
- '"stroke": "white", "strokeWidth": 3, "strokeOpacity": 0.7}]}']
+ '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"groupby": ["<F1>", "<F2>", "<F3>"], "in": '
+ '"<E>"}, {"rollup": {"<E> rows": {"op": "count"}}, "in": "<E>", "out": "<E>__cell_subjects"}, {"groupby": ["<F1>", '
+ '"<F2>"]}, {"rollup": {"subjects": {"op": "count"}}, "out": "<E>__cells"}, {"groupby": ["<F1>", "<F3>"], "in": '
+ '"<E>"}, {"rollup": {"<E> rows": {"op": "count"}}, "in": "<E>", "out": "<E>__row_subject"}, {"groupby": "<F1>"}, '
+ '{"rollup": {"<F1> subjects": {"op": "count"}}, "out": "<E>__rows"}, {"join": {"on": ["<F1>", "<F1>"]}, "in": '
+ '["<E>__cells", "<E>__rows"], "out": "<E>__shares"}, {"derive": {"% of row": {"op": "/", "left": {"op": "*", "left": '
+ '{"field": "subjects"}, "right": {"literal": 100}}, "right": {"field": "<F1> subjects"}}}}, {"derive": {"_half_up": '
+ '{"op": "+", "left": {"field": "% of row"}, "right": {"literal": 0.5}}}}, {"derive": {"row label": {"concat": [{"op": '
+ '"-", "left": {"field": "_half_up"}, "right": {"op": "%", "left": {"field": "_half_up"}, "right": {"literal": 1}}}, '
+ '{"literal": "%"}]}}}], "representation": [{"mark": "rect", "mapping": [{"encoding": "color", "field": "% of row", '
+ '"type": "quantitative", "title": "% of row"}, {"encoding": "y", "field": "<F1>", "type": "nominal"}, {"encoding": '
+ '"x", "field": "<F2>", "type": "nominal"}]}, {"mark": "text", "mapping": [{"encoding": "text", "field": "row label", '
+ '"type": "nominal"}, {"encoding": "y", "field": "<F1>", "type": "nominal"}, {"encoding": "x", "field": "<F2>", '
+ '"type": "nominal"}, {"encoding": "color", "value": "black"}], "stroke": "white", "strokeWidth": 3, "strokeOpacity": '
+ '0.7}]}',
+ '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"groupby": ["<F1>", "<F2>", "<F3>"]}, '
+ '{"rollup": {"<E> rows": {"op": "count"}}}, {"groupby": ["<F1>", "<F2>"]}, {"rollup": {"subjects": {"op": '
+ '"count"}}}], "representation": [{"mark": "rect", "mapping": [{"encoding": "color", "field": "subjects", "type": '
+ '"quantitative", "title": "Subjects"}, {"encoding": "y", "field": "<F1>", "type": "nominal"}, {"encoding": "x", '
+ '"field": "<F2>", "type": "nominal"}]}, {"mark": "text", "mapping": [{"encoding": "text", "field": "subjects", '
+ '"type": "quantitative", "title": "Subjects"}, {"encoding": "y", "field": "<F1>", "type": "nominal"}, {"encoding": '
+ '"x", "field": "<F2>", "type": "nominal"}, {"encoding": "color", "value": "black"}], "stroke": "white", '
+ '"strokeWidth": 3, "strokeOpacity": 0.7}]}']
 
 
 # OpenAI function-calling tool definitions
@@ -5637,25 +5649,52 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                            'entity2_field2'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': '[heatmap] Heatmap of two nominal fields where each cell is its share of the ROW (the '
-                              'field1 category on the y-axis), so every row sums to 100%. Use for row percentages, '
-                              'composition within each category, or normalizing a count heatmap so categories of '
-                              "different sizes compare. Design: The share divides each cell by its row's total, "
-                              'computed as a group aggregate after grouping by the row field rather than by joining a '
-                              'totals table back in. Colour shows the exact share; the label rounds it to a whole '
-                              'percent. Tasks: Compare the composition of each category regardless of its size. Query '
-                              'patterns: Make a heatmap of <E> <F1:n> by <F2:n> as row percentages.; What share of '
-                              'each <F1:n> falls into each <F2:n>?; Convert each row of the <F1:n> by <F2:n> heatmap '
-                              'to percentages.',
+ {'function': {'description': "[heatmap] Heatmap of two nominal fields where each cell is the percentage of the ROW's "
+                              'distinct subjects (field1 category, y-axis) having that field2 value. field3 is the '
+                              'subject id, e.g. a patient id; on a table with one row per subject, bind its row id, '
+                              'and with no id column at all do not use this template. Use ONLY when the request asks '
+                              'for percentages, shares or composition within each category, e.g. converting a '
+                              "heatmap's rows to percentages; for unique counts use the distinct-subject count "
+                              'heatmap. Design: Cells and row totals both count distinct subjects, each reduced on its '
+                              'own and joined on the row field; summing the cells instead would count a subject with '
+                              'two column values twice. Colour shows the exact share; the label rounds it to a whole '
+                              "percent. Tasks: Compare the composition of each category's subjects regardless of its "
+                              'size.',
                'name': 'vis_084_heatmap_row_percentage',
+               'parameters': {'additionalProperties': False,
+                              'properties': {'entity': {'description': 'The data entity (table) to visualize.',
+                                                        'type': 'string'},
+                                             'field1': {'description': 'nominal field, encodes y-axis, color — the '
+                                                                       'JOIN KEY on this table: the column holding the '
+                                                                       'shared record id (e.g. a subject or patient '
+                                                                       'id). Both sides of a join must name columns '
+                                                                       'holding the SAME identifiers, or nothing '
+                                                                       'matches.',
+                                                        'type': 'string'},
+                                             'field2': {'description': 'nominal field, encodes x-axis.',
+                                                        'type': 'string'},
+                                             'field3': {'description': 'any type field.', 'type': 'string'}},
+                              'required': ['entity', 'field1', 'field2', 'field3'],
+                              'type': 'object'}},
+  'type': 'function'},
+ {'function': {'description': '[heatmap] Heatmap of the number of DISTINCT subjects for each combination of two '
+                              'nominal fields on one table. field3 is the subject id, e.g. a patient id. Use for '
+                              'unique patient or subject counts on a table with several rows per subject (an event '
+                              'log); a plain count heatmap counts rows instead. Design: Reduced to one row per (row, '
+                              'column, subject) before counting, so repeated rows of one subject count once per cell. '
+                              'Tasks: Compare how many subjects fall into each pairing of two categories. Query '
+                              'patterns: Make a heatmap of unique <F3> counts by <F1:n> and <F2:n>.; How many distinct '
+                              'subjects are there for each <F1:n> and <F2:n>?',
+               'name': 'vis_085_heatmap_count_subjects',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
                                              'field1': {'description': 'nominal field, encodes y-axis.',
                                                         'type': 'string'},
                                              'field2': {'description': 'nominal field, encodes x-axis.',
-                                                        'type': 'string'}},
-                              'required': ['entity', 'field1', 'field2'],
+                                                        'type': 'string'},
+                                             'field3': {'description': 'any type field.', 'type': 'string'}},
+                              'required': ['entity', 'field1', 'field2', 'field3'],
                               'type': 'object'}},
   'type': 'function'}]
 
@@ -5979,7 +6018,8 @@ TOOL_DISPATCH = {'vis_000_barchart_count_vert_grouped': (0, {'entity': 'E', 'fie
                                                'entity2': 'E2',
                                                'entity2_field1': 'E2.F1',
                                                'entity2_field2': 'E2.F2'}),
- 'vis_084_heatmap_row_percentage': (84, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'})}
+ 'vis_084_heatmap_row_percentage': (84, {'entity': 'E', 'field1': 'F1', 'field2': 'F2', 'field3': 'F3'}),
+ 'vis_085_heatmap_count_subjects': (85, {'entity': 'E', 'field1': 'F1', 'field2': 'F2', 'field3': 'F3'})}
 
 
 # Tags per tool name (drives per-request template selection)
@@ -6067,7 +6107,8 @@ TOOL_TAGS = {'vis_000_barchart_count_vert_grouped': ['line_item', 'barchart'],
  'vis_081_barchart_count_contains': ['line_item', 'barchart'],
  'vis_082_heatmap_count_multivalue': ['line_item', 'heatmap'],
  'vis_083_heatmap_subjects_multivalue_join': ['line_item', 'heatmap'],
- 'vis_084_heatmap_row_percentage': ['line_item', 'heatmap']}
+ 'vis_084_heatmap_row_percentage': ['line_item', 'heatmap'],
+ 'vis_085_heatmap_count_subjects': ['line_item', 'heatmap']}
 
 
 # Entity keys per tool name that may share a table with another entity
@@ -6156,7 +6197,8 @@ TOOL_SHARED_ENTITIES = {'vis_000_barchart_count_vert_grouped': [],
  'vis_081_barchart_count_contains': [],
  'vis_082_heatmap_count_multivalue': [],
  'vis_083_heatmap_subjects_multivalue_join': [],
- 'vis_084_heatmap_row_percentage': []}
+ 'vis_084_heatmap_row_percentage': [],
+ 'vis_085_heatmap_count_subjects': []}
 
 # User-facing text per tool name: (title_template, summary_template),
 # with placeholders rewritten to tokens the frontend resolves against
@@ -6410,6 +6452,11 @@ TOOL_TEXT = {'vis_000_barchart_count_vert_grouped': ('Bar chart of the number of
                                               'Splits each {enc:x} into its individual values, joins {entity1} to '
                                               '{ent:entity2} on the subject id, and displays the number of distinct '
                                               'subjects for each pairing of {enc:y} and value.'),
- 'vis_084_heatmap_row_percentage': ('Heatmap of {enc:x} as a percentage of each {enc:y}',
-                                    'Displays, for each {enc:y}, what percentage of its {entity} fall into each '
-                                    '{enc:x}; every row sums to 100%.')}
+ 'vis_084_heatmap_row_percentage': ('Heatmap of {enc:x} as a percentage of unique subjects per {enc:y}',
+                                    'Displays, for each {enc:y}, what percentage of its unique subjects (by '
+                                    '{col:field3}) have each {enc:x}. A subject with several {enc:x} values counts '
+                                    'under each, so a row can exceed 100%.'),
+ 'vis_085_heatmap_count_subjects': ('Heatmap of unique subjects by {enc:y} and {enc:x}',
+                                    'Displays the number of unique subjects (by {col:field3}) for each pairing of '
+                                    '{enc:y} and {enc:x}. A subject with several {enc:x} values counts once under '
+                                    'each.')}
