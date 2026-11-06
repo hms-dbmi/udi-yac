@@ -77,4 +77,9 @@ for. When the user asks how a chart was built, what it computes, filters or
 encodes, call `GetVisualizationSpec` with its `chart_id` to read the full spec
 before answering.
 
+When the user says a chart couldn't be drawn and quotes an error, that chart
+failed in their browser: call `CreateVisualization` to make it again, with a
+description of the same chart that includes the error so the new one avoids it.
+Do not filter or explain instead.
+
 {{data_domains}}

@@ -29,12 +29,16 @@ export interface UDIVisProps {
    * provider's.
    */
   recordUrl?: RecordUrlFn;
+  /** Don't draw the raw error text on a failed data step; pair with `onRenderError`. */
+  hideErrorMessage?: boolean;
   onSelectionChange?: (selections: DataSelections) => void;
   onDataReady?: (payload: {
     data: object[] | null;
     allData: object[] | null;
     isSubset: boolean;
   }) => void;
+  /** The data step failed (local transformation or remote query); null once a later run succeeds. */
+  onRenderError?: (error: { message: string } | null) => void;
   className?: string;
   style?: React.CSSProperties;
 }
@@ -59,8 +63,10 @@ export function UDIVis({
   palette,
   fontScale,
   recordUrl,
+  hideErrorMessage,
   onSelectionChange,
   onDataReady,
+  onRenderError,
   className,
   style,
 }: UDIVisProps) {
@@ -103,6 +109,12 @@ export function UDIVis({
       (elRef.current as any).recordUrl = effectiveRecordUrl;
     }
   }, [effectiveRecordUrl]);
+
+  React.useLayoutEffect(() => {
+    if (elRef.current) {
+      (elRef.current as any).hideErrorMessage = hideErrorMessage;
+    }
+  }, [hideErrorMessage]);
 
   // Set complex object props via JS properties (not HTML attributes).
   // useLayoutEffect ensures the property is set synchronously after the DOM
@@ -169,6 +181,21 @@ export function UDIVis({
     el.addEventListener('data-ready', handler);
     return () => el.removeEventListener('data-ready', handler);
   }, [onDataReady]);
+
+  // Listen for render-error custom event. A layout effect, not a passive one:
+  // with the data already cached the element fails and emits within a
+  // microtask of mounting, before a post-paint effect would attach, and the
+  // error is emitted only once.
+  React.useLayoutEffect(() => {
+    const el = elRef.current;
+    if (!el || !onRenderError) return;
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      onRenderError(Array.isArray(detail) ? detail[0] : detail);
+    };
+    el.addEventListener('render-error', handler);
+    return () => el.removeEventListener('render-error', handler);
+  }, [onRenderError]);
 
   return React.createElement('udi-vis', {
     ref: elRef,

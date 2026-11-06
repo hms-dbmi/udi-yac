@@ -9,18 +9,28 @@
  * package deliberately does not exercise in jsdom (it is tested in udi-toolkit).
  */
 import { useEffect, useState, type ReactNode } from 'react';
-import { describe, it, expect, vi } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
+// The mounted chart's props, so a test can report a render error as the toolkit would.
+const vis = vi.hoisted(() => ({
+  props: {} as { onRenderError?: (error: { message: string } | null) => void },
+}));
+
 vi.mock('udi-toolkit/react', () => ({
-  UDIVis: () => <div data-testid="udi-vis" />,
+  UDIVis: (props: typeof vis.props) => {
+    vis.props = props;
+    return <div data-testid="udi-vis" />;
+  },
   usePalette: () => undefined,
+  useClearAllSelections: () => () => {},
   describeTransformations: () => ['Group by sex'],
 }));
 
 import {
   UDIChatProvider,
+  useConversationStore,
   useDashboard,
   useDashboardStore,
   useDataPackageStore,
@@ -29,6 +39,7 @@ import {
 import type { UDIGrammar } from 'udi-toolkit/react';
 import type { DataSelection, DataSelections } from '../stores/dataFiltersStore';
 import { DashboardCard } from './DashboardCard';
+import { ChatPanel } from '@/features/chat';
 
 const countBySex = {
   source: { name: 'donors', source: 'donors.csv' },
@@ -232,5 +243,88 @@ describe('DashboardCard — dropping a cleared brush', () => {
 
     act(() => setOwnBrush(null));
     expect(screen.getByTestId('udi-vis')).toBe(drawn);
+  });
+});
+
+describe('DashboardCard — a chart that fails to draw', () => {
+  const error = 'Invalid variable reference: "Surgery": Table expressions do not support closures.';
+
+  /** The real chat panel beside the card, so the repair goes out the way a typed turn does. */
+  function WithChat() {
+    const conversationStore = useConversationStore();
+    const dataPackageStore = useDataPackageStore();
+    useEffect(() => {
+      dataPackageStore.setState({ loadingPhase: 'ready' });
+      // Message 0, the card's own index: the transcript's first chart.
+      conversationStore.getState().addMessage({
+        role: 'assistant',
+        content: '',
+        tool_calls: [{ function: { name: 'RenderVisualization', arguments: {} } }],
+      });
+    }, [conversationStore, dataPackageStore]);
+    return (
+      <ChatPanel
+        config={{ apiBaseUrl: '/api/yac' }}
+        needsApiKey={false}
+        hasApiKey={false}
+        userKeyQuotaExceeded={false}
+        pendingQuotaRetry={false}
+        onSetApiKey={() => {}}
+        onClearApiKey={() => {}}
+        onQuotaRebuff={() => {}}
+        onNormalResponse={() => {}}
+        onConsumePendingRetry={() => {}}
+      />
+    );
+  }
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('swaps the raw error for a plain failure and sends one repair turn', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response('[]', { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    const user = userEvent.setup();
+    render(
+      <UDIChatProvider>
+        <Harness>
+          <WithChat />
+        </Harness>
+      </UDIChatProvider>,
+    );
+    await screen.findByTestId('udi-vis');
+    act(() => vis.props.onRenderError?.({ message: error }));
+
+    expect(screen.getByText("This chart couldn't be drawn from the data.")).toBeTruthy();
+    expect(screen.queryByText(error)).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: 'Try to fix' }));
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body as string);
+    const turn = body.messages.at(-1);
+    expect(turn.role).toBe('user');
+    expect(turn.content).toBe(
+      'The chart "Bar chart of Count of Donors by Sex" (chart_1) couldn\'t be drawn from the ' +
+        `data. Please fix it.\n\nError: ${error}`,
+    );
+    expect(
+      (screen.getByRole('button', { name: 'Fix requested' }) as HTMLButtonElement).disabled,
+    ).toBe(true);
+  });
+
+  it('shows the raw error in debug mode, and clears once a later run draws', async () => {
+    render(
+      <UDIChatProvider>
+        <CaptureGlobalStore />
+        <Harness />
+      </UDIChatProvider>,
+    );
+    await screen.findByTestId('udi-vis');
+    act(() => globalStore.getState().toggleDebugMode());
+    act(() => vis.props.onRenderError?.({ message: error }));
+    expect(screen.getByText(error)).toBeTruthy();
+
+    act(() => vis.props.onRenderError?.(null));
+    expect(screen.queryByText("This chart couldn't be drawn from the data.")).toBeNull();
   });
 });

@@ -32,6 +32,12 @@ export interface ConversationState {
    */
   conversationId: string;
   addMessage: (message: Message) => void;
+  /**
+   * A turn asked for from outside the chat panel (a broken chart's "Try to
+   * fix"), waiting for ChatPanel to send it the way it sends a typed one.
+   */
+  pendingSend: string | null;
+  requestSend: (text: string | null) => void;
   newConversation: () => void;
   getMessagesFormattedForLLM: () => Message[];
   /**
@@ -58,6 +64,10 @@ export function createConversationStore() {
 
     addMessage: (message) => set((state) => ({ messages: [...state.messages, message] })),
 
+    pendingSend: null,
+
+    requestSend: (text) => set({ pendingSend: text }),
+
     addUsage: (usage) =>
       set((state) => ({
         sessionUsage: {
@@ -80,13 +90,14 @@ export function createConversationStore() {
         hiddenCount: 0,
         conversationId: generateEventId(),
         sessionUsage: EMPTY_USAGE,
+        pendingSend: null,
       }),
 
     loadConversation: (messages, options) =>
       set(
         options?.keepId
           ? { messages, hiddenCount: Math.min(get().hiddenCount, messages.length) }
-          : { messages, hiddenCount: 0, conversationId: generateEventId() },
+          : { messages, hiddenCount: 0, conversationId: generateEventId(), pendingSend: null },
       ),
 
     exportConversation: () => JSON.stringify(get().messages, null, 2),

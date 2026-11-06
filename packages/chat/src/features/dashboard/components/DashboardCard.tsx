@@ -29,7 +29,8 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import type { ActiveVisualization } from '../stores/dashboardStore';
+import { normalizeToolCalls, type ActiveVisualization } from '../stores/dashboardStore';
+import type { Message } from '@/types/messages';
 import {
   chartCoversFilter,
   chartSelectFields,
@@ -50,7 +51,7 @@ import {
 } from '@/app/UDIChatContext';
 import { VizTweakComponent } from './VizTweakComponent';
 import { EditableCardTitle } from './EditableCardTitle';
-import { applyFieldLabels, resolveVizSummary } from '../utils/vizTitle';
+import { applyFieldLabels, resolveVizSummary, resolveVizTitle } from '../utils/vizTitle';
 import { useVizTitleLabels } from '../hooks/useVizTitleLabels';
 import { cn } from '@/lib/utils';
 import { DRAG_HANDLE_CLASS } from '../utils/gridDefaults';
@@ -66,6 +67,21 @@ function isTableSpec(spec: ActiveVisualization['spec']): boolean {
   const representation: unknown = spec.representation;
   const layers = representation == null ? [] : [representation].flat();
   return layers.every((layer) => (layer as { mark?: unknown } | null)?.mark === 'row');
+}
+
+/** The id the agent knows a chart by: `chart_N`, counting RenderVisualization
+ *  calls through the transcript (see `udiagent.messages.visualization_calls`). */
+function chartIdOf(messages: Message[], index: number, toolCallIndex: number): string | null {
+  let count = 0;
+  for (const [i, message] of messages.slice(0, index + 1).entries()) {
+    if (message.role !== 'assistant') continue;
+    for (const call of normalizeToolCalls(message)) {
+      if (call.name !== 'RenderVisualization') continue;
+      count++;
+      if (i === index && call.originalIndex === toolCallIndex) return `chart_${count}`;
+    }
+  }
+  return null;
 }
 
 interface DashboardCardProps {
@@ -275,6 +291,27 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
     const compressed = compressToEncodedURIComponent(specJson);
     return `https://hms-dbmi.github.io/udi-grammar/#/Editor?spec=${compressed}`;
   }, [specJson]);
+
+  // A spec that fails to execute: the toolkit reports it here instead of
+  // drawing its raw error, which is written for us, not the reader.
+  const [renderError, setRenderError] = useState<string | null>(null);
+  const handleRenderError = useCallback(
+    (error: { message: string } | null) => setRenderError(error?.message ?? null),
+    [],
+  );
+  // One repair turn per chart: the error goes to the agent as a normal
+  // follow-up, naming the chart by the id it sees it under.
+  const [repairRequested, setRepairRequested] = useState(false);
+  const handleRepair = useCallback(() => {
+    setRepairRequested(true);
+    const conversation = conversationStore.getState();
+    const chartId = chartIdOf(conversation.messages, viz.index, viz.toolCallIndex);
+    const title = resolveVizTitle(viz, titleLabels);
+    conversation.requestSend(
+      `The chart "${title}"${chartId ? ` (${chartId})` : ''} couldn't be drawn from the data. ` +
+        `Please fix it.\n\nError: ${renderError}`,
+    );
+  }, [renderError, conversationStore, viz, titleLabels]);
 
   const handleCopySpec = useCallback(() => {
     navigator.clipboard.writeText(specJson);
@@ -566,12 +603,31 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
             <Loader2 className="udi:h-4 udi:w-4 udi:animate-spin udi:text-muted-foreground" />
           </div>
         )}
+        {renderError != null && (
+          <div className="udi:absolute udi:inset-0 udi:z-10 udi:flex udi:flex-col udi:items-center udi:justify-center udi:gap-2 udi:bg-card udi:p-4 udi:text-center">
+            <p className="udi:text-sm udi:text-muted-foreground">
+              This chart couldn&apos;t be drawn from the data.
+            </p>
+            {debugMode && (
+              <p className="udi:max-w-full udi:font-mono udi:text-xs udi:text-destructive udi:wrap-break-word">
+                {renderError}
+              </p>
+            )}
+            {!readOnly && (
+              <Button variant="outline" size="sm" disabled={repairRequested} onClick={handleRepair}>
+                {repairRequested ? 'Fix requested' : 'Try to fix'}
+              </Button>
+            )}
+          </div>
+        )}
         <UDIVis
           className="udi:block udi:h-full udi:w-full"
           key={isTableView ? `table-${specKey}` : specKey}
           spec={isTableView ? tableSpec : plainSpec}
           selections={externalSelections}
           onSelectionChange={handleSelectionChange}
+          onRenderError={handleRenderError}
+          hideErrorMessage
           sourceResolver={sourceResolver}
           palette={palette}
           fillContainer

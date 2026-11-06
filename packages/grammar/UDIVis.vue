@@ -97,6 +97,11 @@ export interface ParserProps {
    * link. A separate prop, like `palette`, because the spec is JSON-cloned.
    */
   recordUrl?: RecordUrlFn | undefined;
+  /**
+   * Don't draw the raw error text when the data step fails, for a host that
+   * shows its own failure state from the `renderError` event. Default: false.
+   */
+  hideErrorMessage?: boolean | undefined;
 }
 
 // Expose data selections to parent component
@@ -112,6 +117,9 @@ const emit = defineEmits<{
       truncated: { cap: number; sampled: boolean } | null;
     },
   ): void;
+  /** The data step failed (local transformation or remote query); null once
+   *  a later run succeeds. */
+  (e: 'renderError', error: { message: string } | null): void;
 }>();
 
 const props = defineProps<ParserProps>();
@@ -677,6 +685,12 @@ function isVegaLiteCompatible(spec: ParsedUDIGrammar): boolean {
 }
 
 const transformError = ref();
+watch(transformError, (error) =>
+  emit(
+    'renderError',
+    error ? { message: String(error.message ?? error) } : null,
+  ),
+);
 
 // shallowRef, not ref: these hold query results — up to 9474 x 258 for HuBMAP
 // `datasets` — and a deep ref would lazily wrap every row in a reactive Proxy.
@@ -1279,7 +1293,7 @@ const debugVegaData = ref();
        make every mounted UDIVis flash back to "Loading..." even though its
        own data is already cached. -->
   <template v-if="instanceReady && visualizationBuilt">
-    <div class="error-message" v-if="transformError">
+    <div class="error-message" v-if="transformError && !hideErrorMessage">
       {{ transformError.message }}
     </div>
     <div class="truncation-note" v-if="truncatedInfo" :style="chromeVars">
