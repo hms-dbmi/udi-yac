@@ -413,6 +413,10 @@ _FAILURE_OPENERS = {
         "I could not build that chart: the template failed to resolve against this "
         "data package. This is a bug in the template rather than in your request."
     ),
+    "raw_expression": (
+        "I could not build that chart: part of the calculation could only be written "
+        "in a form the chart cannot evaluate, so it would have shown wrong numbers."
+    ),
 }
 
 
