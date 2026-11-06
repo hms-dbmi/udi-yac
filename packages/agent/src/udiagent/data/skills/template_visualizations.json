@@ -2057,5 +2057,29 @@
     "title_template": "Heatmap of subjects by <E2.F2> and individual <E1.F2>",
     "summary_template": "Splits each <E1.F2> into its individual values, joins <E1> to <E2> on the subject id, and displays the number of distinct subjects for each pairing of <E2.F2> and value.",
     "value_descriptions": {}
+  },
+  {
+    "query_templates": [
+      "Make a heatmap of <E> <F1:n> by <F2:n> as row percentages.",
+      "What share of each <F1:n> falls into each <F2:n>?",
+      "Convert each row of the <F1:n> by <F2:n> heatmap to percentages."
+    ],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": [\"<F2>\", \"<F1>\"]}, {\"rollup\": {\"count <E>\": {\"op\": \"count\"}}}, {\"groupby\": \"<F1>\"}, {\"derive\": {\"% of row\": {\"op\": \"/\", \"left\": {\"op\": \"*\", \"left\": {\"field\": \"count <E>\"}, \"right\": {\"literal\": 100}}, \"right\": {\"agg\": \"sum\", \"field\": \"count <E>\"}}}}, {\"derive\": {\"_half_up\": {\"op\": \"+\", \"left\": {\"field\": \"% of row\"}, \"right\": {\"literal\": 0.5}}}}, {\"derive\": {\"row label\": {\"concat\": [{\"op\": \"-\", \"left\": {\"field\": \"_half_up\"}, \"right\": {\"op\": \"%\", \"left\": {\"field\": \"_half_up\"}, \"right\": {\"literal\": 1}}}, {\"literal\": \"%\"}]}}}], \"representation\": [{\"mark\": \"rect\", \"mapping\": [{\"encoding\": \"color\", \"field\": \"% of row\", \"type\": \"quantitative\", \"title\": \"% of row\"}, {\"encoding\": \"y\", \"field\": \"<F1>\", \"type\": \"nominal\"}, {\"encoding\": \"x\", \"field\": \"<F2>\", \"type\": \"nominal\"}]}, {\"mark\": \"text\", \"mapping\": [{\"encoding\": \"text\", \"field\": \"row label\", \"type\": \"nominal\"}, {\"encoding\": \"y\", \"field\": \"<F1>\", \"type\": \"nominal\"}, {\"encoding\": \"x\", \"field\": \"<F2>\", \"type\": \"nominal\"}, {\"encoding\": \"color\", \"value\": \"black\"}], \"stroke\": \"white\", \"strokeWidth\": 3, \"strokeOpacity\": 0.7}]}",
+    "creation_method": "template",
+    "chart_type": "heatmap",
+    "chart_complexity": "extra complex",
+    "spec_key_count": 47,
+    "task_types": ["Cluster", "Compute_Derived_Value", "Correlate"],
+    "tags": ["line_item", "heatmap"],
+    "description": "Heatmap of two nominal fields where each cell is its share of the ROW (the field1 category on the y-axis), so every row sums to 100%. Use for row percentages, composition within each category, or normalizing a count heatmap so categories of different sizes compare.",
+    "design_considerations": "The share divides each cell by its row's total, computed as a group aggregate after grouping by the row field rather than by joining a totals table back in. Colour shows the exact share; the label rounds it to a whole percent.",
+    "tasks": "Compare the composition of each category regardless of its size.",
+    "review_hint": "Each row should sum to 100% (up to label rounding). On pcx, organization_name by metastasis: a small site and a large one become comparable.",
+    "preview_bindings": null,
+    "name_hint": "row_percentage",
+    "shared_entities": [],
+    "title_template": "Heatmap of <F2> as a percentage of each <F1>",
+    "summary_template": "Displays, for each <F1>, what percentage of its <E> fall into each <F2>; every row sums to 100%.",
+    "value_descriptions": {}
   }
 ]

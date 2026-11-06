@@ -30,7 +30,7 @@ The output must be a valid UDI Grammar JSON object with three top-level keys. On
   - constant: `{"literal": value}` (string, number, boolean, or null)
   - binary op: `{"op": "+|-|*|/|%|==|!=|>|>=|<|<=|&&|\|\|", "left": <expr>, "right": <expr>}`
   - conditional: `{"if": <expr>, "then": <expr>, "else": <expr>}`
-  - group aggregate broadcast to rows: `{"agg": "count|sum|mean|min|max|median", "field": "name"}` (omit `field` for count)
+  - group aggregate broadcast to rows: `{"agg": "count|sum|mean|min|max|median", "field": "name"}` (omit `field` for count). It covers the current `groupby` partition, which makes it the way to take a share within a group — e.g. row percentages of a count heatmap: `{"groupby": ["row", "col"]}`, `{"rollup": {"n": {"op": "count"}}}`, `{"groupby": "row"}`, `{"derive": {"pct": {"op": "/", "left": {"field": "n"}, "right": {"agg": "sum", "field": "n"}}}}`. Never join a table to itself to get group totals.
   - window function: `{"window": "rank"}`
   - substring test: `{"fn": "contains", "args": [<expr>, <expr>]}` (case-sensitive; null is false), lower-case: `{"fn": "lower", "args": [<expr>]}` — e.g. case-insensitive match: `{"fn": "contains", "args": [{"fn": "lower", "args": [{"field": "f"}]}, {"literal": "brain stem"}]}`
   - Never write a raw JavaScript string as an expression: method calls like `.includes()` or `.toLowerCase()` are not evaluated and silently yield false.

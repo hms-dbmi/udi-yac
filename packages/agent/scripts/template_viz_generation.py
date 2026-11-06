@@ -5411,6 +5411,84 @@ def generate():
         ),
     )
 
+
+    # Row-percentage heatmap: each cell as its share of the row. `Expr.agg`
+    # inside a derive broadcasts over the CURRENT groupby partition, so after
+    # grouping by the row field, sum(count) is that row's total: no self-join,
+    # which is what the model invented without this template (and whose column
+    # collisions surfaced as "Invalid column reference"). Colour is the exact
+    # share; the label rounds it, floor(x + 0.5) via `%` since the grammar has
+    # no round().
+    _row_total = "count <E>"
+    _row_share = Expr.binop(
+        "/", Expr.binop("*", Expr.field(_row_total), Expr.lit(100)), Expr.agg("sum", _row_total)
+    )
+    df = add_row(
+        df,
+        query_templates=[
+            "Make a heatmap of <E> <F1:n> by <F2:n> as row percentages.",
+            "What share of each <F1:n> falls into each <F2:n>?",
+            "Convert each row of the <F1:n> by <F2:n> heatmap to percentages.",
+        ],
+        spec=(
+            Chart()
+            .source("<E>", "<E.url>")
+            .groupby(["<F2>", "<F1>"])
+            .rollup({_row_total: Op.count()})
+            .groupby("<F1>")
+            .derive({"% of row": _row_share})
+            .derive({"_half_up": Expr.binop("+", Expr.field("% of row"), Expr.lit(0.5))})
+            .derive(
+                {
+                    "row label": Expr.concat(
+                        [
+                            Expr.binop(
+                                "-",
+                                Expr.field("_half_up"),
+                                Expr.binop("%", Expr.field("_half_up"), Expr.lit(1)),
+                            ),
+                            Expr.lit("%"),
+                        ]
+                    )
+                }
+            )
+            .mark("rect")
+            .color(field="% of row", type="quantitative", title="% of row")
+            .y(field="<F1>", type="nominal")
+            .x(field="<F2>", type="nominal")
+            .mark("text")
+            .text(field="row label", type="nominal")
+            .y(field="<F1>", type="nominal")
+            .x(field="<F2>", type="nominal")
+            .color(value="black")
+            .outline(color="white", width=3, opacity=0.7)
+        ),
+        chart_type=ChartType.HEATMAP,
+        name_hint="row_percentage",
+        task_types=[TaskType.CLUSTER, TaskType.COMPUTE_DERIVED_VALUE, TaskType.CORRELATE],
+        description=(
+            "Heatmap of two nominal fields where each cell is its share of the ROW (the "
+            "field1 category on the y-axis), so every row sums to 100%. Use for row "
+            "percentages, composition within each category, or normalizing a count heatmap "
+            "so categories of different sizes compare."
+        ),
+        title_template="Heatmap of <F2> as a percentage of each <F1>",
+        summary_template=(
+            "Displays, for each <F1>, what percentage of its <E> fall into each <F2>; every "
+            "row sums to 100%."
+        ),
+        design_considerations=(
+            "The share divides each cell by its row's total, computed as a group aggregate "
+            "after grouping by the row field rather than by joining a totals table back in. "
+            "Colour shows the exact share; the label rounds it to a whole percent."
+        ),
+        tasks="Compare the composition of each category regardless of its size.",
+        review_hint=(
+            "Each row should sum to 100% (up to label rounding). On pcx, organization_name by "
+            "metastasis: a small site and a large one become comparable."
+        ),
+    )
+
     return df
 
 
