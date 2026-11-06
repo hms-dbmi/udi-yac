@@ -349,3 +349,103 @@ def test_parse_and_validate_without_entity_fields_unchanged():
     )
     _, errors = _parse_and_validate(json.dumps(spec), grammar["schema_dict"])
     assert errors == []  # schema-valid; the mapping bug needs entity_fields
+
+
+# --- raw expression strings (#79) --------------------------------------------
+# The grammar still accepts the legacy raw Arquero string, so the schema passes
+# it. In the browser a method call in one silently evaluates to false, so the
+# observed chart grouped every row into "does not contain".
+_RAW_DERIVE = "d['tumor_locations'] != null && d['tumor_locations'].includes('Brain Stem') ? 'yes' : 'no'"
+
+
+def test_raw_expression_strings_are_reported_wherever_they_sit():
+    spec = _spec(
+        [
+            {"filter": "d['event_type'] == 'Death'"},
+            {"derive": {"grp": _RAW_DERIVE, "ok": {"field": "event_type"}}},
+            {"derive": {"pct": {"rolling": {"expression": "count() / d.total"}}}},
+            {"derive": {"fine": {"rolling": {"expression": {"agg": "count"}}}}},
+        ],
+        [("x", "event_date")],
+    )
+    errors = vis_generate.raw_expression_errors(spec)
+    assert [e.split(" ")[0] for e in errors] == [
+        "transformation[0].filter",
+        "transformation[1].derive.grp",
+        "transformation[2].derive.pct",
+    ]
+    assert all(vis_generate.RAW_EXPRESSION_ERROR in e for e in errors)
+
+
+def test_parse_and_validate_reports_raw_strings_without_entity_fields():
+    from udiagent.grammar import load_grammar
+
+    spec = _spec([{"derive": {"grp": _RAW_DERIVE}}], [("x", "event_date")])
+    _, errors = _parse_and_validate(json.dumps(spec), load_grammar("udi")["schema_dict"])
+    assert len(errors) == 1 and "derive.grp" in errors[0]
+
+
+def _validate_context(spec):
+    from udiagent.grammar import load_grammar
+
+    return {
+        "agent": object(),
+        "messages": [{"role": "user", "content": "compare brain stem"}],
+        "data_schema": json.dumps(
+            {
+                "resources": [
+                    {
+                        "name": "Event",
+                        "schema": {"fields": [{"name": f} for f in sorted(FIELDS["Event"])]},
+                    }
+                ]
+            }
+        ),
+        "grammar": load_grammar("udi"),
+        "config": {},
+        "spec_str": json.dumps(spec),
+    }
+
+
+def test_correction_loop_repairs_a_raw_string(monkeypatch):
+    from udiagent.skills import load_skills
+
+    bad = _spec([{"derive": {"grp": _RAW_DERIVE}}], [("x", "grp")])
+    fixed = _spec(
+        [
+            {
+                "derive": {
+                    "grp": {
+                        "fn": "contains",
+                        "args": [{"field": "event_type"}, {"literal": "Brain Stem"}],
+                    }
+                }
+            }
+        ],
+        [("x", "grp")],
+    )
+    prompts = []
+
+    def fake_call_llm(agent, messages, grammar, config, **kwargs):
+        prompts.append(messages[-1]["content"])
+        return json.dumps(fixed)
+
+    monkeypatch.setattr(vis_generate, "_call_llm", fake_call_llm)
+    result = vis_generate._execute_validate(load_skills()["validate"], _validate_context(bad))
+
+    assert result["valid"] is True
+    assert "generation_failed" not in result
+    assert "raw JavaScript string" in prompts[-1]
+
+
+def test_a_raw_string_that_survives_correction_is_refused(monkeypatch):
+    """Shipping it would draw a plausible chart from miscounted rows."""
+    from udiagent.skills import load_skills
+
+    bad = _spec([{"derive": {"grp": _RAW_DERIVE}}], [("x", "grp")])
+    monkeypatch.setattr(vis_generate, "_call_llm", lambda *a, **k: json.dumps(bad))
+    result = vis_generate._execute_validate(load_skills()["validate"], _validate_context(bad))
+
+    assert result["generation_failed"]["reason"] == vis_generate.FALLBACK_RAW_EXPRESSION
+    assert result["spec_str"] == "{}"
+    assert result["corrections"] == 2

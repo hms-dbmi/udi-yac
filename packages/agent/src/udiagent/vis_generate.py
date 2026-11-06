@@ -171,6 +171,8 @@ FALLBACK_UNKNOWN_TOOL = "unknown_tool"
 FALLBACK_VALIDATION_FAILED = "validation_failed"
 #: Placeholder resolution raised — a template or schema bug, not a model mistake.
 FALLBACK_INSTANTIATE_FAILED = "instantiate_failed"
+#: A freehand spec still wrote an expression as a raw string after correction.
+FALLBACK_RAW_EXPRESSION = "raw_expression"
 
 #: More categories than an axis or legend can show legibly.
 MAX_DRAWN_CATEGORIES = 500
@@ -439,8 +441,51 @@ def _parse_and_validate(spec_str, schema_dict, entity_fields=None):
 
     if not errors and entity_fields:
         errors.extend(spec_mapping_errors(spec_dict, entity_fields))
+    errors.extend(raw_expression_errors(spec_dict))
 
     return spec_dict, errors
+
+
+#: Marks the errors `raw_expression_errors` returns, so a spec still carrying one
+#: after the correction pass can be refused rather than shipped.
+RAW_EXPRESSION_ERROR = "is a raw JavaScript string"
+
+
+def raw_expression_errors(spec_dict) -> list:
+    """An error for each `filter` / `derive` expression written as a string.
+
+    The grammar still accepts the legacy raw Arquero string for hand-written
+    specs, so the schema passes it. From the model it is never right: the
+    structured Expr covers what it may write, and the string form fails
+    silently. Arquero does not evaluate a method call on a column value, so
+    `d['loc'].includes('x')` is false on every row, and the chart comes out
+    wrong with no error. The SQL backend refuses strings outright.
+    """
+    if not isinstance(spec_dict, dict):
+        return []
+    errors = []
+    for index, transform in enumerate(spec_dict.get("transformation") or []):
+        if not isinstance(transform, dict):
+            continue
+        found = []
+        if isinstance(transform.get("filter"), str):
+            found.append(("filter", transform["filter"]))
+        derive = transform.get("derive")
+        if isinstance(derive, dict):
+            for name, expression in derive.items():
+                if isinstance(expression, dict) and "rolling" in expression:
+                    expression = (expression.get("rolling") or {}).get("expression")
+                if isinstance(expression, str):
+                    found.append((f"derive.{name}", expression))
+        for where, text in found:
+            errors.append(
+                f"transformation[{index}].{where} {RAW_EXPRESSION_ERROR} ({text[:80]!r}); "
+                "write it as a structured expression object ({\"field\": …}, "
+                "{\"op\": …}, {\"fn\": \"contains\", …}). Method calls such as "
+                ".includes() or .toLowerCase() in a string are not evaluated and "
+                "silently return false."
+            )
+    return errors
 
 
 def entity_fields_from_schema(data_schema) -> dict:
@@ -2801,6 +2846,25 @@ def _execute_validate(skill, context):
     context["valid"] = len(errors) == 0
     context["errors"] = errors
     context["corrections"] = corrections
+
+    # Other validation errors still ship, as before: they tend to show up on the
+    # chart (an empty axis, an error message). A raw expression does not; it
+    # draws a plausible chart from rows it silently miscounted, so it is the one
+    # error worth refusing the chart over.
+    if any(RAW_EXPRESSION_ERROR in error for error in errors):
+        logger.warning(
+            "[vis %s] no visualization built: raw expression strings survived "
+            "%d correction(s)",
+            context.get("req_id"),
+            corrections,
+        )
+        context["generation_failed"] = {
+            "reason": FALLBACK_RAW_EXPRESSION,
+            "tool": None,
+            "errors": [],
+        }
+        context["spec_str"] = "{}"
+        context["spec_dict"] = None
     return context
 
 
