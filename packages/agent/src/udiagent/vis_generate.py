@@ -629,10 +629,6 @@ def spec_mapping_errors(spec_dict, entity_fields) -> list:
 # ---------------------------------------------------------------------------
 
 
-#: What `<SEP:…>` resolves to for a field that declares no `udi:separator`.
-DEFAULT_SEPARATOR = ";"
-
-
 def _resolve_placeholder(tag, bindings, schema):
     """Resolve a single <tag> placeholder using bindings and schema."""
     # Entity URL: E.url, E1.url, E2.url
@@ -725,7 +721,7 @@ def _resolve_placeholder(tag, bindings, schema):
         entity = _entity_for_binding_key(key, bindings)
         fields = schema.get("entities", {}).get(entity, {}).get("fields", {})
         info = fields.get(bindings.get(key, "")) or {}
-        return json.dumps(info.get("separator") or DEFAULT_SEPARATOR)[1:-1]
+        return json.dumps(info.get("separator") or ";")[1:-1]
 
     item = _LIST_ITEM.fullmatch(tag)
     if item is not None:
