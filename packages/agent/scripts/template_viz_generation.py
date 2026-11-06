@@ -5411,6 +5411,142 @@ def generate():
         ),
     )
 
+
+    # Row-percentage heatmap of distinct subjects (#81). The row total is its
+    # own reduction joined back on the row field: a sum over the cells would
+    # count a subject with two column values twice. The label rounds with
+    # floor(x + 0.5) via `%`; the grammar has no round().
+    _cell_subjects = "subjects"
+    _row_subjects = "<F1> subjects"
+    _row_share = Expr.binop(
+        "/",
+        Expr.binop("*", Expr.field(_cell_subjects), Expr.lit(100)),
+        Expr.field(_row_subjects),
+    )
+    _half_up = Expr.binop("+", Expr.field("% of row"), Expr.lit(0.5))
+    df = add_row(
+        df,
+        query_templates=[
+            "Make a heatmap of <E> <F1:n> by <F2:n> as row percentages of unique <F3>.",
+            "What share of each <F1:n>'s subjects falls into each <F2:n>?",
+            "Convert each row of the <F1:n> by <F2:n> heatmap to percentages.",
+        ],
+        spec=(
+            Chart()
+            .source("<E>", "<E.url>")
+            .groupby(["<F1>", "<F2>", "<F3>"], in_name="<E>")
+            .rollup({"<E> rows": Op.count()}, in_name="<E>", out_name="<E>__cell_subjects")
+            .groupby(["<F1>", "<F2>"])
+            .rollup({_cell_subjects: Op.count()}, out_name="<E>__cells")
+            .groupby(["<F1>", "<F3>"], in_name="<E>")
+            .rollup({"<E> rows": Op.count()}, in_name="<E>", out_name="<E>__row_subject")
+            .groupby("<F1>")
+            .rollup({_row_subjects: Op.count()}, out_name="<E>__rows")
+            .join(in_name=["<E>__cells", "<E>__rows"], on=["<F1>", "<F1>"], out_name="<E>__shares")
+            .derive({"% of row": _row_share})
+            .derive(
+                {
+                    "row label": Expr.concat(
+                        [
+                            Expr.binop("-", _half_up, Expr.binop("%", _half_up, Expr.lit(1))),
+                            Expr.lit("%"),
+                        ]
+                    )
+                }
+            )
+            .mark("rect")
+            .color(field="% of row", type="quantitative", title="% of row")
+            .y(field="<F1>", type="nominal")
+            .x(field="<F2>", type="nominal")
+            .mark("text")
+            .text(field="row label", type="nominal")
+            .y(field="<F1>", type="nominal")
+            .x(field="<F2>", type="nominal")
+            .color(value="black")
+            .outline(color="white", width=3, opacity=0.7)
+        ),
+        chart_type=ChartType.HEATMAP,
+        name_hint="row_percentage",
+        task_types=[TaskType.CLUSTER, TaskType.COMPUTE_DERIVED_VALUE, TaskType.CORRELATE],
+        description=(
+            "Heatmap of two nominal fields where each cell is the percentage of the ROW's "
+            "distinct subjects (field1 category, y-axis) having that field2 value. field3 is "
+            "the subject id, e.g. a patient id; on a table with one row per subject, bind its "
+            "row id, and with no id column at all do not use this template. Use ONLY when "
+            "the request asks for percentages, shares or composition within each category, "
+            "e.g. converting a heatmap's rows to percentages; for unique counts use the "
+            "distinct-subject count heatmap."
+        ),
+        title_template="Heatmap of <F2> as a percentage of unique subjects per <F1>",
+        summary_template=(
+            "Displays, for each <F1>, what percentage of its unique subjects (by <F3>) have "
+            "each <F2>. A subject with several <F2> values counts under each, so a row can "
+            "exceed 100%."
+        ),
+        design_considerations=(
+            "Cells and row totals both count distinct subjects, each reduced on its own and "
+            "joined on the row field; summing the cells instead would count a subject with "
+            "two column values twice. Colour shows the exact share; the label rounds it to a "
+            "whole percent."
+        ),
+        tasks="Compare the composition of each category's subjects regardless of its size.",
+        review_hint=(
+            "On pcx, organization_name by metastasis with research_id: a row sums to over "
+            "100% only where a patient has both values."
+        ),
+    )
+
+    # Unique-subject count heatmap, the count the one above divides. Without
+    # it, "unique patient counts" got the row-percentage heatmap.
+    df = add_row(
+        df,
+        query_templates=[
+            "Make a heatmap of unique <F3> counts by <F1:n> and <F2:n>.",
+            "How many distinct subjects are there for each <F1:n> and <F2:n>?",
+        ],
+        spec=(
+            Chart()
+            .source("<E>", "<E.url>")
+            .groupby(["<F1>", "<F2>", "<F3>"])
+            .rollup({"<E> rows": Op.count()})
+            .groupby(["<F1>", "<F2>"])
+            .rollup({_cell_subjects: Op.count()})
+            .mark("rect")
+            .color(field=_cell_subjects, type="quantitative", title="Subjects")
+            .y(field="<F1>", type="nominal")
+            .x(field="<F2>", type="nominal")
+            .mark("text")
+            .text(field=_cell_subjects, type="quantitative", title="Subjects")
+            .y(field="<F1>", type="nominal")
+            .x(field="<F2>", type="nominal")
+            .color(value="black")
+            .outline(color="white", width=3, opacity=0.7)
+        ),
+        chart_type=ChartType.HEATMAP,
+        name_hint="count_subjects",
+        task_types=[TaskType.CLUSTER, TaskType.COMPUTE_DERIVED_VALUE, TaskType.CORRELATE],
+        description=(
+            "Heatmap of the number of DISTINCT subjects for each combination of two nominal "
+            "fields on one table. field3 is the subject id, e.g. a patient id. Use for unique "
+            "patient or subject counts on a table with several rows per subject (an event "
+            "log); a plain count heatmap counts rows instead."
+        ),
+        title_template="Heatmap of unique subjects by <F1> and <F2>",
+        summary_template=(
+            "Displays the number of unique subjects (by <F3>) for each pairing of <F1> and "
+            "<F2>. A subject with several <F2> values counts once under each."
+        ),
+        design_considerations=(
+            "Reduced to one row per (row, column, subject) before counting, so repeated rows "
+            "of one subject count once per cell."
+        ),
+        tasks="Compare how many subjects fall into each pairing of two categories.",
+        review_hint=(
+            "On pcx, organization_name by metastasis with research_id: Seattle's 'Yes' cell "
+            "is 57 patients (112 events)."
+        ),
+    )
+
     return df
 
 
