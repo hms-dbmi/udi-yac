@@ -188,7 +188,7 @@ console.log('expr-to-arquero: concat assertions passed');
   );
   assert.throws(
     () => exprToArquero({ fn: 'log', args: [] }),
-    /exactly one argument/,
+    /exactly 1 argument/,
     'a function takes exactly one argument',
   );
 }

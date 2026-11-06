@@ -153,8 +153,7 @@ def compile_expr(node: Any, ctx: ExprContext) -> str:
         template, arity = _FUNCTIONS[name]
         args = node.get("args")
         if not isinstance(args, list) or len(args) != arity:
-            count = "one argument" if arity == 1 else f"{arity} arguments"
-            raise UnsupportedQueryError(f"function '{name}' takes exactly {count}")
+            raise UnsupportedQueryError(f"function '{name}' takes exactly {arity} argument(s)")
         return template.format(*(compile_expr(arg, ctx) for arg in args))
 
     if "if" in node:

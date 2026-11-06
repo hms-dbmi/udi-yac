@@ -142,8 +142,9 @@ export function exprToArquero(expr: Expr): string {
     }
     const [name, arity] = fn;
     if (!Array.isArray(expr.args) || expr.args.length !== arity) {
-      const count = arity === 1 ? 'one argument' : `${arity} arguments`;
-      throw new Error(`Expr: function '${expr.fn}' takes exactly ${count}`);
+      throw new Error(
+        `Expr: function '${expr.fn}' takes exactly ${arity} argument(s)`,
+      );
     }
     // log/exp compose with aggregates inside a rolling window: exp(sum(log(x))).
     return `${name}(${(expr.args as Expr[]).map(exprToArquero).join(', ')})`;
