@@ -251,6 +251,45 @@ const CASES = [
     },
   ],
   [
+    // Substring matching: `contains` is case-sensitive and false (never null)
+    // on a null side, so the 11 null-sex penguins land in 'other' on both
+    // compilers; `lower` makes the match case-insensitive. The filter keeps
+    // Adelie and Gentoo ('e') and drops Chinstrap.
+    'string-contains-lower',
+    {
+      source: src('penguins'),
+      transformation: [
+        {
+          derive: {
+            group: {
+              if: {
+                fn: 'contains',
+                args: [
+                  { fn: 'lower', args: [{ field: 'sex' }] },
+                  { literal: 'fem' },
+                ],
+              },
+              then: { literal: 'female' },
+              else: { literal: 'other' },
+            },
+            exact_case: {
+              fn: 'contains',
+              args: [{ field: 'sex' }, { literal: 'fem' }],
+            },
+          },
+        },
+        {
+          filter: {
+            fn: 'contains',
+            args: [{ field: 'species' }, { literal: 'e' }],
+          },
+        },
+        { groupby: ['species', 'group', 'exact_case'] },
+        { rollup: { n: { op: 'count' } } },
+      ],
+    },
+  ],
+  [
     // log/exp exist to write a running PRODUCT as exp(rolling sum(log)) — the
     // Kaplan-Meier estimate. The at-risk count comes from rank() over a UNIQUE
     // order (see rolling-percentile on ties), and every factor is positive, so

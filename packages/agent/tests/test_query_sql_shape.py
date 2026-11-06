@@ -209,3 +209,42 @@ def test_a_plain_rollup_is_left_exactly_as_it_was(compile_sql):
     )
     assert " g GROUP BY" not in sql
     assert "GROUP BY g." not in sql
+
+
+def test_contains_binds_its_search_string(compile_sql):
+    """The search term is user/LLM text, so it must reach the database as a
+    bind parameter, never spliced into the SQL; and a null side is false, not
+    null, to match Arquero's op.includes."""
+    search = "brain'; DROP TABLE donors; --"
+    sql, _dialect = compile_sql(
+        [{"name": "donors", "source": "donors"}],
+        [
+            {
+                "filter": {
+                    "fn": "contains",
+                    "args": [
+                        {"fn": "lower", "args": [{"field": "medical_history"}]},
+                        {"literal": search},
+                    ],
+                }
+            }
+        ],
+    )
+    assert search not in sql
+    assert "COALESCE(INSTR(LOWER(" in sql
+
+
+@pytest.mark.parametrize(
+    "node",
+    [
+        {"fn": "contains", "args": [{"field": "sex"}]},
+        {"fn": "lower", "args": [{"field": "sex"}, {"literal": "x"}]},
+        {"fn": ["lower"], "args": [{"field": "sex"}]},
+        {"fn": "upper", "args": [{"field": "sex"}]},
+    ],
+)
+def test_function_arity_and_name_are_validated(compile_sql, node):
+    from udiagent.query.errors import UnsupportedQueryError
+
+    with pytest.raises(UnsupportedQueryError):
+        compile_sql([{"name": "donors", "source": "donors"}], [{"filter": node}])

@@ -490,6 +490,27 @@ describe('swapPlainField', () => {
     expect(mapping[1].field).toBe('percentile');
   });
 
+  it('follows the plotted field into function arguments in a filter', () => {
+    const spec = cdf('weight_value');
+    const t0 = (spec as unknown as { transformation: Array<Record<string, unknown>> })
+      .transformation;
+    t0[0] = {
+      filter: {
+        fn: 'contains',
+        args: [{ fn: 'lower', args: [{ field: 'weight_value' }] }, { literal: 'x' }],
+      },
+    };
+    const next = swapPlainField(spec, 'x', 'age_value');
+    const t = (next as unknown as { transformation: Array<Record<string, unknown>> })
+      .transformation;
+    expect(t[0]).toEqual({
+      filter: {
+        fn: 'contains',
+        args: [{ fn: 'lower', args: [{ field: 'age_value' }] }, { literal: 'x' }],
+      },
+    });
+  });
+
   it('leaves transforms alone when the old field is still shown on another encoding', () => {
     // density: x and y both on the same field; swapping x should not touch the
     // orderby/filter (ambiguous which axis they belong to).

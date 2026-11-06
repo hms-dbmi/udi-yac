@@ -193,3 +193,48 @@ console.log('expr-to-arquero: concat assertions passed');
   );
 }
 console.log('expr-to-arquero: function assertions passed');
+
+// --- lower / contains --------------------------------------------------------
+// The raw-string spelling `d['loc'].includes(...)` is the trap these replace:
+// Arquero does not evaluate a method call on a column value, and silently
+// yields false for every row.
+const locs = from([
+  { loc: 'Brain Stem- Pons' },
+  { loc: 'Frontal Lobe' },
+  { loc: null },
+  { loc: 'brain stem-medulla' },
+]);
+const caseInsensitive = {
+  fn: 'contains',
+  args: [{ fn: 'lower', args: [{ field: 'loc' }] }, { literal: 'brain stem' }],
+};
+assert.ok(isExpr(caseInsensitive), 'isExpr should accept a contains node');
+assert.deepEqual(
+  locs.derive({ out: exprToArquero(caseInsensitive) }).array('out'),
+  [true, false, false, true],
+  'case-insensitive contains, null is false',
+);
+assert.deepEqual(
+  locs
+    .derive({
+      out: exprToArquero({
+        fn: 'contains',
+        args: [{ field: 'loc' }, { literal: 'Brain' }],
+      }),
+    })
+    .array('out'),
+  [true, false, false, false],
+  'contains is case-sensitive on its own',
+);
+for (const bad of [
+  { fn: 'contains', args: [{ field: 'loc' }] },
+  { fn: 'lower', args: [{ field: 'loc' }, { literal: 'x' }] },
+  { fn: 'includes', args: [{ field: 'loc' }, { literal: 'x' }] },
+  { fn: 'constructor', args: [{ field: 'loc' }] },
+]) {
+  assert.throws(
+    () => exprToArquero(bad),
+    `should reject: ${JSON.stringify(bad)}`,
+  );
+}
+console.log('expr-to-arquero: lower/contains assertions passed');

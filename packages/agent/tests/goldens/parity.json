@@ -821,6 +821,136 @@
       }
     },
     {
+      "name": "string-contains-lower",
+      "spec": {
+        "source": {
+          "name": "penguins",
+          "source": "penguins.csv"
+        },
+        "transformation": [
+          {
+            "derive": {
+              "group": {
+                "if": {
+                  "fn": "contains",
+                  "args": [
+                    {
+                      "fn": "lower",
+                      "args": [
+                        {
+                          "field": "sex"
+                        }
+                      ]
+                    },
+                    {
+                      "literal": "fem"
+                    }
+                  ]
+                },
+                "then": {
+                  "literal": "female"
+                },
+                "else": {
+                  "literal": "other"
+                }
+              },
+              "exact_case": {
+                "fn": "contains",
+                "args": [
+                  {
+                    "field": "sex"
+                  },
+                  {
+                    "literal": "fem"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "filter": {
+              "fn": "contains",
+              "args": [
+                {
+                  "field": "species"
+                },
+                {
+                  "literal": "e"
+                }
+              ]
+            }
+          },
+          {
+            "groupby": ["species", "group", "exact_case"]
+          },
+          {
+            "rollup": {
+              "n": {
+                "op": "count"
+              }
+            }
+          }
+        ]
+      },
+      "selections": null,
+      "displayDataOnly": null,
+      "expect": {
+        "displayData": [
+          {
+            "species": "Adelie",
+            "group": "other",
+            "exact_case": false,
+            "n": 79
+          },
+          {
+            "species": "Adelie",
+            "group": "female",
+            "exact_case": false,
+            "n": 73
+          },
+          {
+            "species": "Gentoo",
+            "group": "female",
+            "exact_case": false,
+            "n": 58
+          },
+          {
+            "species": "Gentoo",
+            "group": "other",
+            "exact_case": false,
+            "n": 66
+          }
+        ],
+        "allData": [
+          {
+            "species": "Adelie",
+            "group": "other",
+            "exact_case": false,
+            "n": 79
+          },
+          {
+            "species": "Adelie",
+            "group": "female",
+            "exact_case": false,
+            "n": 73
+          },
+          {
+            "species": "Gentoo",
+            "group": "female",
+            "exact_case": false,
+            "n": 58
+          },
+          {
+            "species": "Gentoo",
+            "group": "other",
+            "exact_case": false,
+            "n": 66
+          }
+        ],
+        "isSubset": false
+      }
+    },
+    {
       "name": "rolling-log-exp-product",
       "spec": {
         "source": {

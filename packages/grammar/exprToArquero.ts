@@ -38,7 +38,14 @@ const AGGREGATE_NAMES = new Set([
 
 const WINDOW_NAMES = new Set(['rank']);
 
-const FUNCTION_NAMES = new Set(['log', 'exp']);
+// Grammar name -> [Arquero op, arity]. Arquero resolves the bare names to
+// op.*: op.includes is null-safe (false, not null), op.lower keeps null.
+const FUNCTIONS = new Map<unknown, [string, number]>([
+  ['log', ['log', 1]],
+  ['exp', ['exp', 1]],
+  ['lower', ['lower', 1]],
+  ['contains', ['includes', 2]],
+]);
 
 /**
  * Type guard: is this value a structured expression (vs a legacy raw string,
@@ -129,15 +136,17 @@ export function exprToArquero(expr: Expr): string {
   }
 
   if ('fn' in expr) {
-    if (!FUNCTION_NAMES.has(expr.fn)) {
+    const fn = FUNCTIONS.get(expr.fn);
+    if (!fn) {
       throw new Error(`Expr: unsupported function '${String(expr.fn)}'`);
     }
-    if (!Array.isArray(expr.args) || expr.args.length !== 1) {
-      throw new Error(`Expr: function '${expr.fn}' takes exactly one argument`);
+    const [name, arity] = fn;
+    if (!Array.isArray(expr.args) || expr.args.length !== arity) {
+      const count = arity === 1 ? 'one argument' : `${arity} arguments`;
+      throw new Error(`Expr: function '${expr.fn}' takes exactly ${count}`);
     }
-    // Arquero resolves bare `log`/`exp` to op.log/op.exp (natural log), and
-    // they compose with aggregates inside a rolling window: exp(sum(log(x))).
-    return `${expr.fn}(${exprToArquero(expr.args[0])})`;
+    // log/exp compose with aggregates inside a rolling window: exp(sum(log(x))).
+    return `${name}(${(expr.args as Expr[]).map(exprToArquero).join(', ')})`;
   }
 
   if ('window' in expr) {
