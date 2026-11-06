@@ -63,6 +63,9 @@ def parse_schema_from_dict(raw: dict) -> dict:
                 "type": field.get("udi:data_type", ""),
                 "cardinality": cardinality,
             }
+            # A multi-value column's delimiter; templates read it as <SEP:…>.
+            if field.get("udi:separator"):
+                fields[field["name"]]["separator"] = field["udi:separator"]
         entity = {"url": url, "row_count": row_count, "fields": fields}
 
         # Pre-aggregated "powerset cube" metadata (used by the data-cube
@@ -271,6 +274,13 @@ def simplify_data_schema(data_schema):
                 col_lines.append(f"          unique_values: {cardinality}")
             if desc:
                 col_lines.append(f"          description: {desc}")
+            if separator := field.get("udi:separator"):
+                # Said outright: unique_values counts every combination, so a
+                # column of 26 sites reads as 247 categories without it.
+                col_lines.append(
+                    f"          multi_value: each cell lists several values separated by "
+                    f"{json.dumps(separator)}; split it to count individual values"
+                )
             columns.append("\n".join(col_lines))
 
         if columns:

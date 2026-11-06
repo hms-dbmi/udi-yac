@@ -22,6 +22,7 @@ The output must be a valid UDI Grammar JSON object with three top-level keys. On
   - `{"join": {"on": ["left_key", "right_key"]}, "in": ["left_table", "right_table"], "out": "joined_name"}`
   - `{"filter": <expr>}` — e.g. not-null: `{"filter": {"op": "!=", "left": {"field": "f"}, "right": {"literal": null}}}`
   - `{"orderby": [{"field": "name", "order": "ascending|descending"}]}`
+  - `{"unnest": {"field": "name", "separator": ";"}}` — split a column the schema marks `multi_value` into one row per value, using the separator the schema gives. Put it before the groupby that counts, so each individual value is its own category instead of every combination.
   - `{"derive": {"new_field": <expr>}}` — e.g. ratio: `{"derive": {"ratio": {"op": "/", "left": {"field": "a"}, "right": {"field": "b"}}}}`
 
   Expressions (`<expr>`) are structured objects, composed recursively from:

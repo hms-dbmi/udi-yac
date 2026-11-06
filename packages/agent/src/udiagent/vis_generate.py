@@ -629,6 +629,10 @@ def spec_mapping_errors(spec_dict, entity_fields) -> list:
 # ---------------------------------------------------------------------------
 
 
+#: What `<SEP:…>` resolves to for a field that declares no `udi:separator`.
+DEFAULT_SEPARATOR = ";"
+
+
 def _resolve_placeholder(tag, bindings, schema):
     """Resolve a single <tag> placeholder using bindings and schema."""
     # Entity URL: E.url, E1.url, E2.url
@@ -711,6 +715,17 @@ def _resolve_placeholder(tag, bindings, schema):
     # resolves exactly as it did.
     if tag in CHOICES:
         return json.dumps(resolve_choice(tag, bindings.get(tag)))
+
+    # A multi-value column's delimiter, read from the bound field's
+    # `udi:separator`: <SEP:E1.F2> for whatever E1.F2 is bound to. Undeclared is
+    # ";", the delimiter every multi-value template assumed before columns
+    # could declare one, so packages without the declaration keep working.
+    if tag.startswith("SEP:"):
+        key = tag[len("SEP:"):]
+        entity = _entity_for_binding_key(key, bindings)
+        fields = schema.get("entities", {}).get(entity, {}).get("fields", {})
+        info = fields.get(bindings.get(key, "")) or {}
+        return json.dumps(info.get("separator") or DEFAULT_SEPARATOR)[1:-1]
 
     item = _LIST_ITEM.fullmatch(tag)
     if item is not None:

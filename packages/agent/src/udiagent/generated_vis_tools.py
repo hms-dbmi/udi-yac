@@ -2,7 +2,7 @@
 Auto-generated visualization tool definitions.
 
 Generated from: src/udiagent/data/skills/template_visualizations.json
-Tools: 82
+Tools: 84
 
 Schema-independent: tool params are free-form strings resolved against the
 per-request data schema at runtime (see vis_generate._execute_generate).
@@ -1802,7 +1802,25 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '{"literal": "Contains \\u201c<V1>\\u201d"}, "else": {"literal": "Does not contain \\u201c<V1>\\u201d"}}}}, '
  '{"groupby": "Match"}, {"rollup": {"<E> count": {"op": "count"}}}], "representation": {"mark": "bar", "mapping": '
  '[{"encoding": "x", "field": "Match", "type": "nominal"}, {"encoding": "y", "field": "<E> count", "type": '
- '"quantitative"}]}}']
+ '"quantitative"}]}}',
+ '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"unnest": {"field": "<F2:n>", "separator": '
+ '"<SEP:F2>"}}, {"groupby": ["<F2>", "<F1>"]}, {"rollup": {"count <E>": {"op": "count"}}}], "representation": '
+ '[{"mark": "rect", "mapping": [{"encoding": "color", "field": "count <E>", "type": "quantitative"}, {"encoding": "y", '
+ '"field": "<F1>", "type": "nominal"}, {"encoding": "x", "field": "<F2>", "type": "nominal"}]}, {"mark": "text", '
+ '"mapping": [{"encoding": "text", "field": "count <E>", "type": "quantitative"}, {"encoding": "y", "field": "<F1>", '
+ '"type": "nominal"}, {"encoding": "x", "field": "<F2>", "type": "nominal"}, {"encoding": "color", "value": "black"}], '
+ '"stroke": "white", "strokeWidth": 3, "strokeOpacity": 0.7}]}',
+ '{"source": [{"name": "<E1>", "source": "<E1.url>"}, {"name": "<E2>", "source": "<E2.url>"}], "transformation": '
+ '[{"unnest": {"field": "<E1.F2:n>", "separator": "<SEP:E1.F2>"}, "in": "<E1>"}, {"groupby": ["<E1.F1>", "<E1.F2>"]}, '
+ '{"rollup": {"<E1> rows": {"op": "count"}}, "out": "<E1>__values"}, {"groupby": ["<E2.F1>", "<E2.F2:n>"], "in": '
+ '"<E2>"}, {"rollup": {"<E2> rows": {"op": "count"}}, "in": "<E2>", "out": "<E2>__by_subject"}, {"join": {"on": '
+ '["<E1.F1>", "<E2.F1>"]}, "in": ["<E1>__values", "<E2>__by_subject"], "out": "<E1>__<E2>"}, {"groupby": ["<E1.F2>", '
+ '"<E2.F2>"]}, {"rollup": {"subjects": {"op": "count"}}}], "representation": [{"mark": "rect", "mapping": '
+ '[{"encoding": "color", "field": "subjects", "type": "quantitative", "title": "Subjects"}, {"encoding": "y", "field": '
+ '"<E2.F2>", "type": "nominal"}, {"encoding": "x", "field": "<E1.F2>", "type": "nominal"}]}, {"mark": "text", '
+ '"mapping": [{"encoding": "text", "field": "subjects", "type": "quantitative", "title": "Subjects"}, {"encoding": '
+ '"y", "field": "<E2.F2>", "type": "nominal"}, {"encoding": "x", "field": "<E1.F2>", "type": "nominal"}, {"encoding": '
+ '"color", "value": "black"}], "stroke": "white", "strokeWidth": 3, "strokeOpacity": 0.7}]}']
 
 
 # OpenAI function-calling tool definitions
@@ -5541,6 +5559,72 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                         'type': 'string'}},
                               'required': ['entity', 'field', 'value1'],
                               'type': 'object'}},
+  'type': 'function'},
+ {'function': {'description': '[heatmap] Heatmap counting entities for each category of a nominal field (rows) and '
+                              'each INDIVIDUAL value of a multi-value field (columns), one table. Use when the columns '
+                              'field is marked multi_value in the schema (cells list several values); for '
+                              'single-valued fields use the plain count heatmap. Design: Unnest runs before the count, '
+                              'so each value of the multi-value field is its own column and a record listing several '
+                              'values counts once in each. Rect marks with quantitative colour show density; black '
+                              'text on a white halo gives exact counts. Tasks: See which individual values co-occur '
+                              'with which categories. Query patterns: Make a heatmap of <E> <F1:n> by individual '
+                              '<F2:n>.; How many <E> are there for each <F1:n> and each individual value of <F2:n>?',
+               'name': 'vis_082_heatmap_count_multivalue',
+               'parameters': {'additionalProperties': False,
+                              'properties': {'entity': {'description': 'The data entity (table) to visualize.',
+                                                        'type': 'string'},
+                                             'field1': {'description': 'nominal field, encodes y-axis.',
+                                                        'type': 'string'},
+                                             'field2': {'description': 'nominal field, encodes x-axis.',
+                                                        'type': 'string'}},
+                              'required': ['entity', 'field1', 'field2'],
+                              'type': 'object'}},
+  'type': 'function'},
+ {'function': {'description': '[heatmap] Heatmap of distinct subjects for each category of a nominal field on entity2 '
+                              '(rows) and each INDIVIDUAL value of a multi-value field on entity1 (columns), e.g. '
+                              'chemotherapy agents by diagnosis. Entity1 holds the multi-value field (marked '
+                              'multi_value in the schema); entity2 holds the row field; field1 on each is the subject '
+                              'id both tables share. Works for sibling tables with no direct relationship. Design: '
+                              'Both sides are reduced to one row per (subject, value) before the join, so a cell '
+                              'counts distinct subjects, never joined rows. Unnest runs before the count, so each '
+                              'value of the multi-value field is its own column and a record listing several values '
+                              'counts once in each. Rect marks with quantitative colour show density; black text on a '
+                              'white halo gives exact counts. Tasks: Compare which individual values are used across '
+                              'the categories of another table. Query patterns: Make a heatmap of individual <E1.F2:n> '
+                              'across <E2.F2:n>.; How many subjects received each individual <E1.F2:n>, for each '
+                              '<E2.F2:n>?',
+               'name': 'vis_083_heatmap_subjects_multivalue_join',
+               'parameters': {'additionalProperties': False,
+                              'properties': {'entity1': {'description': 'The primary data entity (table).',
+                                                         'type': 'string'},
+                                             'entity1_field1': {'description': 'any type field — the JOIN KEY on this '
+                                                                               'table: the column holding the shared '
+                                                                               'record id (e.g. a subject or patient '
+                                                                               'id). Both sides of a join must name '
+                                                                               'columns holding the SAME identifiers, '
+                                                                               'or nothing matches.',
+                                                                'type': 'string'},
+                                             'entity1_field2': {'description': 'nominal field, encodes x-axis.',
+                                                                'type': 'string'},
+                                             'entity2': {'description': 'The secondary data entity (table) to join '
+                                                                        'with.',
+                                                         'type': 'string'},
+                                             'entity2_field1': {'description': 'any type field — the JOIN KEY on this '
+                                                                               'table: the column holding the shared '
+                                                                               'record id (e.g. a subject or patient '
+                                                                               'id). Both sides of a join must name '
+                                                                               'columns holding the SAME identifiers, '
+                                                                               'or nothing matches.',
+                                                                'type': 'string'},
+                                             'entity2_field2': {'description': 'nominal field, encodes y-axis.',
+                                                                'type': 'string'}},
+                              'required': ['entity1',
+                                           'entity2',
+                                           'entity1_field1',
+                                           'entity1_field2',
+                                           'entity2_field1',
+                                           'entity2_field2'],
+                              'type': 'object'}},
   'type': 'function'}]
 
 
@@ -5854,7 +5938,15 @@ TOOL_DISPATCH = {'vis_000_barchart_count_vert_grouped': (0, {'entity': 'E', 'fie
  'vis_079_stacked_bar_horiz_grouped': (79, {'dimension1': 'D1', 'dimension2': 'D2', 'entity': 'E'}),
  'vis_080_stacked_bar_proportion_horiz_stacked_normalized': (80,
                                                              {'dimension1': 'D1', 'dimension2': 'D2', 'entity': 'E'}),
- 'vis_081_barchart_count_contains': (81, {'entity': 'E', 'field': 'F', 'value1': 'V1'})}
+ 'vis_081_barchart_count_contains': (81, {'entity': 'E', 'field': 'F', 'value1': 'V1'}),
+ 'vis_082_heatmap_count_multivalue': (82, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
+ 'vis_083_heatmap_subjects_multivalue_join': (83,
+                                              {'entity1': 'E1',
+                                               'entity1_field1': 'E1.F1',
+                                               'entity1_field2': 'E1.F2',
+                                               'entity2': 'E2',
+                                               'entity2_field1': 'E2.F1',
+                                               'entity2_field2': 'E2.F2'})}
 
 
 # Tags per tool name (drives per-request template selection)
@@ -5939,7 +6031,9 @@ TOOL_TAGS = {'vis_000_barchart_count_vert_grouped': ['line_item', 'barchart'],
  'vis_078_stacked_bar_horiz_stacked': ['data_cube', 'stacked_bar'],
  'vis_079_stacked_bar_horiz_grouped': ['data_cube', 'stacked_bar'],
  'vis_080_stacked_bar_proportion_horiz_stacked_normalized': ['data_cube', 'stacked_bar'],
- 'vis_081_barchart_count_contains': ['line_item', 'barchart']}
+ 'vis_081_barchart_count_contains': ['line_item', 'barchart'],
+ 'vis_082_heatmap_count_multivalue': ['line_item', 'heatmap'],
+ 'vis_083_heatmap_subjects_multivalue_join': ['line_item', 'heatmap']}
 
 
 # Entity keys per tool name that may share a table with another entity
@@ -6025,7 +6119,9 @@ TOOL_SHARED_ENTITIES = {'vis_000_barchart_count_vert_grouped': [],
  'vis_078_stacked_bar_horiz_stacked': [],
  'vis_079_stacked_bar_horiz_grouped': [],
  'vis_080_stacked_bar_proportion_horiz_stacked_normalized': [],
- 'vis_081_barchart_count_contains': []}
+ 'vis_081_barchart_count_contains': [],
+ 'vis_082_heatmap_count_multivalue': [],
+ 'vis_083_heatmap_subjects_multivalue_join': []}
 
 # User-facing text per tool name: (title_template, summary_template),
 # with placeholders rewritten to tokens the frontend resolves against
@@ -6270,4 +6366,12 @@ TOOL_TEXT = {'vis_000_barchart_count_vert_grouped': ('Bar chart of the number of
  'vis_081_barchart_count_contains': ('Number of {entity} whose {col:field} contains “{col:value1}”',
                                      'Displays how many {entity} have a {col:field} containing “{col:value1}” '
                                      '(ignoring case) and how many do not. A missing {col:field} counts as not '
-                                     'containing it.')}
+                                     'containing it.'),
+ 'vis_082_heatmap_count_multivalue': ('Heatmap of the number of {entity} by {enc:y} and individual {enc:x}',
+                                      'Splits each {enc:x} into its individual values and displays the number of '
+                                      '{entity} for each pairing of {enc:y} and value; a record listing several values '
+                                      'counts once under each.'),
+ 'vis_083_heatmap_subjects_multivalue_join': ('Heatmap of subjects by {enc:y} and individual {enc:x}',
+                                              'Splits each {enc:x} into its individual values, joins {entity1} to '
+                                              '{ent:entity2} on the subject id, and displays the number of distinct '
+                                              'subjects for each pairing of {enc:y} and value.')}
