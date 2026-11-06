@@ -18,7 +18,10 @@ itself. Kept beside the CSVs as `data_dictionary.csv`, it is picked up
 automatically, so a regenerated manifest does not lose them. An optional
 `time_format` column marks a time column (`epoch_ms`, `epoch_s`, `year`, or
 `days` for a duration such as an age), written out as `udi:time_format` so the
-chat shows dates, years and ages instead of raw numbers. Likewise an
+chat shows dates, years and ages instead of raw numbers. An optional `separator`
+column marks a multi-value column, one whose cells list several values joined
+by that delimiter (`;` for `"Frontal Lobe;Ventricles"`), written out as
+`udi:separator` so the agent splits it into individual values. Likewise an
 `example_prompts.json` (a list of strings) beside the CSVs becomes the
 package's `udi:example_prompts`, the prompts the chat suggests.
 
@@ -216,8 +219,9 @@ def _annotate_cube(res: dict, measure: str) -> None:
 def _load_descriptions(path: Path) -> dict[tuple[str, str], dict[str, str]]:
     """Read a data dictionary CSV into ``{(table, field): metadata}``.
 
-    The metadata is the `description` and, from the optional `time_format`
-    column, `udi:time_format`. A blank `field` is the table's own description.
+    The metadata is the `description` and, from the optional `time_format` and
+    `separator` columns, `udi:time_format` and `udi:separator`. A blank `field`
+    is the table's own description.
     Blank cells are skipped, so a dictionary with gaps leaves those columns as
     profiled. An unknown time format stops the run: a typo would otherwise
     quietly leave the column showing raw numbers.
@@ -235,6 +239,8 @@ def _load_descriptions(path: Path) -> dict[tuple[str, str], dict[str, str]]:
                         f"{', '.join(TIME_FORMATS)}"
                     )
                 meta["udi:time_format"] = time_format
+            if separator := (row.get("separator") or "").strip():
+                meta["udi:separator"] = separator
             if meta:
                 entries[(row["table"].strip(), row["field"].strip())] = meta
     return entries
@@ -398,14 +404,16 @@ def _selftest() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         dictionary = Path(tmp) / DICTIONARY_NAME
         dictionary.write_text(
-            "table,field,description,time_format\n"
-            "Ages,age_days,Age in days.,days\n"
-            "Ages,birth_year,,year\n"
+            "table,field,description,time_format,separator\n"
+            "Ages,age_days,Age in days.,days,\n"
+            "Ages,birth_year,,year,\n"
+            'Ages,drugs,,,","\n'
         )
         entries = _load_descriptions(dictionary)
         assert entries == {
             ("Ages", "age_days"): {"description": "Age in days.", "udi:time_format": "days"},
             ("Ages", "birth_year"): {"udi:time_format": "year"},
+            ("Ages", "drugs"): {"udi:separator": ","},
         }, entries
         dictionary.write_text("table,field,description,time_format\nAges,x,,dayz\n")
         try:

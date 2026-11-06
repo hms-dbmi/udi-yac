@@ -202,7 +202,8 @@
             "udi:cardinality": 31,
             "udi:unique": false,
             "udi:data_type": "nominal",
-            "udi:overlapping_fields": "all"
+            "udi:overlapping_fields": "all",
+            "udi:separator": ";"
           },
           {
             "name": "metastasis_location_other",
@@ -247,7 +248,8 @@
             "udi:cardinality": 247,
             "udi:unique": false,
             "udi:data_type": "nominal",
-            "udi:overlapping_fields": "all"
+            "udi:overlapping_fields": "all",
+            "udi:separator": ";"
           },
           {
             "name": "tumor_location_other",
@@ -372,7 +374,8 @@
             "udi:cardinality": 202,
             "udi:unique": false,
             "udi:data_type": "nominal",
-            "udi:overlapping_fields": "all"
+            "udi:overlapping_fields": "all",
+            "udi:separator": ","
           },
           {
             "name": "is_initial_treatment",

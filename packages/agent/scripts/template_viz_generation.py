@@ -5286,6 +5286,131 @@ def generate():
         },
     )
 
+
+    # Multi-value heatmaps. A column whose cells list several values (the
+    # schema marks it `multi_value` from its `udi:separator`) is split into one
+    # row per value BEFORE anything is counted, so its axis shows the handful of
+    # real values rather than every combination: on pcx, 26 tumor locations
+    # instead of 247 location sets, 109 chemotherapy agents instead of 202
+    # regimens. <SEP:…> reads the bound field's own delimiter, `,` for
+    # chemotherapy_agents and `;` for tumor_locations. A row listing three
+    # values counts once in each of their columns, so a row of the heatmap can
+    # sum to more than its records: that is membership, not double counting.
+    _multivalue_note = (
+        "Unnest runs before the count, so each value of the multi-value field is its own "
+        "column and a record listing several values counts once in each. Rect marks with "
+        "quantitative colour show density; black text on a white halo gives exact counts."
+    )
+    df = add_row(
+        df,
+        query_templates=[
+            "Make a heatmap of <E> <F1:n> by individual <F2:n>.",
+            "How many <E> are there for each <F1:n> and each individual value of <F2:n>?",
+        ],
+        spec=(
+            Chart()
+            .source("<E>", "<E.url>")
+            .unnest("<F2:n>", separator="<SEP:F2>")
+            .groupby(["<F2>", "<F1>"])
+            .rollup({"count <E>": Op.count()})
+            .mark("rect")
+            .color(field="count <E>", type="quantitative")
+            .y(field="<F1>", type="nominal")
+            .x(field="<F2>", type="nominal")
+            .mark("text")
+            .text(field="count <E>", type="quantitative")
+            .y(field="<F1>", type="nominal")
+            .x(field="<F2>", type="nominal")
+            .color(value="black")
+            .outline(color="white", width=3, opacity=0.7)
+        ),
+        chart_type=ChartType.HEATMAP,
+        name_hint="count_multivalue",
+        task_types=[TaskType.CLUSTER, TaskType.COMPUTE_DERIVED_VALUE, TaskType.CORRELATE],
+        description=(
+            "Heatmap counting entities for each category of a nominal field (rows) and each "
+            "INDIVIDUAL value of a multi-value field (columns), one table. Use when the columns "
+            "field is marked multi_value in the schema (cells list several values); for "
+            "single-valued fields use the plain count heatmap."
+        ),
+        title_template="Heatmap of the number of <E> by <F1> and individual <F2>",
+        summary_template=(
+            "Splits each <F2> into its individual values and displays the number of <E> for "
+            "each pairing of <F1> and value; a record listing several values counts once "
+            "under each."
+        ),
+        design_considerations=_multivalue_note,
+        tasks="See which individual values co-occur with which categories.",
+    )
+
+    # Across two tables: rows from one table, columns the individual values of a
+    # multi-value field on another, e.g. chemotherapy agents (Medical Therapy) by
+    # diagnosis (Event). The two are usually siblings under a subject table with
+    # no relationship between them, so they join on a subject id taken from each
+    # side. Each side is reduced to one row per (subject, value) first, which
+    # makes a cell the number of DISTINCT subjects: a patient given vincristine
+    # in four regimens, with three events carrying one diagnosis, is one.
+    df = add_row(
+        df,
+        query_templates=[
+            "Make a heatmap of individual <E1.F2:n> across <E2.F2:n>.",
+            "How many subjects received each individual <E1.F2:n>, for each <E2.F2:n>?",
+        ],
+        spec=(
+            Chart()
+            .source("<E1>", "<E1.url>")
+            .source("<E2>", "<E2.url>")
+            .unnest("<E1.F2:n>", separator="<SEP:E1.F2>", in_name="<E1>")
+            .groupby(["<E1.F1>", "<E1.F2>"])
+            .rollup({"<E1> rows": Op.count()}, out_name="<E1>__values")
+            .groupby(["<E2.F1>", "<E2.F2:n>"], in_name="<E2>")
+            .rollup({"<E2> rows": Op.count()}, in_name="<E2>", out_name="<E2>__by_subject")
+            .join(
+                in_name=["<E1>__values", "<E2>__by_subject"],
+                on=["<E1.F1>", "<E2.F1>"],
+                out_name="<E1>__<E2>",
+            )
+            .groupby(["<E1.F2>", "<E2.F2>"])
+            .rollup({"subjects": Op.count()})
+            .mark("rect")
+            .color(field="subjects", type="quantitative", title="Subjects")
+            .y(field="<E2.F2>", type="nominal")
+            .x(field="<E1.F2>", type="nominal")
+            .mark("text")
+            .text(field="subjects", type="quantitative", title="Subjects")
+            .y(field="<E2.F2>", type="nominal")
+            .x(field="<E1.F2>", type="nominal")
+            .color(value="black")
+            .outline(color="white", width=3, opacity=0.7)
+        ),
+        chart_type=ChartType.HEATMAP,
+        name_hint="subjects_multivalue_join",
+        task_types=[TaskType.CLUSTER, TaskType.COMPUTE_DERIVED_VALUE, TaskType.CORRELATE],
+        description=(
+            "Heatmap of distinct subjects for each category of a nominal field on entity2 "
+            "(rows) and each INDIVIDUAL value of a multi-value field on entity1 (columns), "
+            "e.g. chemotherapy agents by diagnosis. Entity1 holds the multi-value field (marked "
+            "multi_value in the schema); entity2 holds the row field; field1 on each is the "
+            "subject id both tables share. Works for sibling tables with no direct "
+            "relationship."
+        ),
+        title_template="Heatmap of subjects by <E2.F2> and individual <E1.F2>",
+        summary_template=(
+            "Splits each <E1.F2> into its individual values, joins <E1> to <E2> on the subject "
+            "id, and displays the number of distinct subjects for each pairing of <E2.F2> and "
+            "value."
+        ),
+        design_considerations=(
+            "Both sides are reduced to one row per (subject, value) before the join, so a cell "
+            "counts distinct subjects, never joined rows. " + _multivalue_note
+        ),
+        tasks="Compare which individual values are used across the categories of another table.",
+        review_hint=(
+            "On pcx, chemotherapy_agents (Medical Therapy) by cns_integrated_diagnosis (Event): "
+            "columns should be single agents (vincristine, cisplatin, …), never comma lists."
+        ),
+    )
+
     return df
 
 
