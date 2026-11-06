@@ -1,36 +1,29 @@
-import { useState } from 'react';
-import { KeyRound } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useConversation } from '@/app/UDIChatContext';
 import { ApiKeyInput } from './ApiKeyInput';
 
 interface SessionStatusDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   hasApiKey: boolean;
   onSetApiKey: (key: string) => void;
   onClearApiKey: () => void;
 }
 
 /**
- * Header button + dialog showing API-key status, whether the key is sent to
- * the backend, and the running token total for the conversation. Replaces the
- * old click-to-clear key button: the key icon is green when a key is set,
- * muted otherwise, and opens this dialog where the key can be set or cleared.
+ * Dialog showing API-key status, whether the key is sent to the backend, and
+ * the running token total for the conversation, opened from the chat header's
+ * menu. The key can be set or cleared here.
  */
 export function SessionStatusDialog({
+  open,
+  onOpenChange,
   hasApiKey,
   onSetApiKey,
   onClearApiKey,
 }: SessionStatusDialogProps) {
-  const [open, setOpen] = useState(false);
   const usage = useConversation((s) => s.sessionUsage);
 
   // Key/value rows for the usage table. Cache writes and reasoning are only
@@ -59,25 +52,11 @@ export function SessionStatusDialog({
 
   const handleSet = (key: string) => {
     onSetApiKey(key);
-    setOpen(false);
+    onOpenChange(false);
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <Tooltip>
-        <TooltipTrigger
-          render={
-            <DialogTrigger
-              render={<Button variant="ghost" size="icon" className="udi:h-7 udi:w-7" />}
-            >
-              <KeyRound
-                className={`udi:h-3.5 udi:w-3.5 ${hasApiKey ? 'udi:text-green-600' : 'udi:text-muted-foreground'}`}
-              />
-            </DialogTrigger>
-          }
-        />
-        <TooltipContent>API key &amp; usage</TooltipContent>
-      </Tooltip>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="udi:max-w-md">
         <DialogHeader>
           <DialogTitle className="udi:text-sm">API Key &amp; Usage</DialogTitle>
