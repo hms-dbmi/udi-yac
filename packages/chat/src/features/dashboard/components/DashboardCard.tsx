@@ -292,8 +292,8 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
     return `https://hms-dbmi.github.io/udi-grammar/#/Editor?spec=${compressed}`;
   }, [specJson]);
 
-  // A spec that fails to execute: the toolkit reports it here instead of
-  // drawing its raw error, which is written for us, not the reader.
+  // A spec that fails to execute: the toolkit reports it here, and the overlay
+  // below covers its raw error, which is written for us, not the reader.
   const [renderError, setRenderError] = useState<string | null>(null);
   const handleRenderError = useCallback(
     (error: { message: string } | null) => setRenderError(error?.message ?? null),
@@ -627,7 +627,6 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
           selections={externalSelections}
           onSelectionChange={handleSelectionChange}
           onRenderError={handleRenderError}
-          hideErrorMessage
           sourceResolver={sourceResolver}
           palette={palette}
           fillContainer

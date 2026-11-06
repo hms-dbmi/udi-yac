@@ -97,11 +97,6 @@ export interface ParserProps {
    * link. A separate prop, like `palette`, because the spec is JSON-cloned.
    */
   recordUrl?: RecordUrlFn | undefined;
-  /**
-   * Don't draw the raw error text when the data step fails, for a host that
-   * shows its own failure state from the `renderError` event. Default: false.
-   */
-  hideErrorMessage?: boolean | undefined;
 }
 
 // Expose data selections to parent component
@@ -1293,7 +1288,7 @@ const debugVegaData = ref();
        make every mounted UDIVis flash back to "Loading..." even though its
        own data is already cached. -->
   <template v-if="instanceReady && visualizationBuilt">
-    <div class="error-message" v-if="transformError && !hideErrorMessage">
+    <div class="error-message" v-if="transformError">
       {{ transformError.message }}
     </div>
     <div class="truncation-note" v-if="truncatedInfo" :style="chromeVars">

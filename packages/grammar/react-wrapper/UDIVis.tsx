@@ -29,8 +29,6 @@ export interface UDIVisProps {
    * provider's.
    */
   recordUrl?: RecordUrlFn;
-  /** Don't draw the raw error text on a failed data step; pair with `onRenderError`. */
-  hideErrorMessage?: boolean;
   onSelectionChange?: (selections: DataSelections) => void;
   onDataReady?: (payload: {
     data: object[] | null;
@@ -63,7 +61,6 @@ export function UDIVis({
   palette,
   fontScale,
   recordUrl,
-  hideErrorMessage,
   onSelectionChange,
   onDataReady,
   onRenderError,
@@ -109,12 +106,6 @@ export function UDIVis({
       (elRef.current as any).recordUrl = effectiveRecordUrl;
     }
   }, [effectiveRecordUrl]);
-
-  React.useLayoutEffect(() => {
-    if (elRef.current) {
-      (elRef.current as any).hideErrorMessage = hideErrorMessage;
-    }
-  }, [hideErrorMessage]);
 
   // Set complex object props via JS properties (not HTML attributes).
   // useLayoutEffect ensures the property is set synchronously after the DOM
