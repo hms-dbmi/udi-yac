@@ -433,12 +433,9 @@
   }
 }
 
-/* The <udi-vis> custom element uses shadowRoot:false, so Vue's scoped component
-   styles apply from the sidecar stylesheet imported at the top of this file
-   rather than from a shadow root. This display rule isn't in that sheet. */
+/* <udi-vis>'s own layout (display, width) comes from the toolkit stylesheet
+   imported at the top of this file; these are the chat's theme hooks into it. */
 .udi-yac udi-vis {
-  display: block;
-  width: 100%;
   /* Table links (record links, URL cells): primary-700 reads on white,
      plain primary on dark. */
   --udi-table-link: var(--udi-color-udi-primary-700);

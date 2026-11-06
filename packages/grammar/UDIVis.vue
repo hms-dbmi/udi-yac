@@ -31,7 +31,7 @@ import type {
   UDIGrammar,
   VisualizationLayer,
 } from './GrammarTypes';
-import type { UDIPalette } from './Palette';
+import { DEFAULT_PALETTE, type UDIPalette } from './Palette';
 import { RECORD_URL_FIELD, recordLink, type RecordUrlFn } from './recordUrl';
 import type { DataSelections, RangeSelection } from './DataSourcesStore';
 import { useDataSourcesStore } from './DataSourcesStore';
@@ -48,6 +48,7 @@ import {
 } from './temporal';
 import { spreadLabels, DEFAULT_LABEL_GAP_FRACTION } from './labelLayout';
 import { PICK_SIGNAL, pickDimTest, selectFields } from './pointSelect';
+import { withArcLabels } from './arcLabels';
 const dataSourcesStore = useDataSourcesStore();
 // Declared up here rather than beside the template: performDataTransformation
 // reads it to decide whether allData is needed, and a later declaration would
@@ -1250,7 +1251,12 @@ function convertToVegaSpec(spec: ParsedUDIGrammar): string {
 
     return outputLayer;
   });
-  vegaSpec['layer'] = outputLayers;
+  vegaSpec['layer'] = withArcLabels(outputLayers, {
+    textColor: effectivePalette.value?.text ?? DEFAULT_PALETTE.text,
+    // VegaLite's config sizes text marks at 11px times the font scale.
+    fontSize: 11 * (props.fontScale ?? 1),
+    rows: vegaSpec.data.values,
+  });
 
   const titleSpec =
     typeof spec.title === 'string' ? { text: spec.title } : spec.title;
@@ -1360,5 +1366,15 @@ const debugVegaData = ref();
     cursor: default;
     text-decoration: none;
   }
+}
+</style>
+
+<style>
+/* The custom element's own box (ce-entry.ts). Unscoped, since no scope
+   attribute reaches the host element; :where() keeps it at zero specificity,
+   so any rule a host page writes for udi-vis wins. */
+:where(udi-vis) {
+  display: block;
+  width: 100%;
 }
 </style>

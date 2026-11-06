@@ -130,12 +130,12 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '{"count": {"op": "count"}}}], "representation": {"mark": "bar", "mapping": [{"encoding": "x", "field": "count", '
  '"type": "quantitative"}, {"encoding": "y", "field": "<F1>", "type": "nominal"}, {"encoding": "color", "field": '
  '"<F2>", "type": "nominal"}]}}',
- '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"groupby": "<F>"}, {"rollup": {"proportion": '
- '{"op": "frequency"}}}], "representation": {"mark": "arc", "mapping": [{"encoding": "theta", "field": "proportion", '
+ '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"groupby": "<F>"}, {"rollup": {"<E> count": '
+ '{"op": "count"}}}], "representation": {"mark": "arc", "mapping": [{"encoding": "theta", "field": "<E> count", '
  '"type": "quantitative", "domainWhenFiltered": "filtered"}, {"encoding": "color", "field": "<F>", "type": '
  '"nominal"}]}}',
- '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"groupby": "<F>"}, {"rollup": {"proportion": '
- '{"op": "frequency"}}}], "representation": {"mark": "arc", "mapping": [{"encoding": "theta", "field": "proportion", '
+ '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"groupby": "<F>"}, {"rollup": {"<E> count": '
+ '{"op": "count"}}}], "representation": {"mark": "arc", "mapping": [{"encoding": "theta", "field": "<E> count", '
  '"type": "quantitative", "domainWhenFiltered": "filtered"}, {"encoding": "color", "field": "<F>", "type": "nominal"}, '
  '{"encoding": "radius", "value": 60}, {"encoding": "radius2", "value": 80}]}}',
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"filter": "<MARGINAL:D>"}], "representation": '
@@ -2333,7 +2333,8 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'type': 'object'}},
   'type': 'function'},
  {'function': {'description': '[circular] Creates a pie chart showing the proportional distribution of a nominal '
-                              'field. Design: Arc marks with theta encoding map proportion to angle. Suitable for '
+                              "field. Design: Arc marks with theta encoding map each count's share of the total to "
+                              'angle; the renderer labels each slice with its count and percentage. Suitable for '
                               'fields with few categories (<8) where part-to-whole perception is the goal. Tasks: '
                               'Assess part-to-whole proportions; identify the dominant category. Query patterns: Make '
                               'a pie chart of <F:n>?',
@@ -2347,10 +2348,10 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'type': 'object'}},
   'type': 'function'},
  {'function': {'description': '[circular] Creates a donut chart showing the proportional distribution of a nominal '
-                              'field. Design: Donut variant with inner/outer radius creates a hollow center that can '
-                              'improve label readability. Suitable for few categories (<8). Tasks: Assess '
-                              'part-to-whole proportions; identify the dominant category. Query patterns: Make a donut '
-                              'chart of <F:n>?',
+                              'field. Design: Donut variant with inner/outer radius creates a hollow center; the '
+                              'renderer labels each segment outside the ring with its count and percentage. Suitable '
+                              'for few categories (<8). Tasks: Assess part-to-whole proportions; identify the dominant '
+                              'category. Query patterns: Make a donut chart of <F:n>?',
                'name': 'vis_031_circular_proportion_distribution',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
