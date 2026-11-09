@@ -33,9 +33,18 @@ function writeStoredKey(key: string | null): void {
  * `retryLastUserMessage` from `useChatApi` — see `pendingQuotaRetry` /
  * `consumePendingRetry` for the hand-off.
  */
-export function useApiKey({ requireApiKey }: { requireApiKey: boolean }) {
+export function useApiKey({
+  requireApiKey,
+  allowApiKey,
+}: {
+  requireApiKey: boolean;
+  allowApiKey: boolean;
+}) {
   const trackEvent = useTracker();
-  const [openAiKey, setOpenAiKey] = useState<string | null>(readStoredKey);
+  const [storedKey, setOpenAiKey] = useState<string | null>(readStoredKey);
+  // With keys disallowed, a key stored by another chat on this origin is
+  // ignored, not cleared.
+  const openAiKey = allowApiKey ? storedKey : null;
   // Budget-exceeded rebuff arrived while the request had no user key —
   // unlocks `ApiKeyInput` regardless of `requireApiKey`.
   const [serverQuotaExceeded, setServerQuotaExceeded] = useState(false);
@@ -88,7 +97,7 @@ export function useApiKey({ requireApiKey }: { requireApiKey: boolean }) {
     setPendingQuotaRetry(false);
   }, []);
 
-  const needsApiKey = (requireApiKey || serverQuotaExceeded) && !openAiKey;
+  const needsApiKey = allowApiKey && (requireApiKey || serverQuotaExceeded) && !openAiKey;
   const hasApiKey = !!openAiKey;
 
   return {
