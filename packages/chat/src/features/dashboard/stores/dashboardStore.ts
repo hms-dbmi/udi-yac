@@ -28,6 +28,7 @@ import {
   packAllRowMajor,
   packRowMajor,
   repackRowMajor,
+  sortRowMajor,
   widenTallItems,
 } from '../utils/gridPacking';
 import { computeInitialCardHeight } from '../utils/initialCardSize';
@@ -89,6 +90,8 @@ export interface ExtractedSpec {
   template?: TemplateProvenance;
   titleTemplate?: string;
   summaryTemplate?: string;
+  /** Key of the open chart this one replaces (the agent's `meta.replaces`). */
+  replaces?: string;
 }
 
 export interface DashboardLayout {
@@ -191,8 +194,11 @@ export interface DashboardState {
       template?: TemplateProvenance;
       titleTemplate?: string;
       summaryTemplate?: string;
+      replaces?: string;
     }>,
     dataPackageStore?: StoreApi<DataPackageState>,
+    /** Where a replaced chart goes. Without it, nothing is replaced. */
+    memoryBankStore?: StoreApi<MemoryBankState>,
   ) => void;
   closeVisualization: (key: string, memoryBankStore?: StoreApi<MemoryBankState>) => void;
   restoreFromMemoryBank: (
@@ -582,11 +588,16 @@ export function createDashboardStore() {
       });
     },
 
-    addActiveVisualizationBatch: (items, dataPackageStore) => {
+    addActiveVisualizationBatch: (items, dataPackageStore, memoryBankStore) => {
       if (items.length === 0) return;
+      // Charts replaced by new ones, closed into the memory bank once the
+      // dashboard is updated.
+      const replaced: [string, ActiveVisualization][] = [];
       set((state) => {
         const next = new Map(state.activeVisualizations);
         const newItems: LayoutItem[] = [];
+        // A replaced chart's key → the new chart's item, which takes its place.
+        const replacements = new Map<string, LayoutItem>();
         // Domain lookup is only available when the caller passes the
         // dataPackageStore (UDIChat does; tests typically don't). Without
         // it we just keep DEFAULT_CARD_H. With it, computeInitialCardHeight
@@ -605,6 +616,7 @@ export function createDashboardStore() {
           template,
           titleTemplate,
           summaryTemplate,
+          replaces,
         } of items) {
           const uuid = generateId();
           const interactiveSpec = injectInteractivity(spec, uuid, sourceFields, cubeMeasureFields);
@@ -623,17 +635,32 @@ export function createDashboardStore() {
             template,
           });
           const h = dp ? computeInitialCardHeight(spec, dp, state.gridRowHeight) : DEFAULT_CARD_H;
-          newItems.push({ ...newDefaultItem(key), h });
+          const item = { ...newDefaultItem(key), h };
+          // Only a chart open before this batch can be replaced. One that is
+          // closed already, or replaced by another new chart, has no place to
+          // give, and the new chart is added like any other. This only runs on
+          // a chart's first add, so replaying a transcript never moves anything.
+          const old =
+            replaces && memoryBankStore ? state.activeVisualizations.get(replaces) : undefined;
+          const oldItem = old && state.layout.items.find((it) => it.i === replaces);
+          if (replaces && old && oldItem && !replacements.has(replaces)) {
+            next.delete(replaces);
+            replaced.push([replaces, old]);
+            replacements.set(replaces, { ...item, w: oldItem.w });
+          } else {
+            newItems.push(item);
+          }
         }
-        if (newItems.length === 0) return { activeVisualizations: next };
+        if (newItems.length === 0 && replacements.size === 0) return { activeVisualizations: next };
         // Single repack: prepend the whole batch (in arrival order) ahead of
         // existing items sorted row-major. This distributes the batch across
         // the available columns left-to-right, then wraps — e.g. with 3 cols
         // and 4 new items, col0 gets 2 (item0 + item3 wrap), cols 1+2 get 1.
-        const newKeys = new Set(newItems.map((it) => it.i));
-        const existingOrdered = [...state.layout.items]
-          .filter((it) => !newKeys.has(it.i))
-          .sort((a, b) => (a.y === b.y ? a.x - b.x : a.y - b.y));
+        // A replacement instead takes the replaced chart's slot in that order.
+        const newKeys = new Set([...newItems, ...replacements.values()].map((it) => it.i));
+        const existingOrdered = sortRowMajor(
+          state.layout.items.filter((it) => !newKeys.has(it.i)),
+        ).map((it) => replacements.get(it.i) ?? it);
         // A new chart far taller than the cards it would join (a 198-category
         // bar) gets a row of its own rather than stretching theirs.
         const combined = widenTallItems([...newItems, ...existingOrdered], state.gridCols, newKeys);
@@ -642,6 +669,7 @@ export function createDashboardStore() {
           layout: { items: packAllRowMajor(combined, state.gridCols) },
         };
       });
+      for (const [key, viz] of replaced) memoryBankStore?.getState().addToMemoryBank(key, viz);
     },
 
     closeVisualization: (key, memoryBankStore) => {
@@ -1321,6 +1349,7 @@ export function extractAllUdiSpecsFromMessage(message: Message): ExtractedSpec[]
         titleTemplate: str(call.arguments?.titleTemplate),
         summaryTemplate: str(call.arguments?.summaryTemplate),
         template: parseTemplateProvenance(call.meta),
+        replaces: str(call.meta?.replaces),
       });
     }
   }

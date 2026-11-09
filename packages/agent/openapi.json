@@ -872,7 +872,7 @@
           "name": {
             "type": "string",
             "title": "Name",
-            "description": "`RenderVisualization`, `FilterData`, `FreeTextExplain`, `ClarifyVariable`, `Rebuff` or `OfferIssueReport`."
+            "description": "`RenderVisualization`, `FilterData`, `FreeTextExplain`, `ClarifyVariable` or `Rebuff`; or a UI action for the client to carry out: `OfferIssueReport`, `UpdateDashboard` or `ResetConversation`."
           },
           "arguments": {
             "additionalProperties": true,
@@ -891,7 +891,7 @@
               }
             ],
             "title": "Meta",
-            "description": "On a chart: its provenance (`tool_used`, `tool_args`, `tweakable_params`, ...), which `/v1/yac/vis_instantiate` takes back."
+            "description": "On a chart: its provenance (`tool_used`, `tool_args`, `tweakable_params`, ...), which `/v1/yac/vis_instantiate` takes back, and `replaces`, the key of an open chart whose place it takes."
           }
         },
         "additionalProperties": true,

@@ -26,6 +26,8 @@ const TOOL_CALL_LABELS: Record<string, string> = {
   Rebuff: 'Notice',
   FilterData: 'Filter',
   OfferIssueReport: 'Report an issue',
+  UpdateDashboard: 'Dashboard',
+  ResetConversation: 'Reset conversation',
 };
 
 export function MessageBubble({ message, messageIndex, onSelectSuggestion }: MessageBubbleProps) {

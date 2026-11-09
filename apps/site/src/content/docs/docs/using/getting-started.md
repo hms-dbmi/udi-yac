@@ -48,4 +48,4 @@ Questions that work well name what you want to see and how to split it:
 
 If a word in your question could mean more than one field, the agent asks: pick the field you meant from the buttons, or type your own reply.
 
-To start over, use **Reset conversation** (the circular arrow at the top of the chat). It clears the chat, every chart, every filter and the closed-chart memory bank.
+To start over, use **Reset conversation** (the circular arrow at the top of the chat), or ask the agent to start a new conversation. Either way you confirm first. It clears the chat, every chart, every filter and the closed-chart memory bank.

@@ -60,6 +60,11 @@ export interface GlobalState {
    * (an `OfferIssueReport` tool call), which live in unrelated trees.
    */
   issueReport: { open: boolean; draft: string; source: IssueReportSource };
+  /**
+   * The Reset conversation confirmation. Opened from the chat header or by the
+   * agent (a `ResetConversation` tool call).
+   */
+  resetConfirmOpen: boolean;
   toggleDebugMode: () => void;
   /**
    * Open/close the Data Overview and optionally pick the entity to expand.
@@ -74,6 +79,7 @@ export interface GlobalState {
   setFontScale: (value: number) => void;
   openIssueReport: (draft: string, source: IssueReportSource) => void;
   closeIssueReport: () => void;
+  setResetConfirmOpen: (open: boolean) => void;
 }
 
 /** The text size in effect: the host's, when it set one, else the viewer's. */
@@ -96,6 +102,7 @@ export function createGlobalStore(
     fontScale: readFontScale(),
     hostFontScale,
     issueReport: { open: false, draft: '', source: 'menu' },
+    resetConfirmOpen: false,
     toggleDebugMode: () => set((state) => ({ debugMode: !state.debugMode })),
     setOverview: (open, entity) =>
       set((state) => ({
@@ -115,5 +122,6 @@ export function createGlobalStore(
     openIssueReport: (draft, source) => set({ issueReport: { open: true, draft, source } }),
     closeIssueReport: () =>
       set((state) => ({ issueReport: { ...state.issueReport, open: false } })),
+    setResetConfirmOpen: (open) => set({ resetConfirmOpen: open }),
   }));
 }

@@ -141,3 +141,71 @@ def test_every_chart_in_the_history_shows_its_id_and_may_be_stale():
     assert [s["chart_id"] for s in shown] == ["chart_1", "chart_2", "chart_3"]
     replies = {m["content"] for m in sent if m["role"] == "tool"}
     assert any("Current dashboard" in r for r in replies)
+
+
+# ---------------------------------------------------------------------------
+# UI actions: closing, restoring and replacing charts, and starting over
+# ---------------------------------------------------------------------------
+
+#: chart_3 and chart_1 open, chart_2 closed.
+DASHBOARD = {"open": [{"key": "3-1"}, {"key": "1-1"}], "closed": ["3-0"]}
+
+
+def _act(*calls, dashboard=DASHBOARD):
+    orch, create = _orchestrator()
+    create.return_value = _completion([_tool_call(name, args) for name, args in calls])
+    return orch.run(HISTORY, "{}", "[]", dashboard=dashboard)
+
+
+def test_update_dashboard_names_charts_by_the_clients_keys():
+    result = _act(
+        ("UpdateDashboard", {"message": "Done.", "close": ["chart_3"], "restore": ["chart_2"]})
+    )
+    assert result.tool_calls == [
+        {
+            "name": "UpdateDashboard",
+            "arguments": {
+                "message": "Done.",
+                "close": [{"chart_id": "chart_3", "key": "3-1"}],
+                "restore": [{"chart_id": "chart_2", "key": "3-0"}],
+            },
+        }
+    ]
+    assert result.orchestrator_choice == "ui-action"
+
+
+def test_update_dashboard_drops_ids_it_cannot_act_on():
+    """Closing a closed chart, restoring an open one or naming one that does not
+    exist does nothing, and the message says so rather than claiming it did."""
+    result = _act(
+        (
+            "UpdateDashboard",
+            {"message": "Closed it.", "close": ["chart_2", "chart_9"], "restore": ["chart_1"]},
+        )
+    )
+    [call] = result.tool_calls
+    assert call["arguments"]["close"] == call["arguments"]["restore"] == []
+    assert call["arguments"]["message"] != "Closed it."
+
+
+def test_reset_conversation_passes_its_message_through():
+    result = _act(("ResetConversation", {"message": "Start over?"}))
+    assert result.tool_calls == [
+        {"name": "ResetConversation", "arguments": {"message": "Start over?"}}
+    ]
+
+
+def test_a_replacing_chart_names_the_open_chart_it_replaces(monkeypatch):
+    rendered = {"name": "RenderVisualization", "arguments": {"spec": "{}"}, "meta": {"tool_used": "t"}}
+    monkeypatch.setattr(
+        "udiagent.orchestrator.function_call_render_visualization",
+        lambda *a, **kw: json.loads(json.dumps(rendered)),
+    )
+
+    [replacing] = _act(("CreateVisualization", {"description": "pie", "replaces": "chart_1"})).tool_calls
+    assert replacing["meta"] == {"tool_used": "t", "replaces": "1-1"}
+
+    # A closed chart has no place to take, and a missing one is no chart at all.
+    for target in ("chart_2", "chart_9"):
+        [added] = _act(("CreateVisualization", {"description": "pie", "replaces": target})).tool_calls
+        assert "replaces" not in added["meta"]

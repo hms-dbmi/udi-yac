@@ -191,6 +191,7 @@ function UDIChatInner({
       template?: TemplateProvenance;
       titleTemplate?: string;
       summaryTemplate?: string;
+      replaces?: string;
     }> = [];
     for (let i = 0; i < messages.length; i++) {
       const message = messages[i];
@@ -203,6 +204,7 @@ function UDIChatInner({
         titleTemplate,
         summaryTemplate,
         template,
+        replaces,
       } of specs) {
         const key = state.vizKey(i, toolCallIndex);
         if (state.activeVisualizations.has(key)) continue;
@@ -222,11 +224,12 @@ function UDIChatInner({
           titleTemplate,
           summaryTemplate,
           template,
+          replaces,
         });
       }
     }
     if (batch.length > 0) {
-      state.addActiveVisualizationBatch(batch, dataPackageStore);
+      state.addActiveVisualizationBatch(batch, dataPackageStore, memoryBankStore);
       for (const item of batch) {
         // Event name kept as `visualization_pinned` for analytics continuity
         // even though the in-code concept renamed pinning → active.

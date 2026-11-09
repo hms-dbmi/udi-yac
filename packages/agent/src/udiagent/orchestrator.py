@@ -44,8 +44,8 @@ from udiagent.structured_functions import (
 )
 from udiagent.tools import (
     INTERNAL_ORCHESTRATOR_TOOLS,
-    OFFER_ISSUE_REPORT_TOOL,
     ORCHESTRATOR_TOOLS,
+    UI_ACTION_TOOLS,
     function_call_render_visualization,
 )
 from udiagent.vis_generate import _latest_user_text, _parse_request_schema, _retry_turns
@@ -56,6 +56,17 @@ logger = logging.getLogger(__name__)
 _DEFAULT_BUDGET_MESSAGE = (
     "You've reached your free usage limit. Add your own OpenAI key in settings to continue."
 )
+
+_UI_ACTIONS = {tool["function"]["name"] for tool in UI_ACTION_TOOLS}
+
+#: What `UpdateDashboard` says when none of its chart_ids could be acted on, in
+#: place of the model's message, which would claim the change was made.
+_NOTHING_TO_UPDATE = "Nothing to change: those charts are not open, or not in the memory bank."
+
+
+def _chart_by_id(charts: list[dict], chart_id) -> dict | None:
+    """The dashboard entry (see `udiagent.dashboard`) with this `chart_id`."""
+    return next((chart for chart in charts if chart["chart_id"] == chart_id), None)
 
 
 @dataclass
@@ -416,6 +427,7 @@ class Orchestrator:
         usage,
         openai_api_key=None,
         model=None,
+        dashboard=None,
     ):
         description = tool_args.get("description", "")
         if description:
@@ -439,6 +451,11 @@ class Orchestrator:
             request_text=_latest_user_text(messages),
         )
 
+        # A chart that replaces an open one tells the client which, by its key:
+        # the client puts it in that chart's place and closes the old one.
+        replaced = _chart_by_id((dashboard or {}).get("open", []), tool_args.get("replaces"))
+        if replaced and result.get("name") == "RenderVisualization":
+            result["meta"] = {**(result.get("meta") or {}), "replaces": replaced["key"]}
         return result
 
     def _reveal_visualization_spec(self, tool_args, messages):
@@ -758,6 +775,8 @@ class Orchestrator:
         )
         return {"name": "FreeTextExplain", "arguments": filter_failure_args(errors)}
 
+    # UI actions: the client carries these out, so none makes an LLM call.
+
     def _handle_offer_issue_report(
         self,
         tool_args,
@@ -775,6 +794,60 @@ class Orchestrator:
                 "summary": tool_args.get("summary", ""),
                 "user_requested": bool(tool_args.get("user_requested", False)),
             },
+        }
+
+    def _handle_update_dashboard(
+        self,
+        tool_args,
+        messages,
+        data_schema,
+        data_domains,
+        usage,
+        openai_api_key=None,
+        model=None,
+        dashboard=None,
+    ):
+        """Close or restore charts, each named by the client's key for it.
+
+        Only an open chart can be closed and only a closed one restored, so an
+        id the model got wrong is dropped rather than sent to the client.
+        """
+        dashboard = dashboard or {"open": [], "closed": []}
+
+        def pick(ids, pool):
+            picked = []
+            for chart_id in dict.fromkeys(ids if isinstance(ids, list) else []):
+                chart = _chart_by_id(pool, chart_id)
+                if chart:
+                    picked.append({"chart_id": chart["chart_id"], "key": chart["key"]})
+            return picked
+
+        close = pick(tool_args.get("close"), dashboard["open"])
+        restore = pick(tool_args.get("restore"), dashboard["closed"])
+        return {
+            "name": "UpdateDashboard",
+            "arguments": {
+                "message": (
+                    tool_args.get("message", "") if close or restore else _NOTHING_TO_UPDATE
+                ),
+                "close": close,
+                "restore": restore,
+            },
+        }
+
+    def _handle_reset_conversation(
+        self,
+        tool_args,
+        messages,
+        data_schema,
+        data_domains,
+        usage,
+        openai_api_key=None,
+        model=None,
+    ):
+        return {
+            "name": "ResetConversation",
+            "arguments": {"message": tool_args.get("message", "")},
         }
 
     # ------------------------------------------------------------------
@@ -795,7 +868,14 @@ class Orchestrator:
         issue_reporting: bool = False,
         dashboard: dict | None = None,
     ):
-        tools = [*self.tools, OFFER_ISSUE_REPORT_TOOL] if issue_reporting else self.tools
+        tools = [
+            *self.tools,
+            *(
+                tool
+                for tool in UI_ACTION_TOOLS
+                if issue_reporting or tool["function"]["name"] != "OfferIssueReport"
+            ),
+        ]
         # The handlers below each read the history afresh, so a chart revealed
         # with GetVisualizationSpec is marked on this copy — never on the
         # caller's messages — and every later read then shows its full spec.
@@ -913,11 +993,17 @@ class Orchestrator:
                 current_filters=filters,
                 current_dashboard=dashboard,
             ),
-            "CreateVisualization": self._handle_create_visualization,
+            "CreateVisualization": functools.partial(
+                self._handle_create_visualization, dashboard=dashboard
+            ),
             "FilterData": functools.partial(
                 self._handle_filter_data, current_filters=filters
             ),
             "OfferIssueReport": self._handle_offer_issue_report,
+            "UpdateDashboard": functools.partial(
+                self._handle_update_dashboard, dashboard=dashboard
+            ),
+            "ResetConversation": self._handle_reset_conversation,
         }
 
         tool_calls = []
@@ -927,7 +1013,7 @@ class Orchestrator:
         has_rebuff = False
         has_clarify = False
         has_explain = False
-        has_issue_report = False
+        has_ui_action = False
 
         for tc in choice.message.tool_calls:
             tool_name = tc.function.name
@@ -968,8 +1054,8 @@ class Orchestrator:
                 has_clarify = True
             elif tool_name == "FreeTextExplain":
                 has_explain = True
-            elif tool_name == "OfferIssueReport":
-                has_issue_report = True
+            elif tool_name in _UI_ACTIONS:
+                has_ui_action = True
 
         if unreadable and not tool_calls:
             return [build_rebuff_toolcall(_UNREADABLE_REPLY_MESSAGE)], "rebuff"
@@ -985,8 +1071,8 @@ class Orchestrator:
             orchestrator_choice = "both"
         elif has_filter:
             orchestrator_choice = "get-subset-of-data"
-        elif has_issue_report and not has_vis:
-            orchestrator_choice = "offer-issue-report"
+        elif has_ui_action and not has_vis:
+            orchestrator_choice = "ui-action"
         else:
             orchestrator_choice = "render-visualization"
 
