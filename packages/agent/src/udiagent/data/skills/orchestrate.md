@@ -33,7 +33,7 @@ To change filters, call `FilterData` once with a `request` describing every chan
 
 ## Current dashboard
 
-The charts on the user's dashboard right now, by `chart_id`, and those the user has closed. A chart in the conversation that is listed in neither is not shown.
+The charts on the user's dashboard right now, by `chart_id`, and those the user has closed. A chart in the conversation that is listed in neither is not shown. A `chart_id` is for your tool calls only: never show one to the user, and name a chart by what it shows instead.
 
 {{current_dashboard}}
 
