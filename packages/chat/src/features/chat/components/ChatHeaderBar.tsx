@@ -5,6 +5,7 @@ import {
   Ellipsis,
   FileDown,
   FlaskConical,
+  Gauge,
   KeyRound,
   Lightbulb,
   Menu,
@@ -40,6 +41,7 @@ import type { QueryConfig } from '../api/completions';
 
 interface ChatHeaderBarProps {
   config: QueryConfig;
+  allowApiKey: boolean;
   hasApiKey: boolean;
   onSetApiKey: (key: string) => void;
   onClearApiKey: () => void;
@@ -59,6 +61,7 @@ interface ChatHeaderBarProps {
  */
 export function ChatHeaderBar({
   config,
+  allowApiKey,
   hasApiKey,
   onSetApiKey,
   onClearApiKey,
@@ -169,8 +172,17 @@ export function ChatHeaderBar({
               Memory bank
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => setSessionOpen(true)}>
-              <KeyRound className={hasApiKey ? 'udi:text-green-600' : undefined} />
-              API key &amp; usage
+              {allowApiKey ? (
+                <>
+                  <KeyRound className={hasApiKey ? 'udi:text-green-600' : undefined} />
+                  API key &amp; usage
+                </>
+              ) : (
+                <>
+                  <Gauge />
+                  Usage
+                </>
+              )}
             </DropdownMenuItem>
             {debugMode && (
               <>
@@ -218,6 +230,7 @@ export function ChatHeaderBar({
         <SessionStatusDialog
           open={sessionOpen}
           onOpenChange={setSessionOpen}
+          allowApiKey={allowApiKey}
           hasApiKey={hasApiKey}
           onSetApiKey={onSetApiKey}
           onClearApiKey={onClearApiKey}

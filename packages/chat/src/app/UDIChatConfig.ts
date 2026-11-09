@@ -52,6 +52,13 @@ export interface UDIChatConfig {
   /** If true, prompt the user to enter an OpenAI API key before chatting. */
   requireApiKey?: boolean;
   /**
+   * If false, the user can't enter an OpenAI API key: the key input is hidden
+   * everywhere (the header menu keeps token usage only), no `X-OpenAI-Key` is
+   * sent, and so neither is `model`. Use it when the server refuses caller
+   * keys, e.g. under `UDI_BEDROCK`. Overrides `requireApiKey`. Default `true`.
+   */
+  allowApiKey?: boolean;
+  /**
    * LLM model id to run the request on. Applied **only when the user supplies
    * their own OpenAI key** (`requireApiKey`, or a key entered in the UI): the
    * server honors a requested model only alongside an `X-OpenAI-Key`, so that
