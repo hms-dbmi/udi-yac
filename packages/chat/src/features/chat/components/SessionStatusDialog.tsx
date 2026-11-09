@@ -2,11 +2,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useConversation } from '@/app/UDIChatContext';
+import { cn } from '@/lib/utils';
 import { ApiKeyInput } from './ApiKeyInput';
 
 interface SessionStatusDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  allowApiKey: boolean;
   hasApiKey: boolean;
   onSetApiKey: (key: string) => void;
   onClearApiKey: () => void;
@@ -15,11 +17,13 @@ interface SessionStatusDialogProps {
 /**
  * Dialog showing API-key status, whether the key is sent to the backend, and
  * the running token total for the conversation, opened from the chat header's
- * menu. The key can be set or cleared here.
+ * menu. The key can be set or cleared here. Without `allowApiKey`, only the
+ * token total shows.
  */
 export function SessionStatusDialog({
   open,
   onOpenChange,
+  allowApiKey,
   hasApiKey,
   onSetApiKey,
   onClearApiKey,
@@ -59,42 +63,51 @@ export function SessionStatusDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="udi:max-w-md">
         <DialogHeader>
-          <DialogTitle className="udi:text-sm">API Key &amp; Usage</DialogTitle>
+          <DialogTitle className="udi:text-sm">
+            {allowApiKey ? 'API Key & Usage' : 'Usage'}
+          </DialogTitle>
         </DialogHeader>
         <div className="udi:flex udi:flex-col udi:gap-4">
-          <section className="udi:flex udi:flex-col udi:gap-2">
-            <div className="udi:flex udi:items-center udi:justify-between">
-              <span className="udi:text-sm udi:font-medium">API key</span>
-              <Badge
-                variant={hasApiKey ? 'secondary' : 'outline'}
-                className={hasApiKey ? 'udi:bg-green-600/10 udi:text-green-700' : undefined}
-              >
-                {hasApiKey ? 'Set' : 'Not set'}
-              </Badge>
-            </div>
-            {hasApiKey ? (
-              <div className="udi:flex udi:items-center udi:justify-between udi:gap-3">
-                <p className="udi:text-xs udi:text-muted-foreground">
-                  Sent to the backend on every request via the{' '}
-                  <code className="udi:rounded udi:bg-muted udi:px-1 udi:py-0.5 udi:text-xs">
-                    X-OpenAI-Key
-                  </code>{' '}
-                  header.
-                </p>
-                <Button variant="outline" size="sm" onClick={onClearApiKey}>
-                  Clear key
-                </Button>
+          {allowApiKey && (
+            <section className="udi:flex udi:flex-col udi:gap-2">
+              <div className="udi:flex udi:items-center udi:justify-between">
+                <span className="udi:text-sm udi:font-medium">API key</span>
+                <Badge
+                  variant={hasApiKey ? 'secondary' : 'outline'}
+                  className={hasApiKey ? 'udi:bg-green-600/10 udi:text-green-700' : undefined}
+                >
+                  {hasApiKey ? 'Set' : 'Not set'}
+                </Badge>
               </div>
-            ) : (
-              <>
-                <p className="udi:text-xs udi:text-muted-foreground">
-                  No key set — the backend uses its own key, subject to a shared budget.
-                </p>
-                <ApiKeyInput onSubmit={handleSet} />
-              </>
+              {hasApiKey ? (
+                <div className="udi:flex udi:items-center udi:justify-between udi:gap-3">
+                  <p className="udi:text-xs udi:text-muted-foreground">
+                    Sent to the backend on every request via the{' '}
+                    <code className="udi:rounded udi:bg-muted udi:px-1 udi:py-0.5 udi:text-xs">
+                      X-OpenAI-Key
+                    </code>{' '}
+                    header.
+                  </p>
+                  <Button variant="outline" size="sm" onClick={onClearApiKey}>
+                    Clear key
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <p className="udi:text-xs udi:text-muted-foreground">
+                    No key set — the backend uses its own key, subject to a shared budget.
+                  </p>
+                  <ApiKeyInput onSubmit={handleSet} />
+                </>
+              )}
+            </section>
+          )}
+          <section
+            className={cn(
+              'udi:flex udi:flex-col udi:gap-2',
+              allowApiKey && 'udi:border-t udi:pt-3',
             )}
-          </section>
-          <section className="udi:flex udi:flex-col udi:gap-2 udi:border-t udi:pt-3">
+          >
             <div className="udi:flex udi:items-baseline udi:justify-between">
               <span className="udi:text-sm udi:font-medium">Tokens used</span>
               <span className="udi:text-lg udi:font-semibold udi:tabular-nums">

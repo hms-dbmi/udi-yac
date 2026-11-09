@@ -75,6 +75,7 @@ function UDIChatInner({
   authToken,
   model,
   requireApiKey,
+  allowApiKey = true,
   initialSession,
   filters,
   onFiltersChange,
@@ -95,7 +96,7 @@ function UDIChatInner({
   const messages = useConversation((s) => s.messages);
   const sourceFields = useDataPackage((s) => s.sourceFields);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const apiKey = useApiKey({ requireApiKey: requireApiKey === true });
+  const apiKey = useApiKey({ requireApiKey: requireApiKey === true, allowApiKey });
   const trackEvent = useTracker();
   const readOnly = useGlobal((s) => s.readOnly);
   const readOnlyLocked = useGlobal((s) => s.readOnlyLocked);
@@ -491,6 +492,7 @@ function UDIChatInner({
               >
                 <ChatPanel
                   config={queryConfig}
+                  allowApiKey={allowApiKey}
                   needsApiKey={apiKey.needsApiKey}
                   hasApiKey={apiKey.hasApiKey}
                   userKeyQuotaExceeded={apiKey.userKeyQuotaExceeded}

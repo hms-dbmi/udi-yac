@@ -14,6 +14,7 @@ import type { QueryConfig } from '../api/completions';
 
 interface ChatPanelProps {
   config: QueryConfig;
+  allowApiKey: boolean;
   needsApiKey: boolean;
   hasApiKey: boolean;
   userKeyQuotaExceeded: boolean;
@@ -30,6 +31,7 @@ interface ChatPanelProps {
 
 export function ChatPanel({
   config,
+  allowApiKey,
   needsApiKey,
   hasApiKey,
   userKeyQuotaExceeded,
@@ -100,6 +102,7 @@ export function ChatPanel({
     <div className="udi:flex udi:flex-col udi:h-full">
       <ChatHeaderBar
         config={config}
+        allowApiKey={allowApiKey}
         hasApiKey={hasApiKey}
         onSetApiKey={onSetApiKey}
         onClearApiKey={onClearApiKey}
