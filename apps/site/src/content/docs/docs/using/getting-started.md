@@ -22,7 +22,7 @@ Each dataset card offers two ways in:
 
 Inside the app, the bar at the top switches dataset or session at any time. Switching reloads the page, so anything you have not [saved](/udi-yac/docs/using/sessions/) is lost.
 
-To see what a dataset contains before you ask, open the **Data overview**: **Data overview** in the ⋮ menu at the top of the chat (or the **Data** tab on narrower screens), or any of the counts above the dashboard. It lists every table, how the tables join, and each field with its possible values. Hover a field to read its description.
+To see what a dataset contains before you ask, open the **Data overview**: **Data overview** in the ⋯ menu at the top of the chat (or the **Data** tab on narrower screens), or any of the counts above the dashboard. It lists every table, how the tables join, and each field with its possible values. Hover a field to read its description.
 
 ## Add your OpenAI key
 
@@ -31,13 +31,13 @@ The public site uses your own OpenAI key to answer questions. Until you add one,
 - Paste a key that starts with `sk-` and select **Set key**.
 - The key stays in this browser's local storage, so you only enter it once per browser. It is sent with each question, in the `X-OpenAI-Key` header, to the YAC agent server, which uses it to call OpenAI for that request and does not keep it.
 - Each question sends the agent your conversation and the dataset's structure (table and field names, descriptions and field values), not its rows.
-- **API key & usage** in the ⋮ menu at the top of the chat opens **API Key & Usage**. It shows the tokens this conversation has used, and **Clear key** removes the key from this browser.
+- **API key & usage** in the ⋯ menu at the top of the chat opens **API Key & Usage**. It shows the tokens this conversation has used, and **Clear key** removes the key from this browser.
 
 **Without a key** you can still open a predefined session: it opens read-only, and its charts, filters and brushing all work. Select **Explore Data** to open the chat. The dropdowns under each chart then change its fields without calling the model, so they work without a key too. Only asking a new question needs the key.
 
 ## Ask a question
 
-Type in the box at the bottom of the chat and press **Enter** (**Shift+Enter** adds a new line). If you're not sure what to ask, the chat starts with suggestions under **"Try asking one of these:"**, and **Example prompts** in the ⋮ menu lists them again.
+Type in the box at the bottom of the chat and press **Enter** (**Shift+Enter** adds a new line). If you're not sure what to ask, the chat starts with suggestions under **"Try asking one of these:"**, and **Example prompts** in the ⋯ menu lists them again.
 
 Questions that work well name what you want to see and how to split it:
 

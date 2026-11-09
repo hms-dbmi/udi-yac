@@ -42,7 +42,7 @@ From left to right, the icons on a card:
 | Table     | **Show table** / **Show chart**             | Switches between the chart and the data behind it.                                                                                                                  |
 | Sort      | **Sort by total** / **Sort alphabetically** | Reorders the categories.                                                                                                                                            |
 | Info      |                                             | Explains the chart and lists, in plain language, each step that turned the data into it.                                                                            |
-| ✕         | **Close**                                   | Removes the card. Closed charts go to **Recently Closed** above the chat input, and **Memory bank** in the ⋮ menu at the top of the chat; restore them from either. |
+| ✕         | **Close**                                   | Removes the card. Closed charts go to **Recently Closed** above the chat input, and **Memory bank** in the ⋯ menu at the top of the chat; restore them from either. |
 
 Not every icon shows on every card: a chart with nothing to tweak has no sliders, and a table has no table toggle.
 

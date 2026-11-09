@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import {
   Archive,
   Database,
-  EllipsisVertical,
+  Ellipsis,
   FileDown,
   FlaskConical,
   KeyRound,
@@ -51,7 +51,7 @@ interface ChatHeaderBarProps {
 }
 
 /**
- * Top toolbar of the chat panel: drawer toggle, title, a kebab menu (data
+ * Top toolbar of the chat panel: drawer toggle, title, an overflow menu (data
  * overview, example prompts, memory bank, API key & usage, debug exports),
  * and the reset button.
  * Owns `debugMode` subscription so that toggling it does not re-render
@@ -138,7 +138,7 @@ export function ChatHeaderBar({
                     />
                   }
                 >
-                  <EllipsisVertical className="udi:h-3.5 udi:w-3.5" />
+                  <Ellipsis className="udi:h-3.5 udi:w-3.5" />
                 </DropdownMenuTrigger>
               }
             />
