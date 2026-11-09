@@ -80,6 +80,7 @@ export {
 
 export { useActiveFilters, selectFilters, type ActiveFilter } from './hooks/useFilterChips';
 export { agentFilterState, type AgentFilterEntry } from './utils/agentFilterState';
+export { agentDashboardState, type AgentDashboardState } from './utils/agentDashboardState';
 
 export type {
   DownloadAction,

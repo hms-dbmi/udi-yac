@@ -986,6 +986,19 @@
             "description": "The active filters as the client holds them: chat, host and chart brush, with the user's edits (see `udiagent.filters`).",
             "default": []
           },
+          "dashboard": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dashboard",
+            "description": "The charts on the dashboard, in order, and those closed into the memory bank, by the key `\"{message index}-{tool call index}\"` of the call that made each: `{open: [{key, tableView?, sortByTotal?}], closed: [key]}` (see `udiagent.dashboard`)."
+          },
           "issueReporting": {
             "type": "boolean",
             "title": "Issuereporting",

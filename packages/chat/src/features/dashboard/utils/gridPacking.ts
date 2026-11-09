@@ -12,7 +12,8 @@ export interface RowHeightOverride {
   h: number;
 }
 
-function sortRowMajor(items: readonly LayoutItem[]): LayoutItem[] {
+/** Cards in reading order: top to bottom, then left to right. */
+export function sortRowMajor(items: readonly LayoutItem[]): LayoutItem[] {
   return [...items].sort((a, b) => (a.y === b.y ? a.x - b.x : a.y - b.y));
 }
 

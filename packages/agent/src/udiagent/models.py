@@ -35,6 +35,14 @@ class YACCompletionRequest(BaseModel):
         description="The active filters as the client holds them: chat, host and "
         "chart brush, with the user's edits (see `udiagent.filters`).",
     )
+    # None from older clients; the prompt then treats every chart as open.
+    dashboard: dict | None = Field(
+        default=None,
+        description="The charts on the dashboard, in order, and those closed into "
+        'the memory bank, by the key `"{message index}-{tool call index}"` of the '
+        "call that made each: `{open: [{key, tableView?, sortByTotal?}], closed: "
+        "[key]}` (see `udiagent.dashboard`).",
+    )
     issueReporting: bool = Field(
         default=False,
         description="The client can send issue reports, so the agent may offer "

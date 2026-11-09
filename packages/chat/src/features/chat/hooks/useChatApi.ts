@@ -2,12 +2,14 @@ import { useCallback, useRef, useState } from 'react';
 import { queryLLM, type QueryConfig, type ToolCallResponse } from '../api/completions';
 import {
   useConversationStore,
+  useDashboardStore,
   useDataFiltersStore,
   useDataPackageStore,
   useGlobalStore,
+  useMemoryBankStore,
   useTracker,
 } from '@/app/UDIChatContext';
-import { agentFilterState, selectFilters } from '@/features/dashboard';
+import { agentDashboardState, agentFilterState, selectFilters } from '@/features/dashboard';
 import { generateEventId } from '@/lib/utils';
 import type { Message } from '@/types/messages';
 
@@ -41,6 +43,8 @@ export function useChatApi(config: QueryConfig, options: UseChatApiOptions = {})
   const conversationStore = useConversationStore();
   const dataPackageStore = useDataPackageStore();
   const dataFiltersStore = useDataFiltersStore();
+  const dashboardStore = useDashboardStore();
+  const memoryBankStore = useMemoryBankStore();
   const globalStore = useGlobalStore();
   const trackEvent = useTracker();
   // The most recently minted turnId — reused by `retryLastUserMessage` so
@@ -70,6 +74,8 @@ export function useChatApi(config: QueryConfig, options: UseChatApiOptions = {})
         messages,
         dpState.dimensionLinks,
       );
+      // Likewise the charts: the transcript still holds every closed one.
+      const dashboard = agentDashboardState(dashboardStore.getState(), memoryBankStore.getState());
       const hadUserKey = !!config.openAiKey;
       const startedAt = performance.now();
       // A reset or an import while this is in flight starts another
@@ -92,6 +98,7 @@ export function useChatApi(config: QueryConfig, options: UseChatApiOptions = {})
           dpState.dataDomainsString,
           conversationId,
           filters,
+          dashboard,
           controller.signal,
         );
         if (isStale()) return;
@@ -163,6 +170,8 @@ export function useChatApi(config: QueryConfig, options: UseChatApiOptions = {})
       conversationStore,
       dataPackageStore,
       dataFiltersStore,
+      dashboardStore,
+      memoryBankStore,
       globalStore,
       onQuotaRebuff,
       onNormalResponse,
