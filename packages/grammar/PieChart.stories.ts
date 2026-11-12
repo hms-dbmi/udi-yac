@@ -49,6 +49,30 @@ export const Default = {
   },
 };
 
+export const Donut = {
+  args: {
+    spec: {
+      source: {
+        name: 'donors',
+        source: './data/hubmap/donors.tsv',
+      },
+      transformation: [
+        { groupby: 'sex' },
+        { rollup: { 'donors count': { op: 'count' } } },
+      ],
+      representation: {
+        mark: 'arc',
+        mapping: [
+          { encoding: 'theta', field: 'donors count', type: 'quantitative' },
+          { encoding: 'color', field: 'sex', type: 'nominal' },
+          { encoding: 'radius', value: 60 },
+          { encoding: 'radius2', value: 80 },
+        ],
+      },
+    },
+  },
+};
+
 export const HierarchicalDonut = {
   args: {
     spec: {
