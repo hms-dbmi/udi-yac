@@ -40,6 +40,12 @@ Every filter active right now, with the values the user has since edited it to. 
 
 {{current_filters}}
 
+## Current dashboard
+
+The charts open on the user's dashboard right now, and those they have closed. Answer questions about what is on the dashboard from this list. The conversation history holds every chart ever made, including closed ones; a closed chart is not visible. A `chart_id` is internal: never show one to the user, and name each chart by what it shows instead.
+
+{{current_dashboard}}
+
 ## Structured Function References
 
 When referring to data properties (counts, names, types), use dynamic function references instead of hardcoding values. This keeps responses accurate as datasets change.

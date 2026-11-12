@@ -61,7 +61,7 @@ def test_a_template_chart_is_shown_as_its_template_call():
 def test_a_freehand_chart_keeps_its_spec():
     """No template behind it, so no shorter faithful description exists."""
     [shown] = _sent_arguments(_history(_chart(tool_used=None)))
-    assert shown == {"spec": _SPEC}
+    assert shown == {"chart_id": "chart_1", "spec": _SPEC}
 
 
 def test_charts_are_numbered_in_order_across_messages_and_shapes():
@@ -76,7 +76,7 @@ def test_a_revealed_chart_keeps_its_spec():
     chart = _chart()
     chart["function"]["meta"]["spec_revealed"] = True
     [shown] = _sent_arguments(_history(chart))
-    assert shown == {"spec": _SPEC}
+    assert shown == {"chart_id": "chart_1", "spec": _SPEC}
 
 
 def test_compaction_can_be_turned_off_and_never_touches_the_callers_copy():

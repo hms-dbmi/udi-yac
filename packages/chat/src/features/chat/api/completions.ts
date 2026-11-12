@@ -1,5 +1,5 @@
 import type { Message, ToolCallMeta } from '@/types/messages';
-import type { AgentFilterEntry } from '@/features/dashboard';
+import type { AgentDashboardState, AgentFilterEntry } from '@/features/dashboard';
 import { httpError } from '@/utils/httpError';
 
 export interface QueryConfig {
@@ -39,6 +39,7 @@ function constructQueryBody(
   dataSchema: string,
   dataDomains: string,
   filters: AgentFilterEntry[],
+  dashboard: AgentDashboardState,
   issueReporting?: boolean,
 ) {
   const processed = structuredClone(messages).map((msg) => {
@@ -64,6 +65,7 @@ function constructQueryBody(
     dataSchema,
     dataDomains,
     filters,
+    dashboard,
   };
 }
 
@@ -113,6 +115,7 @@ export async function queryLLM(
   dataDomains: string,
   conversationId?: string,
   filters: AgentFilterEntry[] = [],
+  dashboard: AgentDashboardState = { open: [], closed: [] },
   signal?: AbortSignal,
 ): Promise<QueryResult> {
   // The server honors a requested model only alongside a caller-supplied key —
@@ -125,6 +128,7 @@ export async function queryLLM(
     dataSchema,
     dataDomains,
     filters,
+    dashboard,
     config.issueReporting,
   );
 

@@ -11,6 +11,7 @@ from typing import Callable
 import openai
 
 from udiagent.skills import Skill, load_skills, render_template
+from udiagent.dashboard import describe_dashboard, normalize_dashboard
 from udiagent.filters import (
     APPLY_FILTER_OPERATIONS,
     APPLY_FILTER_OPERATIONS_TOOL,
@@ -262,6 +263,7 @@ class Orchestrator:
         session_id: str | None = None,
         filters: list[dict] | None = None,
         issue_reporting: bool = False,
+        dashboard: dict | None = None,
     ) -> OrchestratorResult:
         """Run the orchestrator on a user request.
 
@@ -284,6 +286,9 @@ class Orchestrator:
             issue_reporting: Offer the ``OfferIssueReport`` tool, which lets the
                 client open its report form. Pass it only when the client can
                 send reports and something records them.
+            dashboard: The charts on the client's dashboard and in its memory
+                bank (see ``udiagent.dashboard``). ``None`` means the caller did
+                not say, which the prompt reports as every chart still open.
 
         Returns:
             An ``OrchestratorResult`` with tool_calls, orchestrator_choice, and usage.
@@ -298,6 +303,7 @@ class Orchestrator:
                 budget_check=budget_check,
                 filters=filters,
                 issue_reporting=issue_reporting,
+                dashboard=dashboard,
             )
 
     def run_visualization(
@@ -353,6 +359,7 @@ class Orchestrator:
         budget_check: Callable[["Usage"], str | None] | None = None,
         filters: list[dict] | None = None,
         issue_reporting: bool = False,
+        dashboard: dict | None = None,
     ) -> OrchestratorResult:
         usage = Usage()
 
@@ -365,6 +372,9 @@ class Orchestrator:
                     usage=usage,
                 )
 
+        # Before the split: the client keys charts by where they sit in the
+        # history as it sent it.
+        dashboard = normalize_dashboard(dashboard, messages)
         msgs = split_tool_calls(messages)
         try:
             tool_calls, choice = self._orchestrate_tool_calls(
@@ -377,6 +387,7 @@ class Orchestrator:
                 budget_check=budget_check,
                 filters=normalize_filters(filters),
                 issue_reporting=issue_reporting,
+                dashboard=dashboard,
             )
         except BudgetExceededError as err:
             if budget_check is None:
@@ -533,6 +544,7 @@ class Orchestrator:
         openai_api_key=None,
         model=None,
         current_filters=(),
+        current_dashboard=None,
     ):
         available_tools = "\n".join(
             f"- {t['function']['name']}: {t['function']['description']}"
@@ -560,6 +572,9 @@ class Orchestrator:
                     # "Which filters are on?" is answered here too, and the
                     # history only has the FilterData calls as first made.
                     "current_filters": describe_filters(current_filters),
+                    # "What's on my dashboard?" too: the history still holds
+                    # every chart the user has closed.
+                    "current_dashboard": describe_dashboard(current_dashboard),
                     "structured_functions": get_function_signatures(),
                 },
             )
@@ -778,6 +793,7 @@ class Orchestrator:
         *,
         filters: list[dict],
         issue_reporting: bool = False,
+        dashboard: dict | None = None,
     ):
         tools = [*self.tools, OFFER_ISSUE_REPORT_TOOL] if issue_reporting else self.tools
         # The handlers below each read the history afresh, so a chart revealed
@@ -799,6 +815,7 @@ class Orchestrator:
                 "data_schema": simplify_data_schema(data_schema),
                 "data_domains": simplify_data_domains(data_domains),
                 "current_filters": describe_filters(filters),
+                "current_dashboard": describe_dashboard(dashboard),
             },
         )
         msgs.insert(0, {"role": "system", "content": rendered})
@@ -892,7 +909,9 @@ class Orchestrator:
             "Rebuff": self._handle_rebuff,
             "ClarifyVariable": self._handle_clarify_variable,
             "FreeTextExplain": functools.partial(
-                self._handle_free_text_explain, current_filters=filters
+                self._handle_free_text_explain,
+                current_filters=filters,
+                current_dashboard=dashboard,
             ),
             "CreateVisualization": self._handle_create_visualization,
             "FilterData": functools.partial(

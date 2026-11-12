@@ -150,6 +150,11 @@ class TestServerForwardsFilters:
 
     def test_older_clients_send_none(self):
         assert self._post()["filters"] == []
+        assert self._post()["dashboard"] is None
+
+    def test_the_dashboard_reaches_the_orchestrator(self):
+        dashboard = {"open": [{"key": "1-0", "tableView": True}], "closed": ["3-0"]}
+        assert self._post(dashboard=dashboard)["dashboard"] == dashboard
 
 
 # ---------------------------------------------------------------------------

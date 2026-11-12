@@ -23,7 +23,7 @@ client gets back. Code references are to `packages/agent/src/udiagent/`.
 ## A request, end to end
 
 ```
-POST /v1/yac/completions  {messages, dataSchema, dataDomains, filters}
+POST /v1/yac/completions  {messages, dataSchema, dataDomains, filters, dashboard}
   → Orchestrator.run()
     → routing call: the model picks one or more tools
       ↺ ListFieldValues / GetVisualizationSpec answer themselves and loop
@@ -33,8 +33,8 @@ POST /v1/yac/completions  {messages, dataSchema, dataDomains, filters}
 
 1. **Routing.** `Orchestrator.run()` sends the history to the model with the
    `orchestrate` prompt. That prompt carries a summary of the schema, a sample of
-   each column's values (`dataDomains`, which the client caps for size) and the
-   current filters. The model must call at least one tool
+   each column's values (`dataDomains`, which the client caps for size), the
+   current filters and the current dashboard. The model must call at least one tool
    (`tool_choice: "required"`).
 2. **Lookups.** Two tools are internal and never reach the client.
    `ListFieldValues` returns a column's full value list, or the values matching
@@ -161,12 +161,24 @@ that silently matches nothing. Each operation comes back as one `FilterData`
 call. A filter can have a scope (a subject table and `any`/`all`/`none`): it
 then keeps every row of the subjects that match.
 
+## Dashboard
+
+The client also sends its dashboard with every request (`dashboard`): the open
+charts in order, with their table and sort-by-total views, and the closed charts
+in its memory bank. The history can't stand in for this either, because it
+echoes every chart the agent ever made, closed or not. The client names a chart
+by where its call sits in the history it sent (`"{message}-{tool call}"`), and
+`udiagent.dashboard` maps that to the chart's `chart_id`. The orchestrate and
+explain prompts state the result under "Current dashboard". A client that sends
+no dashboard gets "treat every chart as open".
+
 ## Chart history
 
 The client echoes every earlier chart back in the history with its full spec.
-Before the model reads the history, `normalize_tool_calls` replaces each
-template-made chart's spec with a short description: its `chart_id`, template
-and bindings. Charts drawn freehand keep their spec. Long specs made follow-up
+Before the model reads the history, `normalize_tool_calls` labels every chart
+with its `chart_id`, and replaces each template-made chart's spec with a short
+description: its template and bindings. Charts drawn freehand keep their spec.
+Each earlier chart is answered in the history as possibly since closed. Long specs made follow-up
 requests reverse-engineer the template call, and the model misread derived
 columns as options to set. When a question needs the full spec, the model calls
 `GetVisualizationSpec(chart_id)`. That chart's spec then stays in view for the

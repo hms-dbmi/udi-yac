@@ -257,6 +257,7 @@ def completions(
             session_id=session_id,
             filters=request.filters,
             issue_reporting=request.issueReporting and agent.langfuse_enabled,
+            dashboard=request.dashboard,
         )
     except BudgetExceededError as exc:
         rebuff = build_rebuff_toolcall(exc.message, reason="budget_exceeded")

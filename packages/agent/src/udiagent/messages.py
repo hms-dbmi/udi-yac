@@ -14,19 +14,39 @@ def _function(tool_call: dict) -> dict:
     return tool_call.get("function") or tool_call
 
 
+def _is_chart(tool_call) -> bool:
+    return isinstance(tool_call, dict) and _function(tool_call).get("name") == RENDER_VISUALIZATION
+
+
 def visualization_calls(messages: list[dict]):
     """Yield `(chart_id, tool_call)` for each chart rendered earlier in a history.
 
     Charts are numbered in the order they appear — `chart_1`, `chart_2` — so the
     same history always gives the same ids, which is what lets the model ask
-    for one by the id it was shown.
+    for one by the id it was shown. Splitting a message's tool calls apart
+    (`split_tool_calls`) keeps that order, so it keeps the ids too.
     """
     count = 0
     for message in messages:
         for tool_call in message.get("tool_calls") or []:
-            if isinstance(tool_call, dict) and _function(tool_call).get("name") == RENDER_VISUALIZATION:
+            if _is_chart(tool_call):
                 count += 1
                 yield f"chart_{count}", tool_call
+
+
+def chart_keys(messages: list[dict]) -> dict[str, str]:
+    """Map the chat's key for each chart to the `chart_id` the model is shown.
+
+    The chat keys a chart by where its call sits in the history it sends,
+    `"{message index}-{tool call index}"`, so this must read that history as
+    sent: before `split_tool_calls`, which moves calls to new indices.
+    """
+    keys: dict[str, str] = {}
+    for i, message in enumerate(messages):
+        for j, tool_call in enumerate(message.get("tool_calls") or []):
+            if _is_chart(tool_call):
+                keys[f"{i}-{j}"] = f"chart_{len(keys) + 1}"
+    return keys
 
 
 def _compact_arguments(chart_id: str, meta: dict) -> dict:
@@ -56,13 +76,17 @@ def compact_visualization_history(messages: list[dict]) -> list[dict]:
     came from and which has not been revealed (`meta.spec_revealed`, set when the
     model asked for it with `GetVisualizationSpec`). A chart without that
     provenance — drawn freehand — keeps its spec: there is no shorter, faithful
-    description of it. Mutates and returns `messages`; pass a copy.
+    description of it. Every chart is labelled with its `chart_id`, which the
+    Current dashboard section and the dashboard tools refer to. Mutates and
+    returns `messages`; pass a copy.
     """
     for chart_id, tool_call in visualization_calls(messages):
         function = _function(tool_call)
         meta = function.get("meta") or {}
         if meta.get("tool_used") and not meta.get("spec_revealed"):
             function["arguments"] = _compact_arguments(chart_id, meta)
+        elif isinstance(function.get("arguments"), dict):
+            function["arguments"] = {"chart_id": chart_id, **function["arguments"]}
     return messages
 
 
@@ -94,6 +118,15 @@ FILTER_CALL_REPLY = (
     "Applied when made. The user may have edited or removed this filter since; "
     "the Current filters section is the present state."
 )
+
+#: The same for a past chart: "OK" read as "this chart is on screen", and the
+#: model built on charts the user had already closed.
+CHART_CALL_REPLY = (
+    "Shown when made. The user may have closed this chart since; "
+    "the Current dashboard section is the present state."
+)
+
+_CALL_REPLIES = {"FilterData": FILTER_CALL_REPLY, RENDER_VISUALIZATION: CHART_CALL_REPLY}
 
 
 def normalize_tool_calls(messages: list[dict], *, compact_charts: bool = True) -> list[dict]:
@@ -171,11 +204,7 @@ def normalize_tool_calls(messages: list[dict], *, compact_charts: bool = True) -
                     {
                         "role": "tool",
                         "tool_call_id": tc["id"],
-                        "content": (
-                            FILTER_CALL_REPLY
-                            if tc["function"]["name"] == "FilterData"
-                            else "OK"
-                        ),
+                        "content": _CALL_REPLIES.get(tc["function"]["name"], "OK"),
                     }
                 )
 

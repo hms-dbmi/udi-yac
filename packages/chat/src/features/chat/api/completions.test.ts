@@ -88,6 +88,19 @@ describe('queryLLM filter state', () => {
   });
 });
 
+describe('queryLLM dashboard state', () => {
+  it('sends the open and closed charts, and an empty dashboard by default', async () => {
+    const dashboard = { open: [{ key: '3-0', tableView: true as const }], closed: ['1-0'] };
+    const fetchMock = mockFetch();
+    await queryLLM({ apiBaseUrl: '/api/yac' }, [], '{}', '[]', undefined, [], dashboard);
+    expect(body(fetchMock).dashboard).toEqual(dashboard);
+
+    const bare = mockFetch();
+    await queryLLM({ apiBaseUrl: '/api/yac' }, [], '{}', '[]');
+    expect(body(bare).dashboard).toEqual({ open: [], closed: [] });
+  });
+});
+
 /** The agent may offer an issue report only when the host switched reporting on. */
 describe('queryLLM issue reporting flag', () => {
   it('sends the flag when issue reporting is on', async () => {
