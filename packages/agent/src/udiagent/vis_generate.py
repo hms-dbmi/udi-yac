@@ -712,6 +712,17 @@ def _resolve_placeholder(tag, bindings, schema):
     if tag in CHOICES:
         return json.dumps(resolve_choice(tag, bindings.get(tag)))
 
+    # A multi-value column's delimiter, read from the bound field's
+    # `udi:separator`: <SEP:E1.F2> for whatever E1.F2 is bound to. Undeclared is
+    # ";", the delimiter every multi-value template assumed before columns
+    # could declare one, so packages without the declaration keep working.
+    if tag.startswith("SEP:"):
+        key = tag[len("SEP:"):]
+        entity = _entity_for_binding_key(key, bindings)
+        fields = schema.get("entities", {}).get(entity, {}).get("fields", {})
+        info = fields.get(bindings.get(key, "")) or {}
+        return json.dumps(info.get("separator") or ";")[1:-1]
+
     item = _LIST_ITEM.fullmatch(tag)
     if item is not None:
         values = value_list(bindings.get(item.group(1)))
