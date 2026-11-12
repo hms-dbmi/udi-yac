@@ -516,9 +516,9 @@ export interface RollingDeriveExpression {
  * It is deliberately NOT a general expression language: it covers exactly the
  * surface the visualization templates emit today — field references, literals,
  * binary arithmetic/comparison/logic, ternary conditionals, per-group aggregates
- * (count/sum/…), window functions (rank), and the log/exp math functions. Add
- * a node only when a template
- * needs one.
+ * (count/sum/…), window functions (rank), the log/exp math functions, and
+ * lower/contains for substring matching. Add a node only when a template or a
+ * real query needs one.
  *
  * The union is untagged; nodes are distinguished by key
  * (`field` | `literal` | `op` | `if` | `agg` | `window` | `concat` | `fn`)
@@ -623,17 +623,36 @@ export interface ConcatExpr {
 }
 
 /**
- * A scalar math function of one argument. `log` is the NATURAL logarithm.
- *
- * Exists for running products: no executor has a portable product aggregate,
- * but a product is `exp(sum(log(x)))`, and a running sum is already a rolling
- * derive — which is how the survival templates compute the Kaplan-Meier
- * estimate. `log` of zero or a negative number is -Infinity/NaN in Arquero and
- * an error in SQL, so guard the argument with a conditional.
+ * A scalar function call: `log`/`exp`/`lower` take one argument, `contains`
+ * takes two.
  */
-export interface FunctionExpr {
-  fn: 'log' | 'exp';
+export type FunctionExpr = UnaryFunctionExpr | ContainsExpr;
+
+/**
+ * A scalar function of one argument.
+ *
+ * - `log` is the NATURAL logarithm, and with `exp` exists for running
+ *   products: no executor has a portable product aggregate, but a product is
+ *   `exp(sum(log(x)))`, and a running sum is already a rolling derive, which is
+ *   how the survival templates compute the Kaplan-Meier estimate. `log` of zero
+ *   or a negative number is -Infinity/NaN in Arquero and an error in SQL, so
+ *   guard the argument with a conditional.
+ * - `lower` lower-cases a string (null stays null). Wrap both sides of a
+ *   `contains` in it for a case-insensitive match.
+ */
+export interface UnaryFunctionExpr {
+  fn: 'log' | 'exp' | 'lower';
   args: [Expr];
+}
+
+/**
+ * Substring test: true when the first argument (a string) contains the second.
+ * Case-sensitive; compose with `lower` to ignore case. A null on either side is
+ * false, never null, so it is safe as a filter or a conditional on its own.
+ */
+export interface ContainsExpr {
+  fn: 'contains';
+  args: [Expr, Expr];
 }
 
 /**

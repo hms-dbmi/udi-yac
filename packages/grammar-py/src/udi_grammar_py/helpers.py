@@ -91,6 +91,17 @@ class Expr:
         return {"fn": "exp", "args": [arg]}
 
     @staticmethod
+    def lower(arg):
+        """Lower-case a string; null stays null."""
+        return {"fn": "lower", "args": [arg]}
+
+    @staticmethod
+    def contains(text, search):
+        """True when `text` contains `search` (case-sensitive; wrap both in
+        ``lower`` to ignore case). A null on either side is false."""
+        return {"fn": "contains", "args": [text, search]}
+
+    @staticmethod
     def not_null(field):
         """Common filter: ``d['field'] != null``."""
         return {"op": "!=", "left": {"field": field}, "right": {"literal": None}}
