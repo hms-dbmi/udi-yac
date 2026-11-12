@@ -19,6 +19,7 @@ export type RebuffReason = 'budget_exceeded';
 
 export interface RebuffArgs {
   message: string;
+  /** Always empty: the server no longer suggests queries in a rebuff. */
   suggestions: string[];
   reason?: RebuffReason;
 }

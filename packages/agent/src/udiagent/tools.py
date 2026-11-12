@@ -102,7 +102,7 @@ ORCHESTRATOR_TOOLS = [
                 "properties": {
                     "message": {
                         "type": "string",
-                        "description": "A natural-language explanation of what is ambiguous and why clarification is needed.",
+                        "description": "One or two short sentences saying what is ambiguous and why clarification is needed.",
                     },
                     "ambiguous_variables": {
                         "type": "array",
