@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
-import { useDataPackage, useGlobalStore } from '@/app/UDIChatContext';
+import {
+  useConversation,
+  useConversationStore,
+  useDataPackage,
+  useGlobalStore,
+} from '@/app/UDIChatContext';
 import { ChatInput } from './ChatInput';
 import { ApiKeyInput } from './ApiKeyInput';
 import { MessageList } from './MessageList';
@@ -76,6 +81,16 @@ export function ChatPanel({
     },
     [sendMessage, globalStore],
   );
+
+  // A turn asked for from the dashboard (a broken chart's "Try to fix"), sent
+  // like a typed one once any request in flight has finished.
+  const conversationStore = useConversationStore();
+  const pendingSend = useConversation((s) => s.pendingSend);
+  useEffect(() => {
+    if (pendingSend == null || isLoading) return;
+    conversationStore.getState().requestSend(null);
+    handleSend(pendingSend);
+  }, [pendingSend, isLoading, handleSend, conversationStore]);
 
   // Flush a message queued during data load once domains are ready, or cancel
   // it if loading failed (so it can't spin forever). Both calls no-op when

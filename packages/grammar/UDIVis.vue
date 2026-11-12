@@ -112,6 +112,9 @@ const emit = defineEmits<{
       truncated: { cap: number; sampled: boolean } | null;
     },
   ): void;
+  /** The data step failed (local transformation or remote query); null once
+   *  a later run succeeds. */
+  (e: 'renderError', error: { message: string } | null): void;
 }>();
 
 const props = defineProps<ParserProps>();
@@ -677,6 +680,12 @@ function isVegaLiteCompatible(spec: ParsedUDIGrammar): boolean {
 }
 
 const transformError = ref();
+watch(transformError, (error) =>
+  emit(
+    'renderError',
+    error ? { message: String(error.message ?? error) } : null,
+  ),
+);
 
 // shallowRef, not ref: these hold query results — up to 9474 x 258 for HuBMAP
 // `datasets` — and a deep ref would lazily wrap every row in a reactive Proxy.
