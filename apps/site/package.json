@@ -12,9 +12,9 @@
     "test": "node --test src/lib/catalog.test.ts"
   },
   "dependencies": {
-    "@astrojs/react": "^7.1.2",
-    "@astrojs/starlight": "^0.42.8",
-    "astro": "^7.4.4",
+    "@astrojs/react": "^7.1.5",
+    "@astrojs/starlight": "^0.42.10",
+    "astro": "^7.4.8",
     "lz-string": "^1.5.0",
     "monaco-editor": "^0.57.0",
     "react": "^19.3.1",
