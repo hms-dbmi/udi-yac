@@ -24,7 +24,8 @@ export interface RebuffArgs {
 }
 
 // ---------------------------------------------------------------------------
-// OfferIssueReport
+// UI actions: the chat carries these out on the live response (useChatApi),
+// and their cards stay in the transcript as the way back.
 // ---------------------------------------------------------------------------
 /** Sent only to clients that switched issue reporting on. */
 export interface OfferIssueReportArgs {
@@ -33,6 +34,24 @@ export interface OfferIssueReportArgs {
   summary: string;
   /** The user asked to report; the form then opens on its own. */
   user_requested: boolean;
+}
+
+/** A chart as the agent names it, with the chat's `vizKey` for it. */
+export interface DashboardChartRef {
+  chart_id: string;
+  key: string;
+}
+
+/** Charts to close into the memory bank and to restore from it. */
+export interface UpdateDashboardArgs {
+  message: string;
+  close: DashboardChartRef[];
+  restore: DashboardChartRef[];
+}
+
+/** Opens the Reset conversation confirmation; nothing resets until the user accepts. */
+export interface ResetConversationArgs {
+  message: string;
 }
 
 // ---------------------------------------------------------------------------

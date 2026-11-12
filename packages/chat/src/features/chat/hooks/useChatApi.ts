@@ -10,6 +10,7 @@ import {
   useTracker,
 } from '@/app/UDIChatContext';
 import { agentDashboardState, agentFilterState, selectFilters } from '@/features/dashboard';
+import type { UpdateDashboardArgs } from '@/features/tool-calls';
 import { generateEventId } from '@/lib/utils';
 import type { Message } from '@/types/messages';
 
@@ -135,15 +136,29 @@ export function useChatApi(config: QueryConfig, options: UseChatApiOptions = {})
           });
         }
 
-        // The user asked to report something: open the form straight away. Only
-        // here, on the live response, so replaying the transcript (a reload, a
-        // session import) never pops it; the chat card stays as the way back.
-        const offer = toolCalls.find((tc) => tc.name === 'OfferIssueReport');
-        if (config.issueReporting && offer?.arguments.user_requested === true) {
-          const summary = offer.arguments.summary;
-          globalStore
-            .getState()
-            .openIssueReport(typeof summary === 'string' ? summary : '', 'chat');
+        // UI actions run only here, on the live response, so replaying the
+        // transcript (a reload, a session import) never repeats them; each
+        // one's chat card stays as the way back.
+        for (const tc of toolCalls) {
+          if (tc.name === 'OfferIssueReport') {
+            // The user asked to report something: open the form straight away.
+            if (config.issueReporting && tc.arguments.user_requested === true) {
+              const summary = tc.arguments.summary;
+              globalStore
+                .getState()
+                .openIssueReport(typeof summary === 'string' ? summary : '', 'chat');
+            }
+          } else if (tc.name === 'UpdateDashboard') {
+            const { close, restore } = tc.arguments as Partial<UpdateDashboardArgs>;
+            const dashboard = dashboardStore.getState();
+            for (const { key } of close ?? []) dashboard.closeVisualization(key, memoryBankStore);
+            for (const { key } of restore ?? []) {
+              dashboard.restoreFromMemoryBank(key, memoryBankStore, dataPackageStore);
+            }
+          } else if (tc.name === 'ResetConversation') {
+            // Only the confirmation: nothing resets unless the user accepts.
+            globalStore.getState().setResetConfirmOpen(true);
+          }
         }
 
         if (toolCalls.some(isBudgetExceededRebuff)) {

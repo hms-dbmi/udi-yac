@@ -7,7 +7,14 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { UDIChatProvider, useConversationStore, useGlobalStore } from '@/app/UDIChatContext';
+import {
+  UDIChatProvider,
+  useConversationStore,
+  useDashboardStore,
+  useGlobalStore,
+  useMemoryBankStore,
+} from '@/app/UDIChatContext';
+import type { UDIGrammar } from 'udi-toolkit/react';
 import { useChatApi } from './useChatApi';
 
 function stubFetch(response: Response) {
@@ -52,6 +59,65 @@ describe('useChatApi issue report offer', () => {
     await act(() => result.current.api.retryLastUserMessage());
 
     expect(result.current.global.getState().issueReport.open).toBe(opens);
+  });
+});
+
+describe('useChatApi dashboard and reset actions', () => {
+  const spec = { source: { name: 'd', source: 'd.csv' } } as unknown as UDIGrammar;
+
+  async function respond(reply: unknown[]) {
+    stubFetch(json(reply));
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <UDIChatProvider>{children}</UDIChatProvider>
+    );
+    const { result } = renderHook(
+      () => ({
+        api: useChatApi({ apiBaseUrl: '/api/yac' }),
+        conversation: useConversationStore(),
+        dashboard: useDashboardStore(),
+        memoryBank: useMemoryBankStore(),
+        global: useGlobalStore(),
+      }),
+      { wrapper },
+    );
+    const { dashboard, memoryBank, conversation } = result.current;
+    dashboard.getState().addActiveVisualization(0, 0, spec, '', null);
+    dashboard.getState().addActiveVisualization(1, 0, spec, '', null);
+    dashboard.getState().closeVisualization('1-0', memoryBank);
+    conversation.getState().addMessage({ role: 'user', content: 'tidy up' });
+    await act(() => result.current.api.retryLastUserMessage());
+    return result.current;
+  }
+
+  it('closes and restores the charts a live UpdateDashboard names', async () => {
+    const { dashboard, memoryBank } = await respond([
+      {
+        name: 'UpdateDashboard',
+        arguments: {
+          message: 'Swapped them.',
+          close: [{ chart_id: 'chart_1', key: '0-0' }],
+          restore: [{ chart_id: 'chart_2', key: '1-0' }],
+        },
+      },
+    ]);
+    expect(dashboard.getState().isActive('0-0')).toBe(false);
+    expect(memoryBank.getState().closedVisualizations.has('0-0')).toBe(true);
+    expect(dashboard.getState().isActive('1-0')).toBe(true);
+  });
+
+  it('only opens the confirmation for a live ResetConversation', async () => {
+    const { global, conversation, dashboard } = await respond([
+      { name: 'ResetConversation', arguments: { message: 'Start over?' } },
+    ]);
+    expect(global.getState().resetConfirmOpen).toBe(true);
+    expect(conversation.getState().messages).toHaveLength(2);
+    expect(dashboard.getState().isActive('0-0')).toBe(true);
+  });
+
+  it('sends the dashboard with the request', async () => {
+    await respond([]);
+    const sent = JSON.parse((vi.mocked(fetch).mock.calls[0][1] as RequestInit).body as string);
+    expect(sent.dashboard).toEqual({ open: [{ key: '0-0' }], closed: ['1-0'] });
   });
 });
 

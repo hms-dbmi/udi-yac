@@ -85,12 +85,16 @@ export function ChatHeaderBar({
   const [examplesOpen, setExamplesOpen] = useState(false);
   const [memoryBankOpen, setMemoryBankOpen] = useState(false);
   const [sessionOpen, setSessionOpen] = useState(false);
-  const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
+  const resetConfirmOpen = useGlobal((s) => s.resetConfirmOpen);
+  const setResetConfirmOpen = useCallback(
+    (open: boolean) => globalStore.getState().setResetConfirmOpen(open),
+    [globalStore],
+  );
 
   const handleConfirmReset = useCallback(() => {
     setResetConfirmOpen(false);
     onReset();
-  }, [onReset]);
+  }, [onReset, setResetConfirmOpen]);
 
   const handleExampleClick = useCallback(
     (prompt: string) => {

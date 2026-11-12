@@ -307,6 +307,55 @@ describe('dashboardStore — activating / closing', () => {
     expect(memoryBank.getState().closedVisualizations.has('0-0')).toBe(false);
   });
 
+  describe('a chart that replaces an open one', () => {
+    /** Three charts in a row at cols=3, in reading order 0-0, 0-1, 0-2. */
+    function threeCharts() {
+      const dashboard = createDashboardStore();
+      const memoryBank = createMemoryBankStore();
+      dashboard.getState().setGridCols(3);
+      for (const i of [2, 1, 0])
+        dashboard.getState().addActiveVisualization(0, i, makeSpec(), '', null);
+      const order = () =>
+        [...dashboard.getState().layout.items]
+          .sort((a, b) => (a.y === b.y ? a.x - b.x : a.y - b.y))
+          .map((it) => it.i);
+      expect(order()).toEqual(['0-0', '0-1', '0-2']);
+      return { dashboard, memoryBank, order };
+    }
+    const item = (replaces: string) => ({
+      index: 1,
+      toolCallIndex: 0,
+      spec: makeSpec(),
+      userPrompt: 'instead',
+      sourceFields: null,
+      replaces,
+    });
+
+    it('takes its place and closes it into the memory bank', () => {
+      const { dashboard, memoryBank, order } = threeCharts();
+      dashboard.getState().addActiveVisualizationBatch([item('0-1')], undefined, memoryBank);
+      expect(order()).toEqual(['0-0', '1-0', '0-2']);
+      expect(memoryBank.getState().closedVisualizations.has('0-1')).toBe(true);
+    });
+
+    it('is added like any other when the chart is no longer open', () => {
+      const { dashboard, memoryBank, order } = threeCharts();
+      dashboard.getState().closeVisualization('0-1', memoryBank);
+      dashboard.getState().addActiveVisualizationBatch([item('0-1')], undefined, memoryBank);
+      expect(order()).toEqual(['1-0', '0-0', '0-2']);
+    });
+
+    it('never runs again once added, so a replay moves nothing', () => {
+      const { dashboard, memoryBank, order } = threeCharts();
+      dashboard.getState().addActiveVisualizationBatch([item('0-1')], undefined, memoryBank);
+      dashboard.getState().restoreFromMemoryBank('0-1', memoryBank);
+      const before = order();
+      dashboard.getState().addActiveVisualizationBatch([item('0-1')], undefined, memoryBank);
+      expect(order()).toEqual(before);
+      expect(dashboard.getState().isActive('0-1')).toBe(true);
+    });
+  });
+
   it('clearAllVisualizations empties active and table-view state', () => {
     const store = createDashboardStore();
     store.getState().addActiveVisualization(0, 0, makeSpec(), '', null);

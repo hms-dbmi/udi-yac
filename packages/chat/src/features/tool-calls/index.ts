@@ -16,6 +16,8 @@ export type {
   FilterMatch,
   FilterScope,
   OfferIssueReportArgs,
+  UpdateDashboardArgs,
+  ResetConversationArgs,
   TextSegment,
   CreateVisualizationArgs,
 } from './types';

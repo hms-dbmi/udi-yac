@@ -1,7 +1,8 @@
 /**
  * @vitest-environment jsdom
  *
- * The agent's OfferIssueReport, as the chat shows it.
+ * The agent's UI action offers (OfferIssueReport, ResetConversation), as the
+ * chat shows them.
  */
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -48,5 +49,22 @@ describe('OfferIssueReport in the chat', () => {
     );
     expect(screen.getByText('Report this?')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Report issue' })).toBeNull();
+  });
+});
+
+describe('ResetConversation in the chat', () => {
+  it('reopens the reset confirmation', async () => {
+    let globalStore!: ReturnType<typeof useGlobalStore>;
+    render(
+      <UDIChatProvider>
+        <Probe onStores={(s) => (globalStore = s)} />
+        <ToolCallRenderer
+          toolCall={{ name: 'ResetConversation', arguments: { message: 'Start over?' } }}
+        />
+      </UDIChatProvider>,
+    );
+    expect(screen.getByText('Start over?')).toBeTruthy();
+    await userEvent.click(screen.getByRole('button', { name: /Reset conversation/ }));
+    expect(globalStore.getState().resetConfirmOpen).toBe(true);
   });
 });

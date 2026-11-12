@@ -44,14 +44,16 @@ POST /v1/yac/completions  {messages, dataSchema, dataDomains, filters, dashboard
 3. **Dispatch.** Every other tool call is an outcome, and its handler builds
    what the client receives:
 
-| Tool chosen           | Handler does                                                                                              | Client receives                           |
-| --------------------- | --------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
-| `CreateVisualization` | Builds a chart from a template ([below](#charts-from-templates))                                          | `RenderVisualization` with a spec         |
-| `FilterData`          | Turns the request into validated filter operations ([below](#filters))                                    | One `FilterData` per operation            |
-| `FreeTextExplain`     | Answers a question about the data or the system, with the schema, the values and the filters in view      | `FreeTextExplain` with text segments      |
-| `ClarifyVariable`     | Adds each candidate field's type and description from the schema                                          | `ClarifyVariable` with candidates to pick |
-| `Rebuff`              | Explains why the request can't be served and suggests what can                                            | `Rebuff` with a message and suggestions   |
-| `OfferIssueReport`    | Offered only when the client supports issue reports and the server records them ([below](#issue-reports)) | `OfferIssueReport` with a draft summary   |
+| Tool chosen           | Handler does                                                                                              | Client receives                                |
+| --------------------- | --------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| `CreateVisualization` | Builds a chart from a template ([below](#charts-from-templates))                                          | `RenderVisualization` with a spec              |
+| `FilterData`          | Turns the request into validated filter operations ([below](#filters))                                    | One `FilterData` per operation                 |
+| `FreeTextExplain`     | Answers a question about the data or the system, with the schema, the values and the filters in view      | `FreeTextExplain` with text segments           |
+| `ClarifyVariable`     | Adds each candidate field's type and description from the schema                                          | `ClarifyVariable` with candidates to pick      |
+| `Rebuff`              | Explains why the request can't be served and suggests what can                                            | `Rebuff` with a message and suggestions        |
+| `OfferIssueReport`    | Offered only when the client supports issue reports and the server records them ([below](#issue-reports)) | `OfferIssueReport` with a draft summary        |
+| `UpdateDashboard`     | Keeps only charts it can act on, named by the client's keys ([below](#ui-actions))                        | `UpdateDashboard` with charts to close/restore |
+| `ResetConversation`   | Passes the message through ([below](#ui-actions))                                                         | `ResetConversation`, which the user confirms   |
 
 The model may pick several tools in one turn, for example a filter and a chart.
 The response is a JSON list of `{name, arguments, meta?}` objects, one per
@@ -183,6 +185,20 @@ requests reverse-engineer the template call, and the model misread derived
 columns as options to set. When a question needs the full spec, the model calls
 `GetVisualizationSpec(chart_id)`. That chart's spec then stays in view for the
 rest of the turn.
+
+## UI actions
+
+`OfferIssueReport`, `UpdateDashboard` and `ResetConversation` act on the chat's
+own UI, so the client carries them out and none makes an LLM call
+(`UI_ACTION_TOOLS`). `UpdateDashboard` closes charts into the memory bank or
+restores them; its handler keeps only an open chart to close and a closed one to
+restore, and names each by the client's key. `ResetConversation` opens the
+client's "Reset conversation?" confirmation; nothing is cleared unless the user
+accepts. A chart that replaces an open one ("make it a pie chart instead") is a
+`CreateVisualization` with `replaces`: its `RenderVisualization` carries
+`meta.replaces`, the old chart's key, and the client puts the new chart in its
+place and closes the old one. The client applies these once, on the live
+response, so replaying a transcript never repeats them.
 
 ## Issue reports
 

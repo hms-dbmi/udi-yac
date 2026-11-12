@@ -212,6 +212,17 @@ ORCHESTRATOR_TOOLS = [
                         "type": "string",
                         "description": "A brief natural-language description of what visualization to create.",
                     },
+                    "replaces": {
+                        "type": "string",
+                        "description": (
+                            "The chart_id of an open chart this one replaces, when "
+                            "the user asked to change or redo that chart ('make it a "
+                            "pie chart instead', 'use age, not sex'). The new chart "
+                            "takes its place and the old one moves to the memory "
+                            "bank, where the user can restore it. Omit it for an "
+                            "additional chart ('EFS too', 'also by sex')."
+                        ),
+                    },
                 },
                 # No `title`: chart names are built programmatically from the
                 # generated spec on the frontend, which is free, deterministic,
@@ -293,9 +304,7 @@ ORCHESTRATOR_TOOLS = [
 INTERNAL_ORCHESTRATOR_TOOLS = {"ListFieldValues", "GetVisualizationSpec"}
 
 #: Offered only when the client has issue reporting switched on and the server
-#: can record reports (LangFuse). Kept out of ``ORCHESTRATOR_TOOLS`` so the
-#: default tool list, and the capability lists the Rebuff and FreeTextExplain
-#: prompts are built from, stay as they were.
+#: can record reports (LangFuse).
 OFFER_ISSUE_REPORT_TOOL = {
     "type": "function",
     "function": {
@@ -336,6 +345,76 @@ OFFER_ISSUE_REPORT_TOOL = {
     },
 }
 
+
+
+UPDATE_DASHBOARD_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "UpdateDashboard",
+        "description": (
+            "Close charts on the dashboard or bring closed ones back. A closed "
+            "chart moves to the memory bank, where the user can restore it. Close "
+            "charts when the user asks to remove, close or clear them ('clear the "
+            "dashboard' closes every open chart). Restore a chart when the user "
+            "asks for a closed one back. Use the chart_ids in the Current "
+            "dashboard section. To replace a chart with a changed version, use "
+            "CreateVisualization's replaces instead."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "description": "One short sentence shown to the user saying what changed.",
+                },
+                "close": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "chart_ids of open charts to close.",
+                },
+                "restore": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "chart_ids of closed charts to bring back.",
+                },
+            },
+            "required": ["message", "close", "restore"],
+            "additionalProperties": False,
+        },
+    },
+}
+
+RESET_CONVERSATION_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "ResetConversation",
+        "description": (
+            "Offer to start a new conversation, which clears the chat, every chart, "
+            "the memory bank and every filter set in chat or on a chart. The user "
+            "is asked to confirm, and nothing is cleared unless they do. Call it "
+            "only when the user asks to start over, reset, or begin a new "
+            "conversation. To clear only the charts use UpdateDashboard; to clear "
+            "only the filters use FilterData."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "description": "One short sentence shown to the user with the confirmation.",
+                },
+            },
+            "required": ["message"],
+            "additionalProperties": False,
+        },
+    },
+}
+
+#: Tools that act on the chat's own UI rather than on the data: the client
+#: carries them out, and none makes an LLM call. Kept out of
+#: ``ORCHESTRATOR_TOOLS`` so the capability lists the Rebuff and FreeTextExplain
+#: prompts are built from stay about the data.
+UI_ACTION_TOOLS = [OFFER_ISSUE_REPORT_TOOL, UPDATE_DASHBOARD_TOOL, RESET_CONVERSATION_TOOL]
 
 # ---------------------------------------------------------------------------
 # Visualization rendering functions

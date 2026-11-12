@@ -46,6 +46,10 @@ From left to right, the icons on a card:
 
 Not every icon shows on every card: a chart with nothing to tweak has no sliders, and a table has no table toggle.
 
+## Ask the agent to rearrange charts
+
+The agent knows which charts are open and which you have closed. Ask it to close charts (_"remove the pie chart"_, _"clear the dashboard"_) or bring a closed one back (_"show the survival curve again"_). When you ask it to change a chart (_"make that a bar chart instead"_), the new chart takes the old one's place, and the old one goes to the memory bank, where you can restore it.
+
 ## Arrange the dashboard
 
 The gear icon (**Display settings**) sets the number of columns, the row height and the text size, and **Reset layout** tidies the cards back into rows. Row height and text size are remembered in this browser. When the dashboard is too narrow for the row counts and its buttons side by side, **Display settings**, **Session** and **Download Data** fold into one gear menu (**Dashboard options**).

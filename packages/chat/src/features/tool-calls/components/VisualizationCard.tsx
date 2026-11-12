@@ -55,7 +55,7 @@ export function VisualizationCard({
       <div className="udi:py-1">
         <div className="udi:flex udi:items-center udi:gap-2">
           <Badge variant="secondary" className="udi:text-xs">
-            Visualization removed by user
+            Visualization closed (in the memory bank)
           </Badge>
           {title && (
             <span className="udi:text-xs udi:text-muted-foreground udi:truncate">{title}</span>

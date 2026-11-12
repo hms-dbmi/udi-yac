@@ -186,13 +186,15 @@ class ToolCall(BaseModel):
 
     name: str = Field(
         description="`RenderVisualization`, `FilterData`, `FreeTextExplain`, "
-        "`ClarifyVariable`, `Rebuff` or `OfferIssueReport`."
+        "`ClarifyVariable` or `Rebuff`; or a UI action for the client to carry "
+        "out: `OfferIssueReport`, `UpdateDashboard` or `ResetConversation`."
     )
     arguments: dict = Field(description="The payload; its shape depends on `name`.")
     meta: dict | None = Field(
         default=None,
         description="On a chart: its provenance (`tool_used`, `tool_args`, "
-        "`tweakable_params`, ...), which `/v1/yac/vis_instantiate` takes back.",
+        "`tweakable_params`, ...), which `/v1/yac/vis_instantiate` takes back, "
+        "and `replaces`, the key of an open chart whose place it takes.",
     )
 
 

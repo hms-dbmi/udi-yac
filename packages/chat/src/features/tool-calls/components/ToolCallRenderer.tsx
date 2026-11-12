@@ -1,10 +1,17 @@
 import type { FlatToolCall, Message } from '@/types/messages';
-import type { FreeTextExplainArgs, RebuffArgs, OfferIssueReportArgs } from '../types';
+import type {
+  FreeTextExplainArgs,
+  RebuffArgs,
+  OfferIssueReportArgs,
+  UpdateDashboardArgs,
+  ResetConversationArgs,
+} from '../types';
 import { FreeTextExplain } from './FreeTextExplain';
 import { RebuffNotice } from './RebuffNotice';
 import { VisualizationCard } from './VisualizationCard';
 import { FilterComponent } from './FilterComponent';
 import { IssueReportOffer } from './IssueReportOffer';
+import { ResetConversationOffer } from './ResetConversationOffer';
 import type { UDIGrammar } from 'udi-toolkit/react';
 import { Badge } from '@/components/ui/badge';
 
@@ -60,6 +67,15 @@ export function ToolCallRenderer({
     case 'OfferIssueReport': {
       const offerArgs = args as unknown as OfferIssueReportArgs;
       return <IssueReportOffer {...offerArgs} />;
+    }
+    case 'UpdateDashboard': {
+      // Already carried out; the charts' own cards show where they went.
+      const { message } = args as unknown as UpdateDashboardArgs;
+      return <RebuffNotice message={message} />;
+    }
+    case 'ResetConversation': {
+      const { message } = args as unknown as ResetConversationArgs;
+      return <ResetConversationOffer message={message} />;
     }
     default:
       return (

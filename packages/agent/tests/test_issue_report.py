@@ -225,7 +225,7 @@ def test_tool_is_sent_and_its_offer_returned_when_enabled():
 
     assert "OfferIssueReport" in tools
     assert result.tool_calls == [{"name": "OfferIssueReport", "arguments": args}]
-    assert result.orchestrator_choice == "offer-issue-report"
+    assert result.orchestrator_choice == "ui-action"
 
 
 def test_tool_is_not_sent_when_disabled():
@@ -360,3 +360,9 @@ def test_webhook_config_is_checked_at_startup(overrides, error):
     }
     with pytest.raises(ValidationError, match=error):
         ServerConfig(**{**base, **overrides})
+
+
+def test_the_other_ui_actions_are_sent_either_way():
+    for enabled in (True, False):
+        tools, _ = _orchestrate(enabled, {"message": "", "summary": "", "user_requested": False})
+        assert {"UpdateDashboard", "ResetConversation"} <= set(tools)
